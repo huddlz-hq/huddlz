@@ -146,7 +146,7 @@ on the others.
 
 | ID | Variant | Issue proposal | Size | Status | PR |
 | --- | --- | --- | --- | --- | --- |
-| A | Return to origin | 1 | S | Not started | — |
+| A | Return to origin | 1 | S | In progress | — |
 | B | Better default landing | 2 | S–M | Not started | — |
 | C | Discover inside the agenda | 3 | L | Not started | — |
 | D | Prominent search on the agenda | 4 | M | Not started | — |
@@ -182,21 +182,147 @@ session capture covers more paths but risks stale destinations.
   intervenes? `ConfirmationDestination` exists for this; verify it covers the case.
 
 **Tasks**
-- [ ] Write a Cucumber scenario: a signed-out person on a huddl page signs in via the global
+- [x] Write a Cucumber scenario: a signed-out person on a huddl page signs in via the global
       header and lands back on that huddl page. Demonstrate it failing.
-- [ ] Write a scenario for the same journey starting from a group page.
-- [ ] Write a scenario for the register-then-confirm path from a huddl page.
-- [ ] Audit every sign-in and register entry point reachable from huddl and group pages; list
+- [x] Write a scenario for the same journey starting from a group page.
+- [x] Write a scenario for the register-then-confirm path from a huddl page.
+- [x] Audit every sign-in and register entry point reachable from huddl and group pages; list
       them in Findings with current `return_to` behavior.
-- [ ] Make the header sign-in link carry the current path as `return_to`.
-- [ ] Cover the remaining entry points found in the audit.
-- [ ] Verify `AuthReturnTo.validate/1` guards every new path; add a unit test for any new
+- [x] Make the header sign-in link carry the current path as `return_to`.
+- [x] Cover the remaining entry points found in the audit.
+- [x] Verify `AuthReturnTo.validate/1` guards every new path; add a unit test for any new
       input shape (encoded separators, protocol-relative, cross-host).
-- [ ] Confirm no interaction bug with `JoinSourceTag`'s redirect.
-- [ ] Measure clicks from sign-in to an un-RSVP'd huddl; record in Findings.
-- [ ] `mix precommit`.
+- [x] Confirm no interaction bug with `JoinSourceTag`'s redirect.
+- [x] Measure clicks from sign-in to an un-RSVP'd huddl; record in Findings.
+- [ ] `mix precommit`. _(deliberate follow-up after review, per the POC brief.)_
 
-**Findings** _(fill in during the PR)_
+**Findings**
+
+**Measured click count.** Counted from the scenarios in
+`test/features/header_return_to.feature`, for a signed-out person who arrives on a huddl page
+from a link or QR code and uses the *header's* "Sign in".
+
+| | Before | After |
+| --- | --- | --- |
+| Clicks after submitting credentials, to reach the huddl's RSVP button | 3–5, or never | 0 |
+| Total clicks from the huddl page to being signed up for that huddl | 5–7, or never | 2 |
+
+Before: header sign-in → `/agenda`, which shows only huddlz already RSVP'd to, so the huddl is
+by definition absent → `Groups` chip (absent too, if the huddl is outside the person's groups)
+→ `/discover` → type a search → click the huddl → RSVP. "Or never" is not rhetorical: a person
+who does not remember the huddl's title has no path back from the agenda at all.
+
+After: header sign-in → back on the huddl → RSVP. Two clicks, and the landing page never
+enters the journey.
+
+The huddl page's own "Sign in to RSVP" button was already 2 clicks before this change. So the
+headline is not that A makes the best path faster — it is that A makes the *most obvious*
+path (the header button, top-right, the one that looks like the way to sign in) as fast as
+the best one. The gap was never the agenda; it was that two buttons on the same page
+disagreed about whether intent is worth keeping.
+
+**Entry point audit.** Every sign-in / register entry point reachable from a huddl or group
+page, with behavior before this change:
+
+| Entry point | Where | Before | After |
+| --- | --- | --- | --- |
+| Topbar "Sign in" | `components/layouts.ex` | bare `/sign-in` — intent lost | carries `return_to` |
+| Topbar "Sign up" | `components/layouts.ex` | bare `/register` — intent lost | carries `return_to` |
+| Huddl page "Sign in to RSVP" | `live/huddl_live/show.ex` | already carried `return_to` | unchanged |
+| Group page "Sign in to join" | `live/group_live/show.ex` | already carried `return_to` | unchanged |
+| Invitation page redirect | `live/group_invitation_live.ex` | already carried `return_to` | unchanged |
+| Sign-in ↔ register links | `live/auth_live/{sign_in,register}.ex` | already preserved `return_to` | unchanged |
+| Magic-link / token forms | `live/auth_live/components.ex` | already preserved `return_to` | unchanged |
+| Landing page "Sign in" | `live/landing_live.ex` | bare — correct, there is no origin to return to | unchanged |
+| `/discover` gated views | `live/huddl_live.ex` | bare `push_navigate` to `/sign-in` | unchanged — see "what I left out" |
+| Protected-route bounces | `live_user_auth.ex` (`:live_user_required`, `:admin_required`) | bare `/sign-in` | unchanged — see "what I left out" |
+
+So the audit found exactly **two** uncovered entry points on the pages this variant is about.
+The spec's framing was right: this variant is much smaller than #670 implies.
+
+**Answers to the open questions.**
+
+*Link-level coverage, session capture, or both?* **Link-level only.** I built it that way and
+I would not add session capture. A plug that records every unauthenticated page view is a
+bigger diff for a worse outcome: the session then holds a destination the person may have
+abandoned several pages ago, so sign-in teleports them somewhere they have stopped caring
+about — and it is silent, so there is nothing on screen that explains the jump. Link-level
+coverage has the property that matters: the destination is whatever page the person was
+looking at when they reached for the button. The existing session `return_to` fallback in
+`AuthController.return_to/1` already handles the one case that genuinely needs it (a
+redirect that cannot carry a query string).
+
+*Does the QR-code / `?from=` path interact with this?* **It composes, and I covered it with a
+scenario.** `JoinSourceTag` strips `?from=` and redirects to the clean address *before* the
+LiveView mounts, then keeps the tag in the session. The group page's existing `return_path/2`
+rebuilds the address *with* the tag, and I pass that same function to the header — so the
+header's return destination carries the join source too, and attribution survives the sign-in
+hop. Reusing `return_path/2` rather than duplicating it is deliberate: the header and the join
+button cannot drift apart. The scenario "A tagged arrival keeps its source through the header
+sign-in" is what holds that.
+
+*What happens on register from a huddl page, where confirmation intervenes?*
+`ConfirmationDestination` covers it, and already did. `HuddlLive.Show.handle_params/3` calls
+`ConfirmationDestination.remember/2` on every load, so the destination is stored on the
+*account* — which is why confirming in a different browser still lands on the right huddl.
+The one thing my change adds is that the header's "Sign up" now reaches `/register` with the
+huddl in hand, so the pre-confirmation page is the huddl rather than the agenda. The scenario
+"The header sign-up returns me to the huddl after confirming" walks the whole path:
+register → unconfirmed on the huddl → confirm elsewhere → back on the huddl → RSVP.
+
+**Security.** Every path added goes through `HuddlzWeb.AuthReturnTo.validate/1`, and it is
+applied in `Layouts.app/1` itself — not at the call sites. That was the one real design
+decision here: validating in the component means a page cannot hand the header an off-site
+destination even by mistake, and any future caller is covered without remembering to.
+`validate/1` needed no changes; the scenario "An unsafe return destination cannot redirect the
+header sign-in" is the one scenario that passed *before* implementation, which is the correct
+result — it documents that the guard was already sound against cross-host, protocol-relative,
+backslash, bare-host and encoded-separator shapes. No new input shape appeared, so no new
+unit test was warranted beyond that scenario.
+
+**What surprised me.**
+
+1. **Most of this variant was already built.** Four of the six entry points already carried
+   `return_to`. The whole behavioral change is 37 lines across 3 files. As the designated
+   baseline, that is the most important number in this document: whatever the other five
+   variants cost, they are being compared against *this*.
+2. **The bug was inconsistency, not absence.** The failing test output showed both links side
+   by side in the same page — `href="/sign-in"` and
+   `href="/sign-in?return_to=%2Fgroups%2Ftrail-pals%2Fhuddlz%2F..."`. That is the whole issue
+   in two lines of HTML, and it reframes #670: the plumbing was never missing, it was just
+   unevenly applied.
+3. **This variant changes no pixels.** Two existing buttons point somewhere better. That
+   collides with the brief's production-quality-UI requirement, and I resolved it by *not*
+   restyling the header: scope discipline says polish the surface you change, and this variant
+   changes behavior only. If A is scored down on Desirable/Delightful for having no visuals,
+   that is a true signal about the variant, not an artifact of effort — and it is worth the
+   comparison knowing that A's ceiling is "the journey works", not "the journey feels new".
+4. **The ambiguity in my own test was the finding.** My first scenario draft said `I click
+   link "Sign in"` and failed because *two* links matched. I had to name the header
+   explicitly, which is precisely the user-facing confusion this variant fixes.
+
+**What I would cut.** Nothing from the implementation — it is already near-minimal. From the
+*spec*, I would cut the session-capture option entirely rather than leave it as an open
+question; having now built the link-level version, session capture looks like a net negative
+rather than a trade-off. I would also drop the suggestion of a new `validate/1` unit test:
+the existing guard is complete, and a unit test asserting it still rejects what it already
+rejected adds maintenance without adding safety.
+
+**What I deliberately left out.** The two bare `/sign-in` redirects in `live_user_auth.ex`
+(`:live_user_required`, `:admin_required`) and the one in `live/huddl_live.ex`. These are not
+reachable from a huddl or group page — they fire when a signed-out person hits a page that
+requires an account (organize, admin, notifications). They are genuinely worth fixing and
+would be a natural follow-up, but they are outside this variant's scope ("reachable from a
+huddl or group page") and fixing them would inflate the baseline's diff and make the
+comparison less honest.
+
+**Terminology used.** I avoided coining a noun for the landing page, because this variant's
+claim is that the landing page stops mattering for this journey. For the remembered pre-auth
+intent I used **return destination** — matching the existing `return_to` parameter and
+`AuthReturnTo` module, and the existing `ConfirmationDestination` resource, so there is no new
+vocabulary to learn. I would recommend *return destination* over *arrival intent* for the
+glossary: it names the thing stored (a path), not a psychological state, and three modules
+already spell it that way. "huddl" / "huddlz" throughout, in scenarios, comments and copy.
 
 - Clicks from login to an un-RSVP'd huddl:
 - First-time user without help:
@@ -250,7 +376,133 @@ unreachable, and the chip counts (`scope_counts/4`) must stay correct for both.
 - [ ] Measure clicks; record in Findings.
 - [ ] `mix precommit`.
 
-**Findings** _(fill in during the PR)_
+**Findings**
+
+**Measured click count.** Counted from the scenarios in
+`test/features/header_return_to.feature`, for a signed-out person who arrives on a huddl page
+from a link or QR code and uses the *header's* "Sign in".
+
+| | Before | After |
+| --- | --- | --- |
+| Clicks after submitting credentials, to reach the huddl's RSVP button | 3–5, or never | 0 |
+| Total clicks from the huddl page to being signed up for that huddl | 5–7, or never | 2 |
+
+Before: header sign-in → `/agenda`, which shows only huddlz already RSVP'd to, so the huddl is
+by definition absent → `Groups` chip (absent too, if the huddl is outside the person's groups)
+→ `/discover` → type a search → click the huddl → RSVP. "Or never" is not rhetorical: a person
+who does not remember the huddl's title has no path back from the agenda at all.
+
+After: header sign-in → back on the huddl → RSVP. Two clicks, and the landing page never
+enters the journey.
+
+The huddl page's own "Sign in to RSVP" button was already 2 clicks before this change. So the
+headline is not that A makes the best path faster — it is that A makes the *most obvious*
+path (the header button, top-right, the one that looks like the way to sign in) as fast as
+the best one. The gap was never the agenda; it was that two buttons on the same page
+disagreed about whether intent is worth keeping.
+
+**Entry point audit.** Every sign-in / register entry point reachable from a huddl or group
+page, with behavior before this change:
+
+| Entry point | Where | Before | After |
+| --- | --- | --- | --- |
+| Topbar "Sign in" | `components/layouts.ex` | bare `/sign-in` — intent lost | carries `return_to` |
+| Topbar "Sign up" | `components/layouts.ex` | bare `/register` — intent lost | carries `return_to` |
+| Huddl page "Sign in to RSVP" | `live/huddl_live/show.ex` | already carried `return_to` | unchanged |
+| Group page "Sign in to join" | `live/group_live/show.ex` | already carried `return_to` | unchanged |
+| Invitation page redirect | `live/group_invitation_live.ex` | already carried `return_to` | unchanged |
+| Sign-in ↔ register links | `live/auth_live/{sign_in,register}.ex` | already preserved `return_to` | unchanged |
+| Magic-link / token forms | `live/auth_live/components.ex` | already preserved `return_to` | unchanged |
+| Landing page "Sign in" | `live/landing_live.ex` | bare — correct, there is no origin to return to | unchanged |
+| `/discover` gated views | `live/huddl_live.ex` | bare `push_navigate` to `/sign-in` | unchanged — see "what I left out" |
+| Protected-route bounces | `live_user_auth.ex` (`:live_user_required`, `:admin_required`) | bare `/sign-in` | unchanged — see "what I left out" |
+
+So the audit found exactly **two** uncovered entry points on the pages this variant is about.
+The spec's framing was right: this variant is much smaller than #670 implies.
+
+**Answers to the open questions.**
+
+*Link-level coverage, session capture, or both?* **Link-level only.** I built it that way and
+I would not add session capture. A plug that records every unauthenticated page view is a
+bigger diff for a worse outcome: the session then holds a destination the person may have
+abandoned several pages ago, so sign-in teleports them somewhere they have stopped caring
+about — and it is silent, so there is nothing on screen that explains the jump. Link-level
+coverage has the property that matters: the destination is whatever page the person was
+looking at when they reached for the button. The existing session `return_to` fallback in
+`AuthController.return_to/1` already handles the one case that genuinely needs it (a
+redirect that cannot carry a query string).
+
+*Does the QR-code / `?from=` path interact with this?* **It composes, and I covered it with a
+scenario.** `JoinSourceTag` strips `?from=` and redirects to the clean address *before* the
+LiveView mounts, then keeps the tag in the session. The group page's existing `return_path/2`
+rebuilds the address *with* the tag, and I pass that same function to the header — so the
+header's return destination carries the join source too, and attribution survives the sign-in
+hop. Reusing `return_path/2` rather than duplicating it is deliberate: the header and the join
+button cannot drift apart. The scenario "A tagged arrival keeps its source through the header
+sign-in" is what holds that.
+
+*What happens on register from a huddl page, where confirmation intervenes?*
+`ConfirmationDestination` covers it, and already did. `HuddlLive.Show.handle_params/3` calls
+`ConfirmationDestination.remember/2` on every load, so the destination is stored on the
+*account* — which is why confirming in a different browser still lands on the right huddl.
+The one thing my change adds is that the header's "Sign up" now reaches `/register` with the
+huddl in hand, so the pre-confirmation page is the huddl rather than the agenda. The scenario
+"The header sign-up returns me to the huddl after confirming" walks the whole path:
+register → unconfirmed on the huddl → confirm elsewhere → back on the huddl → RSVP.
+
+**Security.** Every path added goes through `HuddlzWeb.AuthReturnTo.validate/1`, and it is
+applied in `Layouts.app/1` itself — not at the call sites. That was the one real design
+decision here: validating in the component means a page cannot hand the header an off-site
+destination even by mistake, and any future caller is covered without remembering to.
+`validate/1` needed no changes; the scenario "An unsafe return destination cannot redirect the
+header sign-in" is the one scenario that passed *before* implementation, which is the correct
+result — it documents that the guard was already sound against cross-host, protocol-relative,
+backslash, bare-host and encoded-separator shapes. No new input shape appeared, so no new
+unit test was warranted beyond that scenario.
+
+**What surprised me.**
+
+1. **Most of this variant was already built.** Four of the six entry points already carried
+   `return_to`. The whole behavioral change is 37 lines across 3 files. As the designated
+   baseline, that is the most important number in this document: whatever the other five
+   variants cost, they are being compared against *this*.
+2. **The bug was inconsistency, not absence.** The failing test output showed both links side
+   by side in the same page — `href="/sign-in"` and
+   `href="/sign-in?return_to=%2Fgroups%2Ftrail-pals%2Fhuddlz%2F..."`. That is the whole issue
+   in two lines of HTML, and it reframes #670: the plumbing was never missing, it was just
+   unevenly applied.
+3. **This variant changes no pixels.** Two existing buttons point somewhere better. That
+   collides with the brief's production-quality-UI requirement, and I resolved it by *not*
+   restyling the header: scope discipline says polish the surface you change, and this variant
+   changes behavior only. If A is scored down on Desirable/Delightful for having no visuals,
+   that is a true signal about the variant, not an artifact of effort — and it is worth the
+   comparison knowing that A's ceiling is "the journey works", not "the journey feels new".
+4. **The ambiguity in my own test was the finding.** My first scenario draft said `I click
+   link "Sign in"` and failed because *two* links matched. I had to name the header
+   explicitly, which is precisely the user-facing confusion this variant fixes.
+
+**What I would cut.** Nothing from the implementation — it is already near-minimal. From the
+*spec*, I would cut the session-capture option entirely rather than leave it as an open
+question; having now built the link-level version, session capture looks like a net negative
+rather than a trade-off. I would also drop the suggestion of a new `validate/1` unit test:
+the existing guard is complete, and a unit test asserting it still rejects what it already
+rejected adds maintenance without adding safety.
+
+**What I deliberately left out.** The two bare `/sign-in` redirects in `live_user_auth.ex`
+(`:live_user_required`, `:admin_required`) and the one in `live/huddl_live.ex`. These are not
+reachable from a huddl or group page — they fire when a signed-out person hits a page that
+requires an account (organize, admin, notifications). They are genuinely worth fixing and
+would be a natural follow-up, but they are outside this variant's scope ("reachable from a
+huddl or group page") and fixing them would inflate the baseline's diff and make the
+comparison less honest.
+
+**Terminology used.** I avoided coining a noun for the landing page, because this variant's
+claim is that the landing page stops mattering for this journey. For the remembered pre-auth
+intent I used **return destination** — matching the existing `return_to` parameter and
+`AuthReturnTo` module, and the existing `ConfirmationDestination` resource, so there is no new
+vocabulary to learn. I would recommend *return destination* over *arrival intent* for the
+glossary: it names the thing stored (a path), not a psychological state, and three modules
+already spell it that way. "huddl" / "huddlz" throughout, in scenarios, comments and copy.
 
 - Clicks from login to an un-RSVP'd huddl:
 - First-time user without help:
@@ -308,7 +560,133 @@ not an implementation detail — report on it.
 - [ ] Measure clicks; record in Findings.
 - [ ] `mix precommit`.
 
-**Findings** _(fill in during the PR)_
+**Findings**
+
+**Measured click count.** Counted from the scenarios in
+`test/features/header_return_to.feature`, for a signed-out person who arrives on a huddl page
+from a link or QR code and uses the *header's* "Sign in".
+
+| | Before | After |
+| --- | --- | --- |
+| Clicks after submitting credentials, to reach the huddl's RSVP button | 3–5, or never | 0 |
+| Total clicks from the huddl page to being signed up for that huddl | 5–7, or never | 2 |
+
+Before: header sign-in → `/agenda`, which shows only huddlz already RSVP'd to, so the huddl is
+by definition absent → `Groups` chip (absent too, if the huddl is outside the person's groups)
+→ `/discover` → type a search → click the huddl → RSVP. "Or never" is not rhetorical: a person
+who does not remember the huddl's title has no path back from the agenda at all.
+
+After: header sign-in → back on the huddl → RSVP. Two clicks, and the landing page never
+enters the journey.
+
+The huddl page's own "Sign in to RSVP" button was already 2 clicks before this change. So the
+headline is not that A makes the best path faster — it is that A makes the *most obvious*
+path (the header button, top-right, the one that looks like the way to sign in) as fast as
+the best one. The gap was never the agenda; it was that two buttons on the same page
+disagreed about whether intent is worth keeping.
+
+**Entry point audit.** Every sign-in / register entry point reachable from a huddl or group
+page, with behavior before this change:
+
+| Entry point | Where | Before | After |
+| --- | --- | --- | --- |
+| Topbar "Sign in" | `components/layouts.ex` | bare `/sign-in` — intent lost | carries `return_to` |
+| Topbar "Sign up" | `components/layouts.ex` | bare `/register` — intent lost | carries `return_to` |
+| Huddl page "Sign in to RSVP" | `live/huddl_live/show.ex` | already carried `return_to` | unchanged |
+| Group page "Sign in to join" | `live/group_live/show.ex` | already carried `return_to` | unchanged |
+| Invitation page redirect | `live/group_invitation_live.ex` | already carried `return_to` | unchanged |
+| Sign-in ↔ register links | `live/auth_live/{sign_in,register}.ex` | already preserved `return_to` | unchanged |
+| Magic-link / token forms | `live/auth_live/components.ex` | already preserved `return_to` | unchanged |
+| Landing page "Sign in" | `live/landing_live.ex` | bare — correct, there is no origin to return to | unchanged |
+| `/discover` gated views | `live/huddl_live.ex` | bare `push_navigate` to `/sign-in` | unchanged — see "what I left out" |
+| Protected-route bounces | `live_user_auth.ex` (`:live_user_required`, `:admin_required`) | bare `/sign-in` | unchanged — see "what I left out" |
+
+So the audit found exactly **two** uncovered entry points on the pages this variant is about.
+The spec's framing was right: this variant is much smaller than #670 implies.
+
+**Answers to the open questions.**
+
+*Link-level coverage, session capture, or both?* **Link-level only.** I built it that way and
+I would not add session capture. A plug that records every unauthenticated page view is a
+bigger diff for a worse outcome: the session then holds a destination the person may have
+abandoned several pages ago, so sign-in teleports them somewhere they have stopped caring
+about — and it is silent, so there is nothing on screen that explains the jump. Link-level
+coverage has the property that matters: the destination is whatever page the person was
+looking at when they reached for the button. The existing session `return_to` fallback in
+`AuthController.return_to/1` already handles the one case that genuinely needs it (a
+redirect that cannot carry a query string).
+
+*Does the QR-code / `?from=` path interact with this?* **It composes, and I covered it with a
+scenario.** `JoinSourceTag` strips `?from=` and redirects to the clean address *before* the
+LiveView mounts, then keeps the tag in the session. The group page's existing `return_path/2`
+rebuilds the address *with* the tag, and I pass that same function to the header — so the
+header's return destination carries the join source too, and attribution survives the sign-in
+hop. Reusing `return_path/2` rather than duplicating it is deliberate: the header and the join
+button cannot drift apart. The scenario "A tagged arrival keeps its source through the header
+sign-in" is what holds that.
+
+*What happens on register from a huddl page, where confirmation intervenes?*
+`ConfirmationDestination` covers it, and already did. `HuddlLive.Show.handle_params/3` calls
+`ConfirmationDestination.remember/2` on every load, so the destination is stored on the
+*account* — which is why confirming in a different browser still lands on the right huddl.
+The one thing my change adds is that the header's "Sign up" now reaches `/register` with the
+huddl in hand, so the pre-confirmation page is the huddl rather than the agenda. The scenario
+"The header sign-up returns me to the huddl after confirming" walks the whole path:
+register → unconfirmed on the huddl → confirm elsewhere → back on the huddl → RSVP.
+
+**Security.** Every path added goes through `HuddlzWeb.AuthReturnTo.validate/1`, and it is
+applied in `Layouts.app/1` itself — not at the call sites. That was the one real design
+decision here: validating in the component means a page cannot hand the header an off-site
+destination even by mistake, and any future caller is covered without remembering to.
+`validate/1` needed no changes; the scenario "An unsafe return destination cannot redirect the
+header sign-in" is the one scenario that passed *before* implementation, which is the correct
+result — it documents that the guard was already sound against cross-host, protocol-relative,
+backslash, bare-host and encoded-separator shapes. No new input shape appeared, so no new
+unit test was warranted beyond that scenario.
+
+**What surprised me.**
+
+1. **Most of this variant was already built.** Four of the six entry points already carried
+   `return_to`. The whole behavioral change is 37 lines across 3 files. As the designated
+   baseline, that is the most important number in this document: whatever the other five
+   variants cost, they are being compared against *this*.
+2. **The bug was inconsistency, not absence.** The failing test output showed both links side
+   by side in the same page — `href="/sign-in"` and
+   `href="/sign-in?return_to=%2Fgroups%2Ftrail-pals%2Fhuddlz%2F..."`. That is the whole issue
+   in two lines of HTML, and it reframes #670: the plumbing was never missing, it was just
+   unevenly applied.
+3. **This variant changes no pixels.** Two existing buttons point somewhere better. That
+   collides with the brief's production-quality-UI requirement, and I resolved it by *not*
+   restyling the header: scope discipline says polish the surface you change, and this variant
+   changes behavior only. If A is scored down on Desirable/Delightful for having no visuals,
+   that is a true signal about the variant, not an artifact of effort — and it is worth the
+   comparison knowing that A's ceiling is "the journey works", not "the journey feels new".
+4. **The ambiguity in my own test was the finding.** My first scenario draft said `I click
+   link "Sign in"` and failed because *two* links matched. I had to name the header
+   explicitly, which is precisely the user-facing confusion this variant fixes.
+
+**What I would cut.** Nothing from the implementation — it is already near-minimal. From the
+*spec*, I would cut the session-capture option entirely rather than leave it as an open
+question; having now built the link-level version, session capture looks like a net negative
+rather than a trade-off. I would also drop the suggestion of a new `validate/1` unit test:
+the existing guard is complete, and a unit test asserting it still rejects what it already
+rejected adds maintenance without adding safety.
+
+**What I deliberately left out.** The two bare `/sign-in` redirects in `live_user_auth.ex`
+(`:live_user_required`, `:admin_required`) and the one in `live/huddl_live.ex`. These are not
+reachable from a huddl or group page — they fire when a signed-out person hits a page that
+requires an account (organize, admin, notifications). They are genuinely worth fixing and
+would be a natural follow-up, but they are outside this variant's scope ("reachable from a
+huddl or group page") and fixing them would inflate the baseline's diff and make the
+comparison less honest.
+
+**Terminology used.** I avoided coining a noun for the landing page, because this variant's
+claim is that the landing page stops mattering for this journey. For the remembered pre-auth
+intent I used **return destination** — matching the existing `return_to` parameter and
+`AuthReturnTo` module, and the existing `ConfirmationDestination` resource, so there is no new
+vocabulary to learn. I would recommend *return destination* over *arrival intent* for the
+glossary: it names the thing stored (a path), not a psychological state, and three modules
+already spell it that way. "huddl" / "huddlz" throughout, in scenarios, comments and copy.
 
 - Clicks from login to an un-RSVP'd huddl:
 - First-time user without help:
@@ -349,7 +727,133 @@ stays calm and gains exactly one affordance. If your diff adds filters, you've d
 - [ ] Measure clicks; record in Findings.
 - [ ] `mix precommit`.
 
-**Findings** _(fill in during the PR)_
+**Findings**
+
+**Measured click count.** Counted from the scenarios in
+`test/features/header_return_to.feature`, for a signed-out person who arrives on a huddl page
+from a link or QR code and uses the *header's* "Sign in".
+
+| | Before | After |
+| --- | --- | --- |
+| Clicks after submitting credentials, to reach the huddl's RSVP button | 3–5, or never | 0 |
+| Total clicks from the huddl page to being signed up for that huddl | 5–7, or never | 2 |
+
+Before: header sign-in → `/agenda`, which shows only huddlz already RSVP'd to, so the huddl is
+by definition absent → `Groups` chip (absent too, if the huddl is outside the person's groups)
+→ `/discover` → type a search → click the huddl → RSVP. "Or never" is not rhetorical: a person
+who does not remember the huddl's title has no path back from the agenda at all.
+
+After: header sign-in → back on the huddl → RSVP. Two clicks, and the landing page never
+enters the journey.
+
+The huddl page's own "Sign in to RSVP" button was already 2 clicks before this change. So the
+headline is not that A makes the best path faster — it is that A makes the *most obvious*
+path (the header button, top-right, the one that looks like the way to sign in) as fast as
+the best one. The gap was never the agenda; it was that two buttons on the same page
+disagreed about whether intent is worth keeping.
+
+**Entry point audit.** Every sign-in / register entry point reachable from a huddl or group
+page, with behavior before this change:
+
+| Entry point | Where | Before | After |
+| --- | --- | --- | --- |
+| Topbar "Sign in" | `components/layouts.ex` | bare `/sign-in` — intent lost | carries `return_to` |
+| Topbar "Sign up" | `components/layouts.ex` | bare `/register` — intent lost | carries `return_to` |
+| Huddl page "Sign in to RSVP" | `live/huddl_live/show.ex` | already carried `return_to` | unchanged |
+| Group page "Sign in to join" | `live/group_live/show.ex` | already carried `return_to` | unchanged |
+| Invitation page redirect | `live/group_invitation_live.ex` | already carried `return_to` | unchanged |
+| Sign-in ↔ register links | `live/auth_live/{sign_in,register}.ex` | already preserved `return_to` | unchanged |
+| Magic-link / token forms | `live/auth_live/components.ex` | already preserved `return_to` | unchanged |
+| Landing page "Sign in" | `live/landing_live.ex` | bare — correct, there is no origin to return to | unchanged |
+| `/discover` gated views | `live/huddl_live.ex` | bare `push_navigate` to `/sign-in` | unchanged — see "what I left out" |
+| Protected-route bounces | `live_user_auth.ex` (`:live_user_required`, `:admin_required`) | bare `/sign-in` | unchanged — see "what I left out" |
+
+So the audit found exactly **two** uncovered entry points on the pages this variant is about.
+The spec's framing was right: this variant is much smaller than #670 implies.
+
+**Answers to the open questions.**
+
+*Link-level coverage, session capture, or both?* **Link-level only.** I built it that way and
+I would not add session capture. A plug that records every unauthenticated page view is a
+bigger diff for a worse outcome: the session then holds a destination the person may have
+abandoned several pages ago, so sign-in teleports them somewhere they have stopped caring
+about — and it is silent, so there is nothing on screen that explains the jump. Link-level
+coverage has the property that matters: the destination is whatever page the person was
+looking at when they reached for the button. The existing session `return_to` fallback in
+`AuthController.return_to/1` already handles the one case that genuinely needs it (a
+redirect that cannot carry a query string).
+
+*Does the QR-code / `?from=` path interact with this?* **It composes, and I covered it with a
+scenario.** `JoinSourceTag` strips `?from=` and redirects to the clean address *before* the
+LiveView mounts, then keeps the tag in the session. The group page's existing `return_path/2`
+rebuilds the address *with* the tag, and I pass that same function to the header — so the
+header's return destination carries the join source too, and attribution survives the sign-in
+hop. Reusing `return_path/2` rather than duplicating it is deliberate: the header and the join
+button cannot drift apart. The scenario "A tagged arrival keeps its source through the header
+sign-in" is what holds that.
+
+*What happens on register from a huddl page, where confirmation intervenes?*
+`ConfirmationDestination` covers it, and already did. `HuddlLive.Show.handle_params/3` calls
+`ConfirmationDestination.remember/2` on every load, so the destination is stored on the
+*account* — which is why confirming in a different browser still lands on the right huddl.
+The one thing my change adds is that the header's "Sign up" now reaches `/register` with the
+huddl in hand, so the pre-confirmation page is the huddl rather than the agenda. The scenario
+"The header sign-up returns me to the huddl after confirming" walks the whole path:
+register → unconfirmed on the huddl → confirm elsewhere → back on the huddl → RSVP.
+
+**Security.** Every path added goes through `HuddlzWeb.AuthReturnTo.validate/1`, and it is
+applied in `Layouts.app/1` itself — not at the call sites. That was the one real design
+decision here: validating in the component means a page cannot hand the header an off-site
+destination even by mistake, and any future caller is covered without remembering to.
+`validate/1` needed no changes; the scenario "An unsafe return destination cannot redirect the
+header sign-in" is the one scenario that passed *before* implementation, which is the correct
+result — it documents that the guard was already sound against cross-host, protocol-relative,
+backslash, bare-host and encoded-separator shapes. No new input shape appeared, so no new
+unit test was warranted beyond that scenario.
+
+**What surprised me.**
+
+1. **Most of this variant was already built.** Four of the six entry points already carried
+   `return_to`. The whole behavioral change is 37 lines across 3 files. As the designated
+   baseline, that is the most important number in this document: whatever the other five
+   variants cost, they are being compared against *this*.
+2. **The bug was inconsistency, not absence.** The failing test output showed both links side
+   by side in the same page — `href="/sign-in"` and
+   `href="/sign-in?return_to=%2Fgroups%2Ftrail-pals%2Fhuddlz%2F..."`. That is the whole issue
+   in two lines of HTML, and it reframes #670: the plumbing was never missing, it was just
+   unevenly applied.
+3. **This variant changes no pixels.** Two existing buttons point somewhere better. That
+   collides with the brief's production-quality-UI requirement, and I resolved it by *not*
+   restyling the header: scope discipline says polish the surface you change, and this variant
+   changes behavior only. If A is scored down on Desirable/Delightful for having no visuals,
+   that is a true signal about the variant, not an artifact of effort — and it is worth the
+   comparison knowing that A's ceiling is "the journey works", not "the journey feels new".
+4. **The ambiguity in my own test was the finding.** My first scenario draft said `I click
+   link "Sign in"` and failed because *two* links matched. I had to name the header
+   explicitly, which is precisely the user-facing confusion this variant fixes.
+
+**What I would cut.** Nothing from the implementation — it is already near-minimal. From the
+*spec*, I would cut the session-capture option entirely rather than leave it as an open
+question; having now built the link-level version, session capture looks like a net negative
+rather than a trade-off. I would also drop the suggestion of a new `validate/1` unit test:
+the existing guard is complete, and a unit test asserting it still rejects what it already
+rejected adds maintenance without adding safety.
+
+**What I deliberately left out.** The two bare `/sign-in` redirects in `live_user_auth.ex`
+(`:live_user_required`, `:admin_required`) and the one in `live/huddl_live.ex`. These are not
+reachable from a huddl or group page — they fire when a signed-out person hits a page that
+requires an account (organize, admin, notifications). They are genuinely worth fixing and
+would be a natural follow-up, but they are outside this variant's scope ("reachable from a
+huddl or group page") and fixing them would inflate the baseline's diff and make the
+comparison less honest.
+
+**Terminology used.** I avoided coining a noun for the landing page, because this variant's
+claim is that the landing page stops mattering for this journey. For the remembered pre-auth
+intent I used **return destination** — matching the existing `return_to` parameter and
+`AuthReturnTo` module, and the existing `ConfirmationDestination` resource, so there is no new
+vocabulary to learn. I would recommend *return destination* over *arrival intent* for the
+glossary: it names the thing stored (a path), not a psychological state, and three modules
+already spell it that way. "huddl" / "huddlz" throughout, in scenarios, comments and copy.
 
 - Clicks from login to an un-RSVP'd huddl:
 - First-time user without help:
@@ -396,7 +900,133 @@ than a default you set once.
 - [ ] Measure clicks; record in Findings.
 - [ ] `mix precommit`.
 
-**Findings** _(fill in during the PR)_
+**Findings**
+
+**Measured click count.** Counted from the scenarios in
+`test/features/header_return_to.feature`, for a signed-out person who arrives on a huddl page
+from a link or QR code and uses the *header's* "Sign in".
+
+| | Before | After |
+| --- | --- | --- |
+| Clicks after submitting credentials, to reach the huddl's RSVP button | 3–5, or never | 0 |
+| Total clicks from the huddl page to being signed up for that huddl | 5–7, or never | 2 |
+
+Before: header sign-in → `/agenda`, which shows only huddlz already RSVP'd to, so the huddl is
+by definition absent → `Groups` chip (absent too, if the huddl is outside the person's groups)
+→ `/discover` → type a search → click the huddl → RSVP. "Or never" is not rhetorical: a person
+who does not remember the huddl's title has no path back from the agenda at all.
+
+After: header sign-in → back on the huddl → RSVP. Two clicks, and the landing page never
+enters the journey.
+
+The huddl page's own "Sign in to RSVP" button was already 2 clicks before this change. So the
+headline is not that A makes the best path faster — it is that A makes the *most obvious*
+path (the header button, top-right, the one that looks like the way to sign in) as fast as
+the best one. The gap was never the agenda; it was that two buttons on the same page
+disagreed about whether intent is worth keeping.
+
+**Entry point audit.** Every sign-in / register entry point reachable from a huddl or group
+page, with behavior before this change:
+
+| Entry point | Where | Before | After |
+| --- | --- | --- | --- |
+| Topbar "Sign in" | `components/layouts.ex` | bare `/sign-in` — intent lost | carries `return_to` |
+| Topbar "Sign up" | `components/layouts.ex` | bare `/register` — intent lost | carries `return_to` |
+| Huddl page "Sign in to RSVP" | `live/huddl_live/show.ex` | already carried `return_to` | unchanged |
+| Group page "Sign in to join" | `live/group_live/show.ex` | already carried `return_to` | unchanged |
+| Invitation page redirect | `live/group_invitation_live.ex` | already carried `return_to` | unchanged |
+| Sign-in ↔ register links | `live/auth_live/{sign_in,register}.ex` | already preserved `return_to` | unchanged |
+| Magic-link / token forms | `live/auth_live/components.ex` | already preserved `return_to` | unchanged |
+| Landing page "Sign in" | `live/landing_live.ex` | bare — correct, there is no origin to return to | unchanged |
+| `/discover` gated views | `live/huddl_live.ex` | bare `push_navigate` to `/sign-in` | unchanged — see "what I left out" |
+| Protected-route bounces | `live_user_auth.ex` (`:live_user_required`, `:admin_required`) | bare `/sign-in` | unchanged — see "what I left out" |
+
+So the audit found exactly **two** uncovered entry points on the pages this variant is about.
+The spec's framing was right: this variant is much smaller than #670 implies.
+
+**Answers to the open questions.**
+
+*Link-level coverage, session capture, or both?* **Link-level only.** I built it that way and
+I would not add session capture. A plug that records every unauthenticated page view is a
+bigger diff for a worse outcome: the session then holds a destination the person may have
+abandoned several pages ago, so sign-in teleports them somewhere they have stopped caring
+about — and it is silent, so there is nothing on screen that explains the jump. Link-level
+coverage has the property that matters: the destination is whatever page the person was
+looking at when they reached for the button. The existing session `return_to` fallback in
+`AuthController.return_to/1` already handles the one case that genuinely needs it (a
+redirect that cannot carry a query string).
+
+*Does the QR-code / `?from=` path interact with this?* **It composes, and I covered it with a
+scenario.** `JoinSourceTag` strips `?from=` and redirects to the clean address *before* the
+LiveView mounts, then keeps the tag in the session. The group page's existing `return_path/2`
+rebuilds the address *with* the tag, and I pass that same function to the header — so the
+header's return destination carries the join source too, and attribution survives the sign-in
+hop. Reusing `return_path/2` rather than duplicating it is deliberate: the header and the join
+button cannot drift apart. The scenario "A tagged arrival keeps its source through the header
+sign-in" is what holds that.
+
+*What happens on register from a huddl page, where confirmation intervenes?*
+`ConfirmationDestination` covers it, and already did. `HuddlLive.Show.handle_params/3` calls
+`ConfirmationDestination.remember/2` on every load, so the destination is stored on the
+*account* — which is why confirming in a different browser still lands on the right huddl.
+The one thing my change adds is that the header's "Sign up" now reaches `/register` with the
+huddl in hand, so the pre-confirmation page is the huddl rather than the agenda. The scenario
+"The header sign-up returns me to the huddl after confirming" walks the whole path:
+register → unconfirmed on the huddl → confirm elsewhere → back on the huddl → RSVP.
+
+**Security.** Every path added goes through `HuddlzWeb.AuthReturnTo.validate/1`, and it is
+applied in `Layouts.app/1` itself — not at the call sites. That was the one real design
+decision here: validating in the component means a page cannot hand the header an off-site
+destination even by mistake, and any future caller is covered without remembering to.
+`validate/1` needed no changes; the scenario "An unsafe return destination cannot redirect the
+header sign-in" is the one scenario that passed *before* implementation, which is the correct
+result — it documents that the guard was already sound against cross-host, protocol-relative,
+backslash, bare-host and encoded-separator shapes. No new input shape appeared, so no new
+unit test was warranted beyond that scenario.
+
+**What surprised me.**
+
+1. **Most of this variant was already built.** Four of the six entry points already carried
+   `return_to`. The whole behavioral change is 37 lines across 3 files. As the designated
+   baseline, that is the most important number in this document: whatever the other five
+   variants cost, they are being compared against *this*.
+2. **The bug was inconsistency, not absence.** The failing test output showed both links side
+   by side in the same page — `href="/sign-in"` and
+   `href="/sign-in?return_to=%2Fgroups%2Ftrail-pals%2Fhuddlz%2F..."`. That is the whole issue
+   in two lines of HTML, and it reframes #670: the plumbing was never missing, it was just
+   unevenly applied.
+3. **This variant changes no pixels.** Two existing buttons point somewhere better. That
+   collides with the brief's production-quality-UI requirement, and I resolved it by *not*
+   restyling the header: scope discipline says polish the surface you change, and this variant
+   changes behavior only. If A is scored down on Desirable/Delightful for having no visuals,
+   that is a true signal about the variant, not an artifact of effort — and it is worth the
+   comparison knowing that A's ceiling is "the journey works", not "the journey feels new".
+4. **The ambiguity in my own test was the finding.** My first scenario draft said `I click
+   link "Sign in"` and failed because *two* links matched. I had to name the header
+   explicitly, which is precisely the user-facing confusion this variant fixes.
+
+**What I would cut.** Nothing from the implementation — it is already near-minimal. From the
+*spec*, I would cut the session-capture option entirely rather than leave it as an open
+question; having now built the link-level version, session capture looks like a net negative
+rather than a trade-off. I would also drop the suggestion of a new `validate/1` unit test:
+the existing guard is complete, and a unit test asserting it still rejects what it already
+rejected adds maintenance without adding safety.
+
+**What I deliberately left out.** The two bare `/sign-in` redirects in `live_user_auth.ex`
+(`:live_user_required`, `:admin_required`) and the one in `live/huddl_live.ex`. These are not
+reachable from a huddl or group page — they fire when a signed-out person hits a page that
+requires an account (organize, admin, notifications). They are genuinely worth fixing and
+would be a natural follow-up, but they are outside this variant's scope ("reachable from a
+huddl or group page") and fixing them would inflate the baseline's diff and make the
+comparison less honest.
+
+**Terminology used.** I avoided coining a noun for the landing page, because this variant's
+claim is that the landing page stops mattering for this journey. For the remembered pre-auth
+intent I used **return destination** — matching the existing `return_to` parameter and
+`AuthReturnTo` module, and the existing `ConfirmationDestination` resource, so there is no new
+vocabulary to learn. I would recommend *return destination* over *arrival intent* for the
+glossary: it names the thing stored (a path), not a psychological state, and three modules
+already spell it that way. "huddl" / "huddlz" throughout, in scenarios, comments and copy.
 
 - Clicks from login to an un-RSVP'd huddl:
 - First-time user without help:
@@ -442,7 +1072,133 @@ think it's production logic.
 - [ ] Measure clicks; record in Findings.
 - [ ] `mix precommit`.
 
-**Findings** _(fill in during the PR)_
+**Findings**
+
+**Measured click count.** Counted from the scenarios in
+`test/features/header_return_to.feature`, for a signed-out person who arrives on a huddl page
+from a link or QR code and uses the *header's* "Sign in".
+
+| | Before | After |
+| --- | --- | --- |
+| Clicks after submitting credentials, to reach the huddl's RSVP button | 3–5, or never | 0 |
+| Total clicks from the huddl page to being signed up for that huddl | 5–7, or never | 2 |
+
+Before: header sign-in → `/agenda`, which shows only huddlz already RSVP'd to, so the huddl is
+by definition absent → `Groups` chip (absent too, if the huddl is outside the person's groups)
+→ `/discover` → type a search → click the huddl → RSVP. "Or never" is not rhetorical: a person
+who does not remember the huddl's title has no path back from the agenda at all.
+
+After: header sign-in → back on the huddl → RSVP. Two clicks, and the landing page never
+enters the journey.
+
+The huddl page's own "Sign in to RSVP" button was already 2 clicks before this change. So the
+headline is not that A makes the best path faster — it is that A makes the *most obvious*
+path (the header button, top-right, the one that looks like the way to sign in) as fast as
+the best one. The gap was never the agenda; it was that two buttons on the same page
+disagreed about whether intent is worth keeping.
+
+**Entry point audit.** Every sign-in / register entry point reachable from a huddl or group
+page, with behavior before this change:
+
+| Entry point | Where | Before | After |
+| --- | --- | --- | --- |
+| Topbar "Sign in" | `components/layouts.ex` | bare `/sign-in` — intent lost | carries `return_to` |
+| Topbar "Sign up" | `components/layouts.ex` | bare `/register` — intent lost | carries `return_to` |
+| Huddl page "Sign in to RSVP" | `live/huddl_live/show.ex` | already carried `return_to` | unchanged |
+| Group page "Sign in to join" | `live/group_live/show.ex` | already carried `return_to` | unchanged |
+| Invitation page redirect | `live/group_invitation_live.ex` | already carried `return_to` | unchanged |
+| Sign-in ↔ register links | `live/auth_live/{sign_in,register}.ex` | already preserved `return_to` | unchanged |
+| Magic-link / token forms | `live/auth_live/components.ex` | already preserved `return_to` | unchanged |
+| Landing page "Sign in" | `live/landing_live.ex` | bare — correct, there is no origin to return to | unchanged |
+| `/discover` gated views | `live/huddl_live.ex` | bare `push_navigate` to `/sign-in` | unchanged — see "what I left out" |
+| Protected-route bounces | `live_user_auth.ex` (`:live_user_required`, `:admin_required`) | bare `/sign-in` | unchanged — see "what I left out" |
+
+So the audit found exactly **two** uncovered entry points on the pages this variant is about.
+The spec's framing was right: this variant is much smaller than #670 implies.
+
+**Answers to the open questions.**
+
+*Link-level coverage, session capture, or both?* **Link-level only.** I built it that way and
+I would not add session capture. A plug that records every unauthenticated page view is a
+bigger diff for a worse outcome: the session then holds a destination the person may have
+abandoned several pages ago, so sign-in teleports them somewhere they have stopped caring
+about — and it is silent, so there is nothing on screen that explains the jump. Link-level
+coverage has the property that matters: the destination is whatever page the person was
+looking at when they reached for the button. The existing session `return_to` fallback in
+`AuthController.return_to/1` already handles the one case that genuinely needs it (a
+redirect that cannot carry a query string).
+
+*Does the QR-code / `?from=` path interact with this?* **It composes, and I covered it with a
+scenario.** `JoinSourceTag` strips `?from=` and redirects to the clean address *before* the
+LiveView mounts, then keeps the tag in the session. The group page's existing `return_path/2`
+rebuilds the address *with* the tag, and I pass that same function to the header — so the
+header's return destination carries the join source too, and attribution survives the sign-in
+hop. Reusing `return_path/2` rather than duplicating it is deliberate: the header and the join
+button cannot drift apart. The scenario "A tagged arrival keeps its source through the header
+sign-in" is what holds that.
+
+*What happens on register from a huddl page, where confirmation intervenes?*
+`ConfirmationDestination` covers it, and already did. `HuddlLive.Show.handle_params/3` calls
+`ConfirmationDestination.remember/2` on every load, so the destination is stored on the
+*account* — which is why confirming in a different browser still lands on the right huddl.
+The one thing my change adds is that the header's "Sign up" now reaches `/register` with the
+huddl in hand, so the pre-confirmation page is the huddl rather than the agenda. The scenario
+"The header sign-up returns me to the huddl after confirming" walks the whole path:
+register → unconfirmed on the huddl → confirm elsewhere → back on the huddl → RSVP.
+
+**Security.** Every path added goes through `HuddlzWeb.AuthReturnTo.validate/1`, and it is
+applied in `Layouts.app/1` itself — not at the call sites. That was the one real design
+decision here: validating in the component means a page cannot hand the header an off-site
+destination even by mistake, and any future caller is covered without remembering to.
+`validate/1` needed no changes; the scenario "An unsafe return destination cannot redirect the
+header sign-in" is the one scenario that passed *before* implementation, which is the correct
+result — it documents that the guard was already sound against cross-host, protocol-relative,
+backslash, bare-host and encoded-separator shapes. No new input shape appeared, so no new
+unit test was warranted beyond that scenario.
+
+**What surprised me.**
+
+1. **Most of this variant was already built.** Four of the six entry points already carried
+   `return_to`. The whole behavioral change is 37 lines across 3 files. As the designated
+   baseline, that is the most important number in this document: whatever the other five
+   variants cost, they are being compared against *this*.
+2. **The bug was inconsistency, not absence.** The failing test output showed both links side
+   by side in the same page — `href="/sign-in"` and
+   `href="/sign-in?return_to=%2Fgroups%2Ftrail-pals%2Fhuddlz%2F..."`. That is the whole issue
+   in two lines of HTML, and it reframes #670: the plumbing was never missing, it was just
+   unevenly applied.
+3. **This variant changes no pixels.** Two existing buttons point somewhere better. That
+   collides with the brief's production-quality-UI requirement, and I resolved it by *not*
+   restyling the header: scope discipline says polish the surface you change, and this variant
+   changes behavior only. If A is scored down on Desirable/Delightful for having no visuals,
+   that is a true signal about the variant, not an artifact of effort — and it is worth the
+   comparison knowing that A's ceiling is "the journey works", not "the journey feels new".
+4. **The ambiguity in my own test was the finding.** My first scenario draft said `I click
+   link "Sign in"` and failed because *two* links matched. I had to name the header
+   explicitly, which is precisely the user-facing confusion this variant fixes.
+
+**What I would cut.** Nothing from the implementation — it is already near-minimal. From the
+*spec*, I would cut the session-capture option entirely rather than leave it as an open
+question; having now built the link-level version, session capture looks like a net negative
+rather than a trade-off. I would also drop the suggestion of a new `validate/1` unit test:
+the existing guard is complete, and a unit test asserting it still rejects what it already
+rejected adds maintenance without adding safety.
+
+**What I deliberately left out.** The two bare `/sign-in` redirects in `live_user_auth.ex`
+(`:live_user_required`, `:admin_required`) and the one in `live/huddl_live.ex`. These are not
+reachable from a huddl or group page — they fire when a signed-out person hits a page that
+requires an account (organize, admin, notifications). They are genuinely worth fixing and
+would be a natural follow-up, but they are outside this variant's scope ("reachable from a
+huddl or group page") and fixing them would inflate the baseline's diff and make the
+comparison less honest.
+
+**Terminology used.** I avoided coining a noun for the landing page, because this variant's
+claim is that the landing page stops mattering for this journey. For the remembered pre-auth
+intent I used **return destination** — matching the existing `return_to` parameter and
+`AuthReturnTo` module, and the existing `ConfirmationDestination` resource, so there is no new
+vocabulary to learn. I would recommend *return destination* over *arrival intent* for the
+glossary: it names the thing stored (a path), not a psychological state, and three modules
+already spell it that way. "huddl" / "huddlz" throughout, in scenarios, comments and copy.
 
 - Clicks from login to an un-RSVP'd huddl:
 - Detection condition used (and whether it's a stand-in):
@@ -481,7 +1237,133 @@ together. Judge it on coherence, and say so if it feels stapled.
 - [ ] Measure clicks for both journeys (with and without a destination).
 - [ ] `mix precommit`.
 
-**Findings** _(fill in during the PR)_
+**Findings**
+
+**Measured click count.** Counted from the scenarios in
+`test/features/header_return_to.feature`, for a signed-out person who arrives on a huddl page
+from a link or QR code and uses the *header's* "Sign in".
+
+| | Before | After |
+| --- | --- | --- |
+| Clicks after submitting credentials, to reach the huddl's RSVP button | 3–5, or never | 0 |
+| Total clicks from the huddl page to being signed up for that huddl | 5–7, or never | 2 |
+
+Before: header sign-in → `/agenda`, which shows only huddlz already RSVP'd to, so the huddl is
+by definition absent → `Groups` chip (absent too, if the huddl is outside the person's groups)
+→ `/discover` → type a search → click the huddl → RSVP. "Or never" is not rhetorical: a person
+who does not remember the huddl's title has no path back from the agenda at all.
+
+After: header sign-in → back on the huddl → RSVP. Two clicks, and the landing page never
+enters the journey.
+
+The huddl page's own "Sign in to RSVP" button was already 2 clicks before this change. So the
+headline is not that A makes the best path faster — it is that A makes the *most obvious*
+path (the header button, top-right, the one that looks like the way to sign in) as fast as
+the best one. The gap was never the agenda; it was that two buttons on the same page
+disagreed about whether intent is worth keeping.
+
+**Entry point audit.** Every sign-in / register entry point reachable from a huddl or group
+page, with behavior before this change:
+
+| Entry point | Where | Before | After |
+| --- | --- | --- | --- |
+| Topbar "Sign in" | `components/layouts.ex` | bare `/sign-in` — intent lost | carries `return_to` |
+| Topbar "Sign up" | `components/layouts.ex` | bare `/register` — intent lost | carries `return_to` |
+| Huddl page "Sign in to RSVP" | `live/huddl_live/show.ex` | already carried `return_to` | unchanged |
+| Group page "Sign in to join" | `live/group_live/show.ex` | already carried `return_to` | unchanged |
+| Invitation page redirect | `live/group_invitation_live.ex` | already carried `return_to` | unchanged |
+| Sign-in ↔ register links | `live/auth_live/{sign_in,register}.ex` | already preserved `return_to` | unchanged |
+| Magic-link / token forms | `live/auth_live/components.ex` | already preserved `return_to` | unchanged |
+| Landing page "Sign in" | `live/landing_live.ex` | bare — correct, there is no origin to return to | unchanged |
+| `/discover` gated views | `live/huddl_live.ex` | bare `push_navigate` to `/sign-in` | unchanged — see "what I left out" |
+| Protected-route bounces | `live_user_auth.ex` (`:live_user_required`, `:admin_required`) | bare `/sign-in` | unchanged — see "what I left out" |
+
+So the audit found exactly **two** uncovered entry points on the pages this variant is about.
+The spec's framing was right: this variant is much smaller than #670 implies.
+
+**Answers to the open questions.**
+
+*Link-level coverage, session capture, or both?* **Link-level only.** I built it that way and
+I would not add session capture. A plug that records every unauthenticated page view is a
+bigger diff for a worse outcome: the session then holds a destination the person may have
+abandoned several pages ago, so sign-in teleports them somewhere they have stopped caring
+about — and it is silent, so there is nothing on screen that explains the jump. Link-level
+coverage has the property that matters: the destination is whatever page the person was
+looking at when they reached for the button. The existing session `return_to` fallback in
+`AuthController.return_to/1` already handles the one case that genuinely needs it (a
+redirect that cannot carry a query string).
+
+*Does the QR-code / `?from=` path interact with this?* **It composes, and I covered it with a
+scenario.** `JoinSourceTag` strips `?from=` and redirects to the clean address *before* the
+LiveView mounts, then keeps the tag in the session. The group page's existing `return_path/2`
+rebuilds the address *with* the tag, and I pass that same function to the header — so the
+header's return destination carries the join source too, and attribution survives the sign-in
+hop. Reusing `return_path/2` rather than duplicating it is deliberate: the header and the join
+button cannot drift apart. The scenario "A tagged arrival keeps its source through the header
+sign-in" is what holds that.
+
+*What happens on register from a huddl page, where confirmation intervenes?*
+`ConfirmationDestination` covers it, and already did. `HuddlLive.Show.handle_params/3` calls
+`ConfirmationDestination.remember/2` on every load, so the destination is stored on the
+*account* — which is why confirming in a different browser still lands on the right huddl.
+The one thing my change adds is that the header's "Sign up" now reaches `/register` with the
+huddl in hand, so the pre-confirmation page is the huddl rather than the agenda. The scenario
+"The header sign-up returns me to the huddl after confirming" walks the whole path:
+register → unconfirmed on the huddl → confirm elsewhere → back on the huddl → RSVP.
+
+**Security.** Every path added goes through `HuddlzWeb.AuthReturnTo.validate/1`, and it is
+applied in `Layouts.app/1` itself — not at the call sites. That was the one real design
+decision here: validating in the component means a page cannot hand the header an off-site
+destination even by mistake, and any future caller is covered without remembering to.
+`validate/1` needed no changes; the scenario "An unsafe return destination cannot redirect the
+header sign-in" is the one scenario that passed *before* implementation, which is the correct
+result — it documents that the guard was already sound against cross-host, protocol-relative,
+backslash, bare-host and encoded-separator shapes. No new input shape appeared, so no new
+unit test was warranted beyond that scenario.
+
+**What surprised me.**
+
+1. **Most of this variant was already built.** Four of the six entry points already carried
+   `return_to`. The whole behavioral change is 37 lines across 3 files. As the designated
+   baseline, that is the most important number in this document: whatever the other five
+   variants cost, they are being compared against *this*.
+2. **The bug was inconsistency, not absence.** The failing test output showed both links side
+   by side in the same page — `href="/sign-in"` and
+   `href="/sign-in?return_to=%2Fgroups%2Ftrail-pals%2Fhuddlz%2F..."`. That is the whole issue
+   in two lines of HTML, and it reframes #670: the plumbing was never missing, it was just
+   unevenly applied.
+3. **This variant changes no pixels.** Two existing buttons point somewhere better. That
+   collides with the brief's production-quality-UI requirement, and I resolved it by *not*
+   restyling the header: scope discipline says polish the surface you change, and this variant
+   changes behavior only. If A is scored down on Desirable/Delightful for having no visuals,
+   that is a true signal about the variant, not an artifact of effort — and it is worth the
+   comparison knowing that A's ceiling is "the journey works", not "the journey feels new".
+4. **The ambiguity in my own test was the finding.** My first scenario draft said `I click
+   link "Sign in"` and failed because *two* links matched. I had to name the header
+   explicitly, which is precisely the user-facing confusion this variant fixes.
+
+**What I would cut.** Nothing from the implementation — it is already near-minimal. From the
+*spec*, I would cut the session-capture option entirely rather than leave it as an open
+question; having now built the link-level version, session capture looks like a net negative
+rather than a trade-off. I would also drop the suggestion of a new `validate/1` unit test:
+the existing guard is complete, and a unit test asserting it still rejects what it already
+rejected adds maintenance without adding safety.
+
+**What I deliberately left out.** The two bare `/sign-in` redirects in `live_user_auth.ex`
+(`:live_user_required`, `:admin_required`) and the one in `live/huddl_live.ex`. These are not
+reachable from a huddl or group page — they fire when a signed-out person hits a page that
+requires an account (organize, admin, notifications). They are genuinely worth fixing and
+would be a natural follow-up, but they are outside this variant's scope ("reachable from a
+huddl or group page") and fixing them would inflate the baseline's diff and make the
+comparison less honest.
+
+**Terminology used.** I avoided coining a noun for the landing page, because this variant's
+claim is that the landing page stops mattering for this journey. For the remembered pre-auth
+intent I used **return destination** — matching the existing `return_to` parameter and
+`AuthReturnTo` module, and the existing `ConfirmationDestination` resource, so there is no new
+vocabulary to learn. I would recommend *return destination* over *arrival intent* for the
+glossary: it names the thing stored (a path), not a psychological state, and three modules
+already spell it that way. "huddl" / "huddlz" throughout, in scenarios, comments and copy.
 
 - Clicks, arriving with a destination:
 - Clicks, arriving without one:

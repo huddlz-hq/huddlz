@@ -51,12 +51,24 @@ defmodule HuddlzWeb.Layouts do
     doc: "groups the current_user organizes — rendered as sb-org-row entries"
 
   attr :query, :string, default: "", doc: "current search query — prefilled in topbar input"
+
+  attr :return_to, :string,
+    default: nil,
+    doc: """
+    where the topbar's sign-in and sign-up links should send the person back
+    to once they are signed in. A page worth returning to passes its own
+    address; anything else leaves this nil and the links stay bare. Always
+    re-checked through `HuddlzWeb.AuthReturnTo.validate/1` here, so a page
+    cannot hand the header an off-site destination.
+    """
+
   slot :inner_block, required: true
 
   def app(assigns) do
     assigns =
       assigns
       |> assign_new(:signed_in, fn -> assigns.current_user != nil end)
+      |> assign(:return_to, HuddlzWeb.AuthReturnTo.validate(assigns[:return_to]))
 
     ~H"""
     <.skip_link />
@@ -339,8 +351,12 @@ defmodule HuddlzWeb.Layouts do
               </span>
             </.link>
           <% else %>
-            <.link class="btn-secondary" navigate={~p"/sign-in"}>Sign in</.link>
-            <.link class="btn-primary" navigate={~p"/register"}>Sign up</.link>
+            <.link class="btn-secondary" navigate={auth_path(~p"/sign-in", @return_to)}>
+              Sign in
+            </.link>
+            <.link class="btn-primary" navigate={auth_path(~p"/register", @return_to)}>
+              Sign up
+            </.link>
           <% end %>
         </div>
       </header>
@@ -459,6 +475,14 @@ defmodule HuddlzWeb.Layouts do
       {:dark, "Dark", "hero-moon", "Always dark"}
     ]
   end
+
+  # A signed-out person reading a huddl or a group has somewhere they mean to
+  # come back to. The topbar's sign-in and sign-up carry it so the trip
+  # through auth does not cost them the page. `@return_to` has already been
+  # through `AuthReturnTo.validate/1` in `app/1`; nil means there is nothing
+  # worth returning to and the bare path is right.
+  defp auth_path(path, nil), do: path
+  defp auth_path(path, return_to), do: path <> "?" <> URI.encode_query(return_to: return_to)
 
   defp theme_current(%{theme_preference: theme}) when theme in [:light, :dark], do: theme
   defp theme_current(_user), do: :system

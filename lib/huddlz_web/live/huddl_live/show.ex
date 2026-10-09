@@ -92,6 +92,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
       unread_notification_count={@unread_notification_count}
       sidebar_owned_groups={@sidebar_owned_groups}
       active="discover"
+      return_to={rsvp_return_to(@huddl.group.slug, @huddl.id)}
     >
       <HuddlzWeb.StructuredData.huddl huddl={@huddl} url={@canonical_url} />
       <div class={["huddl-frame", @can_view_photos && "huddl-frame-photos"]}>
@@ -1055,9 +1056,13 @@ defmodule HuddlzWeb.HuddlLive.Show do
   defp dock_rsvp?(%{status: status}) when status in [:draft, :completed, :cancelled], do: nil
   defp dock_rsvp?(_huddl), do: true
 
+  # This huddl is where a signed-out person meant to be. Both the RSVP call to
+  # action and the topbar's sign-in send them back here, so whichever one they
+  # reach for costs them the same single trip.
+  defp rsvp_return_to(group_slug, huddl_id), do: "/groups/#{group_slug}/huddlz/#{huddl_id}"
+
   defp rsvp_sign_in_path(group_slug, huddl_id) do
-    return_to = "/groups/#{group_slug}/huddlz/#{huddl_id}"
-    "/sign-in?" <> URI.encode_query(return_to: return_to)
+    "/sign-in?" <> URI.encode_query(return_to: rsvp_return_to(group_slug, huddl_id))
   end
 
   defp upload_one_photo(path, entry, huddl_id, user) do
