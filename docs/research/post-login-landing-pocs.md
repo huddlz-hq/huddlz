@@ -147,7 +147,7 @@ on the others.
 | ID | Variant | Issue proposal | Size | Status | PR |
 | --- | --- | --- | --- | --- | --- |
 | A | Return to origin | 1 | S | Not started | — |
-| B | Better default landing | 2 | S–M | In progress | — |
+| B | Better default landing | 2 | S–M | PR open #675 | [#675](https://github.com/huddlz-hq/huddlz/pull/675) |
 | C | Discover inside the agenda | 3 | L | Not started | — |
 | D | Prominent search on the agenda | 4 | M | Not started | — |
 | E | Intent-based login flow | 5 | M | Not started | — |
