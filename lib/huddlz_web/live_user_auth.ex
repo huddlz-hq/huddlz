@@ -127,6 +127,7 @@ defmodule HuddlzWeb.LiveUserAuth do
       |> subscribe_to_organizer_access_changes()
       |> maybe_subscribe_to_unread_count()
       |> maybe_attach_theme_menu()
+      |> HuddlzWeb.LandingNudge.attach()
       |> watch_for_suspension()
 
     {:cont, socket}

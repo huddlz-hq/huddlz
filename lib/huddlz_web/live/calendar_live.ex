@@ -23,6 +23,7 @@ defmodule HuddlzWeb.CalendarLive do
 
   alias Huddlz.Communities
   alias HuddlzWeb.HuddlStatus
+  alias HuddlzWeb.LandingNudge
   alias HuddlzWeb.Layouts
   alias HuddlzWeb.Live.Helpers.BrowserTimeZone
   alias HuddlzWeb.Live.Helpers.HuddlCardHelpers
@@ -590,6 +591,13 @@ defmodule HuddlzWeb.CalendarLive do
           </p>
         </div>
       </div>
+
+      <LandingNudge.nudge
+        :if={@view_mode == :agenda}
+        user={@current_user}
+        path={assigns[:landing_nudge_path] || "/agenda"}
+        hidden={assigns[:landing_nudge_hidden?] || false}
+      />
 
       <div class="cal-toolbar">
         <%= case @view_mode do %>

@@ -151,7 +151,7 @@ on the others.
 | C | Discover inside the agenda | 3 | L | Not started | — |
 | D | Prominent search on the agenda | 4 | M | Not started | — |
 | E | Intent-based login flow | 5 | M | Not started | — |
-| F | Adaptive nudge | 6 | M–L | Not started | — |
+| F | Adaptive nudge | 6 | M–L | In progress | — |
 | G | Combination: A + B + C | "these can be combined" | L | Not started | — |
 
 Size is relative effort, not priority.
@@ -430,25 +430,96 @@ think it's production logic.
 - Is the nudge welcome or irritating? Report your honest reaction.
 
 **Tasks**
-- [ ] Write a Cucumber scenario: a person who navigates away from their landing page several
+- [x] Write a Cucumber scenario: a person who navigates away from their landing page several
       times is offered the chance to change it. Demonstrate it failing.
-- [ ] Write a scenario: choosing Change updates the landing and the next sign-in honors it.
-- [ ] Write a scenario: choosing "Don't ask again" stops the offer.
-- [ ] Define the detection condition; label it clearly as a stand-in if it is one.
-- [ ] Add the minimum landing preference the nudge can write to (borrow B's shape; duplicating
+- [x] Write a scenario: choosing Change updates the landing and the next sign-in honors it.
+- [x] Write a scenario: choosing "Don't ask again" stops the offer.
+- [x] Define the detection condition; label it clearly as a stand-in if it is one.
+- [x] Add the minimum landing preference the nudge can write to (borrow B's shape; duplicating
       B is fine).
-- [ ] Add the nudge UI with all three actions.
-- [ ] Persist the dismissal per the policy you chose.
-- [ ] Measure clicks; record in Findings.
-- [ ] `mix precommit`.
+- [x] Add the nudge UI with all three actions.
+- [x] Persist the dismissal per the policy you chose.
+- [x] Measure clicks; record in Findings.
+- [ ] `mix precommit`. _(deliberate follow-up after review, per the POC brief: verified by
+      scenario failing -> passing plus a clean `--warnings-as-errors` compile.)_
 
-**Findings** _(fill in during the PR)_
+**Findings**
 
-- Clicks from login to an un-RSVP'd huddl:
-- Detection condition used (and whether it's a stand-in):
-- Was the nudge welcome:
-- What you'd cut:
-- Terminology used:
+- **Clicks from login to an un-RSVP'd huddl:** 4 before, 3 after — and the saving is
+  smaller than that, because of what the sidebar already does (below).
+  - Baseline: land on `/agenda` -> **1** Discover in the sidebar -> **2** submit a search
+    -> **3** open the huddl -> **4** RSVP.
+  - After accepting the nudge (landing `:discover`): **1** submit a search -> **2** open the
+    huddl -> **3** RSVP. Plus a one-time **1** click on "Land on Discover", so the nudge pays
+    for itself on the second sign-in.
+  - **The honest caveat.** `components/layouts.ex` already renders a global topbar search that
+    GETs straight to `/discover` from *every* page, agenda included. Someone who uses that box
+    is at **3** clicks today, with no preference and no nudge. So for them variant F saves
+    **zero** clicks and only removes a surface they never visited. The 4-click baseline
+    assumes the person navigates via the sidebar rather than the search box. I did not
+    discover that search box until I was measuring, and it is the single most important thing
+    I found: it weakens F's premise, and it weakens #670's "the agenda is a dead end" framing
+    generally. Whoever scores these variants should check it before crediting any of them with
+    click savings.
+
+- **Detection condition used (and whether it's a stand-in):** **A stand-in. It should not
+  ship.** `User.landing_departures` is an integer on the user record, incremented once per
+  mount of a first-class in-app page that is not the person's landing page (`/discover`,
+  `/agenda`, `/groups`, `/calendar/week`), capped at the threshold. At **3** departures the
+  offer renders on the landing page. Three is a feel-it-in-a-POC number, not a researched one.
+  It is wrong in at least four ways, all documented in the module's `@moduledoc`:
+  1. it cannot tell "I came for a specific huddl and the agenda was no help" from idle
+     browsing — both look like a departure;
+  2. it never decays, so one curious afternoon marks the account permanently;
+  3. it writes to the user record on page mounts, which is the wrong home for navigation
+     signal and the wrong write pattern;
+  4. it counts a page *mount*, so a back-button round trip inflates the count.
+  Production would want something session- or event-shaped that distinguishes
+  *searched-then-left* from *browsed*, and that decays. Per the variant's own warning I did
+  **not** build analytics infrastructure to get there — the deliverable is the offer, not the
+  detector.
+
+- **Was the nudge welcome:** **Mixed, and I'd lean no in this form.** Honest reaction from
+  building and clicking it:
+  - The *copy* is the good part. "Change where you land after login?" with a reason ("You keep
+    heading somewhere else after signing in") is legible in about a second, and offering the
+    destination as a named button — "Land on Discover", with a line of hint text — means you
+    never have to go find a settings page. That much I'd keep.
+  - The *interruption* is the bad part, and the fact that it appears on the landing page makes
+    it worse: it appears exactly when the person has arrived with an intention, which is the
+    worst moment to ask them an unrelated question. It is a banner that pushes the content
+    down. Three times out of four I wanted to answer "not now" just to get rid of it, which is
+    the tell — a prompt people dismiss reflexively has become chrome, not help.
+  - It also asks the person to predict their own future behavior ("where do you *usually* want
+    to land?"), which is harder than the question it's trying to save them. The three-action
+    shape is right — a free out and a permanent out are both necessary — but needing a
+    "Don't ask again" button at all is an admission that the prompt is expected to annoy
+    someone.
+  - My read: the **preference** is worth having and the **nudge** is not the way to surface it.
+    A quiet, always-available control (variant B's setting, or a pin on the surface itself)
+    costs nothing and interrupts nobody. If a nudge survives at all it should be a one-line
+    inline link, not a banner, and it should appear on the page the person *keeps going to*
+    ("Always start here?") rather than on the one they're trying to leave. That reframing is
+    cheap and I'd test it before testing this.
+
+- **What you'd cut:**
+  - The **detector**, entirely, as described above. It is the majority of the risk in this
+    variant and none of its value.
+  - The **banner treatment** — reduce to an inline one-line offer.
+  - `landing_departures` as a **persisted column**. If a nudge like this ships, the counter is
+    session state; it does not belong on the user row.
+  - The **`:groups` landing option**, probably. `/agenda?scope=groups` as a *landing* is a
+    third thing to explain next to Agenda and Discover, and the nudge's job is to be
+    answerable without thinking. Two choices beat three here.
+  - The nudge's **"Not now"** could arguably go too: it is the option that makes the prompt
+    repeatable, and a prompt worth showing once is not obviously worth showing twice.
+
+- **Terminology used:** **landing** — `landing_preference`, `LandingPreference`, "where you
+  land after login", "Land on Discover". I picked it over *home* (already overloaded: `/` is
+  the landing surface, and the user record has a `home_location`) and over *post-sign-in
+  destination* (accurate, unusable in a button). The remembered pre-auth intent keeps the
+  existing code's name, **return destination** (`return_to`, `AuthReturnTo`), which I did not
+  rename. huddl/huddlz used throughout; no "event" anywhere in the diff.
 
 ---
 

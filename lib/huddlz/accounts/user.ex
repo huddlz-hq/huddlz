@@ -423,6 +423,31 @@ defmodule Huddlz.Accounts.User do
       accept [:theme_preference]
     end
 
+    # --- Adaptive landing nudge (POC, issue #670) -----------------------
+    # `landing_departures` is a STAND-IN for noticing that someone keeps
+    # leaving their landing page. Production would want something that
+    # distinguishes "went looking for a huddl" from "browsed around", and
+    # would not write to the user record on every page mount.
+    update :update_landing_preference do
+      description "Choose which page huddlz opens on after signing in"
+      accept [:landing_preference]
+
+      change set_attribute(:landing_departures, 0)
+    end
+
+    update :dismiss_landing_nudge do
+      description "Stop offering to change where this person lands after signing in"
+
+      change set_attribute(:landing_nudge_declined, true)
+    end
+
+    update :note_landing_departure do
+      description "Record that this person left their landing page for somewhere else"
+      require_atomic? false
+
+      change atomic_update(:landing_departures, expr(landing_departures + 1))
+    end
+
     update :update_notification_preferences do
       description "Merge a partial map of trigger overrides onto the user's notification_preferences."
       require_atomic? false
@@ -876,6 +901,11 @@ defmodule Huddlz.Accounts.User do
       description "Users can update their own appearance preference"
       authorize_if expr(id == ^actor(:id))
     end
+
+    policy action([:update_landing_preference, :dismiss_landing_nudge, :note_landing_departure]) do
+      description "Users can only change where they themselves land after signing in"
+      authorize_if expr(id == ^actor(:id))
+    end
   end
 
   validations do
@@ -979,6 +1009,32 @@ defmodule Huddlz.Accounts.User do
       description "Follow the device appearance, or always light or dark"
       allow_nil? false
       default :system
+      public? true
+    end
+
+    attribute :landing_preference, Huddlz.Accounts.LandingPreference do
+      description "Which page huddlz opens on after this person signs in"
+      allow_nil? false
+      default :agenda
+      public? true
+    end
+
+    attribute :landing_nudge_declined, :boolean do
+      description "This person asked not to be offered a different landing page again"
+      allow_nil? false
+      default false
+      public? true
+    end
+
+    attribute :landing_departures, :integer do
+      description """
+      How many times this person has left their landing page for somewhere
+      else. A stand-in for real navigation signal; see the POC in #670.
+      """
+
+      allow_nil? false
+      default 0
+      constraints min: 0
       public? true
     end
 

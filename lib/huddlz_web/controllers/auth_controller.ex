@@ -4,6 +4,7 @@ defmodule HuddlzWeb.AuthController do
 
   alias AshAuthentication.TokenResource.Actions, as: Tokens
   alias Huddlz.Accounts.ConfirmationDestination
+  alias Huddlz.Accounts.LandingPreference
   alias Huddlz.Accounts.Token
   alias Huddlz.Accounts.User
   alias Huddlz.Accounts.User.Errors.ConfirmationAddressChanged
@@ -27,7 +28,7 @@ defmodule HuddlzWeb.AuthController do
       if activity == {:confirm_new_user, :confirm} do
         ConfirmationDestination.validate(user.__metadata__[:confirmation_destination]) || ~p"/"
       else
-        return_to(conn)
+        landing_for(conn, user)
       end
 
     ConfirmationDestination.remember(user, return_to)
@@ -125,4 +126,18 @@ defmodule HuddlzWeb.AuthController do
     |> Enum.find_value(&AuthReturnTo.validate/1)
     |> Kernel.||(~p"/")
   end
+
+  # Variant F (#670): where someone lands when nothing else claimed the
+  # destination. An explicit `return_to` still wins — arriving for a
+  # specific huddl always outranks a standing preference — and the chosen
+  # path goes through `AuthReturnTo.validate/1` like any other.
+  defp landing_for(conn, %User{landing_preference: preference}) do
+    explicit =
+      [conn.params["return_to"], get_session(conn, :return_to)]
+      |> Enum.find_value(&AuthReturnTo.validate/1)
+
+    explicit || AuthReturnTo.validate(LandingPreference.path(preference)) || ~p"/"
+  end
+
+  defp landing_for(_conn, _user), do: ~p"/"
 end

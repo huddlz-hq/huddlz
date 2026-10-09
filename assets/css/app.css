@@ -8001,3 +8001,135 @@ body .photo-delete-preview figcaption { overflow-wrap: anywhere; }
   body .huddl-create-actions > :first-child { grid-column: 1 / -1; }
   body .huddl-create-actions > * { min-height: 44px; justify-content: center; }
 }
+
+/* ─────────────────────────────────────────────────  LANDING NUDGE (POC #670)  ───
+   Variant F's offer, on the landing page, after it has demonstrably sent the
+   person elsewhere a few times. One sentence of reason, one button per
+   alternative landing, and two ways out — one for now, one forever. Sized to
+   sit under the page head without competing with it. */
+body .landing-nudge {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 24px;
+  padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, var(--accent) 34%, transparent);
+  border-radius: var(--radius);
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--accent) 11%, transparent),
+      color-mix(in srgb, var(--accent) 4%, transparent)
+    ),
+    var(--panel);
+  color: var(--text);
+  animation: landing-nudge-in 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes landing-nudge-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body .landing-nudge { animation: none; }
+}
+
+body .landing-nudge .landing-nudge-mark {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent-ink);
+}
+
+body .landing-nudge .landing-nudge-body { flex: 1 1 auto; min-width: 0; }
+
+body .landing-nudge .landing-nudge-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+
+body .landing-nudge .landing-nudge-copy {
+  margin: 3px 0 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--soft);
+}
+
+body .landing-nudge .landing-nudge-actions {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+body .landing-nudge .landing-nudge-primary {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 7px 14px;
+  border: 1px solid color-mix(in srgb, var(--accent) 46%, transparent);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition: background 140ms ease, border-color 140ms ease, transform 140ms ease;
+}
+
+body .landing-nudge .landing-nudge-primary:hover {
+  background: color-mix(in srgb, var(--accent) 24%, transparent);
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+
+body .landing-nudge .landing-nudge-primary:active { transform: none; }
+
+body .landing-nudge .landing-nudge-primary-label {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+body .landing-nudge .landing-nudge-primary-hint {
+  font-size: 11px;
+  color: var(--soft);
+  white-space: nowrap;
+}
+
+body .landing-nudge .landing-nudge-quiet {
+  padding: 7px 10px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+  transition: color 140ms ease, background 140ms ease;
+}
+
+body .landing-nudge .landing-nudge-quiet:hover {
+  color: var(--text);
+  background: color-mix(in srgb, var(--line-strong) 45%, transparent);
+}
+
+body .landing-nudge :is(.landing-nudge-primary, .landing-nudge-quiet):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (max-width: 760px) {
+  body .landing-nudge { flex-wrap: wrap; }
+  body .landing-nudge .landing-nudge-body { flex-basis: 100%; }
+  body .landing-nudge .landing-nudge-mark { display: none; }
+  body .landing-nudge .landing-nudge-actions { width: 100%; }
+  body .landing-nudge .landing-nudge-primary { flex: 1 1 auto; }
+}
