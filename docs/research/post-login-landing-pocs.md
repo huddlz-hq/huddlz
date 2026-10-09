@@ -105,9 +105,14 @@ These apply to every POC. A POC that violates one isn't comparable with the othe
   `current_scope`; use `<.input>` and `<.icon>`.
 - **Validation via Ash, not HTML5.** Any new setting uses `allow_nil?`/constraints on the
   resource, not a `required` attribute.
-- **Scope discipline.** A POC is a draft meant to be *read and judged*, not shipped. Prefer
-  the smallest diff that lets a reviewer feel the difference. Do not refactor adjacent code,
-  do not restyle surfaces you aren't changing, and do not bundle two variants into one PR.
+- **Production-quality UI.** A POC here is meant to be *felt*, not squinted at: follow the
+  UI/UX guidelines in `AGENTS.md` — polished responsive layout, clean typography and spacing,
+  subtle micro-interactions, hover and loading states. A variant that looks unfinished will
+  lose the Desirable and Delightful criteria for reasons that have nothing to do with its idea,
+  which would make the comparison worthless.
+- **Scope discipline.** Polish the surface your variant changes; leave everything else alone.
+  Do not refactor adjacent code, do not restyle surfaces you aren't changing, and do not
+  bundle two variants into one PR.
 - **`mix precommit` passes** before the PR goes up.
 
 ### Terminology this work will need
