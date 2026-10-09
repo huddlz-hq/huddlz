@@ -423,6 +423,11 @@ defmodule Huddlz.Accounts.User do
       accept [:theme_preference]
     end
 
+    update :update_landing_choice do
+      description "Record what the person said they came to huddlz for, asked once after signing in"
+      accept [:landing_choice]
+    end
+
     update :update_notification_preferences do
       description "Merge a partial map of trigger overrides onto the user's notification_preferences."
       require_atomic? false
@@ -876,6 +881,11 @@ defmodule Huddlz.Accounts.User do
       description "Users can update their own appearance preference"
       authorize_if expr(id == ^actor(:id))
     end
+
+    policy action(:update_landing_choice) do
+      description "Users can record their own answer to the post-sign-in question"
+      authorize_if expr(id == ^actor(:id))
+    end
   end
 
   validations do
@@ -979,6 +989,13 @@ defmodule Huddlz.Accounts.User do
       description "Follow the device appearance, or always light or dark"
       allow_nil? false
       default :system
+      public? true
+    end
+
+    attribute :landing_choice, Huddlz.Accounts.LandingChoice do
+      description "What the person came for: their own huddlz, or finding a new one"
+      allow_nil? false
+      default :unasked
       public? true
     end
 

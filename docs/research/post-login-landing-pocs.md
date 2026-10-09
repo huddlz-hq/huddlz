@@ -150,7 +150,7 @@ on the others.
 | B | Better default landing | 2 | S–M | Not started | — |
 | C | Discover inside the agenda | 3 | L | Not started | — |
 | D | Prominent search on the agenda | 4 | M | Not started | — |
-| E | Intent-based login flow | 5 | M | Not started | — |
+| E | Intent-based login flow | 5 | M | In progress | — |
 | F | Adaptive nudge | 6 | M–L | Not started | — |
 | G | Combination: A + B + C | "these can be combined" | L | Not started | — |
 
@@ -383,27 +383,104 @@ than a default you set once.
 - What did the choice distribution look like in your own testing?
 
 **Tasks**
-- [ ] Write a Cucumber scenario: a person signs in, chooses "find a new one", and reaches
+- [x] Write a Cucumber scenario: a person signs in, chooses "find a new one", and reaches
       Discover. Demonstrate it failing.
-- [ ] Write a scenario: a person signs in with a `return_to` destination and is **not** asked.
-- [ ] Write a scenario: the choice is not re-asked on the next sign-in (per whatever policy
+- [x] Write a scenario: a person signs in with a `return_to` destination and is **not** asked.
+- [x] Write a scenario: the choice is not re-asked on the next sign-in (per whatever policy
       you chose).
-- [ ] Decide the showing policy; record the reasoning in Findings.
-- [ ] Add the interstitial between the post-auth redirect and the landing page.
-- [ ] Route each choice to its destination via `AuthReturnTo.validate/1`.
-- [ ] Ensure an explicit `return_to` bypasses the interstitial completely.
-- [ ] Log the choice so the distribution is observable; note it in Findings.
-- [ ] Measure clicks; record in Findings.
-- [ ] `mix precommit`.
+- [x] Decide the showing policy; record the reasoning in Findings.
+- [x] Add the interstitial between the post-auth redirect and the landing page.
+- [x] Route each choice to its destination via `AuthReturnTo.validate/1`.
+- [x] Ensure an explicit `return_to` bypasses the interstitial completely.
+- [x] Log the choice so the distribution is observable; note it in Findings.
+- [x] Measure clicks; record in Findings.
+- [ ] `mix precommit`. _(deliberate follow-up after review, per the POC brief.)_
 
-**Findings** _(fill in during the PR)_
+**Findings**
 
-- Clicks from login to an un-RSVP'd huddl:
-- First-time user without help:
-- Choice distribution observed:
-- Memorable (or does it nag):
-- What you'd cut:
-- Terminology used:
+- **Clicks from login to an un-RSVP'd huddl:** **2** on the first sign-in (answer the
+  question, then the huddl), **1** on every sign-in after that. The predicted loss on the
+  click-count measure is real but it is a one-time cost, not a per-sign-in toll — and it is
+  **0 extra clicks** for the journey #670 actually describes, because an arrival carrying
+  `return_to` is never asked at all.
+- **First-time user without help:** the question is self-explanatory — two choices, each with
+  a sentence saying what it leads to, and no jargon. The risk is not comprehension, it is
+  that someone who came for one specific huddl reads a question about browsing and feels the
+  app did not understand them. That person should never see this page, which is exactly why
+  requirement 1 (`return_to` bypass) is the load-bearing part of this variant.
+- **Choice distribution observed:** honestly, **not a real distribution.** The only answers
+  this branch has produced are mine, through the scenarios and unit tests — 2 ×
+  `find_a_huddl`, 1 × `my_huddlz`, 1 × skipped. That is test fixtures, not evidence about
+  people, and it would be dishonest to present it as a signal for B's default. What the POC
+  does deliver is the *instrument*: every answer emits one greppable line,
+  `post_sign_in_intent choice=<my_huddlz|find_a_huddl> user_id=<id>`, pinned by
+  `test/huddlz_web/live/welcome_live_test.exs`. A week of real traffic through this page would
+  settle B's default argument with `grep | sort | uniq -c` and no analytics plumbing. **That
+  is the strongest reason to pick E, and it is also an argument for shipping E temporarily and
+  then replacing it with B** once the distribution is known.
+- **Memorable (or does it nag):** this is where the variant is genuinely exposed, and the
+  answer depends entirely on the showing policy. Asked-every-time would fail Krug outright: a
+  question you re-answer is strictly worse than a default you set once, because it makes the
+  person re-derive the decision instead of remembering it. So the policy here is **asked
+  exactly once, persisted**: the answer is stored on `landing_choice`, and from the second
+  sign-in onward the app routes straight to the chosen landing. After the one answer, the
+  page is unreachable by normal navigation — visiting `/welcome` again redirects an answered
+  person to their landing rather than re-asking. That converts the question from a recurring
+  nag into a one-time setup step, which is the only version that survives the criterion.
+  The remaining honest weakness: **a one-time question is also a one-time chance.** There is
+  no UI in this POC to change the answer later (the page copy promises the sidebar can, and
+  that promise is unimplemented — see "what I'd cut"). A person who answers wrongly, or whose
+  habits change, is stuck with their first instinct. B's explicit setting does not have this
+  problem, which is the clearest argument that E is a *discovery mechanism for B* rather than
+  a competitor to it.
+- **Does answering also set the B preference:** yes, deliberately. `landing_choice` is the
+  same shape as `theme_preference` (atom-typed `Ash.Type.Enum`, `allow_nil? false`, default
+  `:unasked`, a narrow `:update_landing_choice` action, and a policy allowing only
+  `id == ^actor(:id)`). So the answer *is* a landing preference, set by asking instead of by
+  burying a dropdown in `/profile`. If both E and B were chosen, they would share this
+  attribute and B would just add the settings UI. The spec asked whether this makes E a
+  discovery mechanism for B rather than a competitor — having built it, I think it plainly
+  does, and I would frame it that way in the comparison rather than defending E on clicks.
+- **E depends on A, and testing that exposed a real gap.** My first bypass scenario used the
+  huddl page's RSVP button, which is the only link producing a `return_to` on `main`. Probing
+  the *header* link from a huddl page, the question **did** interpose — because on this branch
+  that link is still a bare `~p"/sign-in"` and drops the destination. So E's requirement
+  "never ask someone who arrived from a huddl link" is only satisfied for the entry points A
+  covers. I deliberately did **not** fix the header here: that is A's deliverable, and
+  building it into E would mean E got scored partly on A's idea. Instead the scenario pins
+  E's side of the contract — whichever link produced the destination, the question defers to
+  it — and this is the dependency to carry into the comparison. **If E is chosen, A must ship
+  with it or alongside it**; E alone would interrupt exactly the person #670 is about.
+- **Not trapping anyone:** three escapes. Both choices lead somewhere real; "Not sure yet"
+  leaves to the agenda *without* recording an answer, so the question stays open rather than
+  being silently decided by walking away; and an already-answered visit to `/welcome`
+  redirects out instead of looping. If persisting the answer fails, the redirect still honors
+  what the person just clicked — remembering is a convenience, not a precondition.
+- **What surprised me:** how small the risky part turned out to be. The interstitial is one
+  clause in `AuthController.success/4` that fires *only* on the literal `"/"` fallback from
+  `return_to/1`. Because `return_to/1` already returns `"/"` exactly when neither params nor
+  session carried a valid destination, "do not interpose on a real destination" came out as a
+  pattern match rather than a condition I had to reason about — so A's journey is bypassed
+  structurally, not by a check that could rot. The second surprise was the opposite
+  direction: my own scenario forced the design decision. I first built the page so that an
+  answered person simply was not asked again, and the scenario failed by landing on `/agenda`
+  instead of the `/discover` they had chosen — which is the moment it became clear the answer
+  has to be a stored preference, not just a seen-it flag.
+- **What you'd cut:** (1) the sentence "You can change it any time from the sidebar" — it is
+  currently a lie, since no such control exists in this POC; either implement it (which is B)
+  or delete the sentence. It stayed only so the page reads as a finished product for
+  comparison, and it is the one piece of copy here I would not ship as-is. (2) The
+  `landing_choice` GraphQL mutation — deliberately not exposed, since
+  `graphql_user_exposure_test.exs` pins the allowed surface and a POC preference has no
+  business in the public schema. (3) If the distribution came back lopsided, I would cut the
+  whole page and ship B's default instead, which is the outcome this variant is designed to
+  make decidable.
+- **Terminology used:** *landing* for the post-sign-in destination (`landing_choice`,
+  `landing_path/1`) — shorter than "post-sign-in destination" and it reads naturally in UI
+  copy. The recorded answers are `:my_huddlz` and `:find_a_huddl`, matching the two buttons
+  ("See my huddlz" / "Find a new one"). "huddl"/"huddlz" throughout, never "event". I did not
+  need a term for the remembered pre-auth intent, since this variant only has to *detect*
+  one and defer to it; A's existing `return_to` language covered it.
 
 ---
 

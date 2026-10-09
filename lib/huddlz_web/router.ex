@@ -174,6 +174,8 @@ defmodule HuddlzWeb.Router do
       live "/code-of-conduct", LegalLive, :conduct
       live "/privacy", LegalLive, :privacy
       live "/agenda", CalendarLive, :agenda
+      # POC variant E — the post-sign-in question, asked once.
+      live "/welcome", WelcomeLive, :index
       live "/groups", GroupsLive, :index
       live "/calendar/week", CalendarLive, :week
       live "/calendar/month", CalendarLive, :month

@@ -32,6 +32,8 @@ defmodule HuddlzWeb.AuthController do
 
     ConfirmationDestination.remember(user, return_to)
 
+    return_to = intent_destination(user, return_to)
+
     message =
       case activity do
         {:confirm_new_user, :confirm} ->
@@ -125,4 +127,22 @@ defmodule HuddlzWeb.AuthController do
     |> Enum.find_value(&AuthReturnTo.validate/1)
     |> Kernel.||(~p"/")
   end
+
+  # POC variant E. With an explicit return destination the app already knows
+  # what the person came for, so it must not ask — that journey sails straight
+  # through. `return_to/1` falls back to "/" only when neither the params nor
+  # the session carried a valid destination, so that clause is exactly the
+  # no-intent case; anything else wins outright and nothing is interposed.
+  defp intent_destination(user, "/" = fallback) do
+    AuthReturnTo.validate(intent_path(user)) || fallback
+  end
+
+  defp intent_destination(_user, return_to), do: return_to
+
+  # Unanswered: ask. Answered once: go where they said, so the question is a
+  # one-time cost rather than a toll on every sign-in.
+  defp intent_path(%User{landing_choice: :unasked}), do: ~p"/welcome"
+  defp intent_path(%User{landing_choice: :find_a_huddl}), do: ~p"/discover"
+  defp intent_path(%User{landing_choice: :my_huddlz}), do: ~p"/agenda"
+  defp intent_path(_user), do: nil
 end
