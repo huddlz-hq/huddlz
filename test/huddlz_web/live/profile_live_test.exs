@@ -141,7 +141,7 @@ defmodule HuddlzWeb.ProfileLiveTest do
       conn
       |> login(user)
       |> visit("/profile")
-      |> assert_has(".settings-stack > .panel, .settings-stack > form > .panel", count: 5)
+      |> assert_has(".settings-stack > .panel, .settings-stack > form > .panel", count: 6)
       |> assert_has(".profile-photo-actions .profile-photo-buttons label.btn-secondary",
         text: "Upload a photo…"
       )

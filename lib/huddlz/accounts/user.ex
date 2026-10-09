@@ -423,6 +423,11 @@ defmodule Huddlz.Accounts.User do
       accept [:theme_preference]
     end
 
+    update :update_agenda_landing do
+      description "Choose which filter the agenda opens on: everything from your groups, or just your RSVPs"
+      accept [:agenda_landing]
+    end
+
     update :update_notification_preferences do
       description "Merge a partial map of trigger overrides onto the user's notification_preferences."
       require_atomic? false
@@ -876,6 +881,11 @@ defmodule Huddlz.Accounts.User do
       description "Users can update their own appearance preference"
       authorize_if expr(id == ^actor(:id))
     end
+
+    policy action(:update_agenda_landing) do
+      description "Users can update their own agenda filter preference"
+      authorize_if expr(id == ^actor(:id))
+    end
   end
 
   validations do
@@ -979,6 +989,13 @@ defmodule Huddlz.Accounts.User do
       description "Follow the device appearance, or always light or dark"
       allow_nil? false
       default :system
+      public? true
+    end
+
+    attribute :agenda_landing, Huddlz.Accounts.AgendaLanding do
+      description "Which filter the agenda opens on: everything from your groups, or just your RSVPs"
+      allow_nil? false
+      default :groups
       public? true
     end
 

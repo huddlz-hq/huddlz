@@ -61,6 +61,7 @@ defmodule HuddlzWeb.ProfileLive do
      |> assign(:avatar_error, nil)
      |> assign(:remove_avatar_dialog_open, false)
      |> assign(:location_error, nil)
+     |> assign(:agenda_landing_saved?, false)
      |> UploadHelpers.allow_image_upload(:avatar, &handle_upload_progress/3)}
   end
 
@@ -299,6 +300,42 @@ defmodule HuddlzWeb.ProfileLive do
           </form>
         </div>
 
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Agenda</h2>
+              <div class="panel-sub">
+                Which filter your agenda opens on when you arrive. Either way both filters
+                stay one click apart on the page.
+              </div>
+            </div>
+          </div>
+          <form id="agenda-landing-form" phx-change="set_agenda_landing">
+            <fieldset class="agenda-landing-choices">
+              <legend class="form-label">Open my agenda on</legend>
+              <.agenda_landing_option
+                value="groups"
+                current={@current_user.agenda_landing}
+                icon="hero-user-group"
+                title="Everything from my groups"
+                desc="Your groups' upcoming huddlz plus your own RSVPs — including huddlz you haven't responded to yet."
+              />
+              <.agenda_landing_option
+                value="mine"
+                current={@current_user.agenda_landing}
+                icon="hero-check-circle"
+                title="Just my RSVPs"
+                desc="Only the huddlz you're hosting, going to, or waiting on."
+              />
+            </fieldset>
+            <p class="form-help" aria-live="polite">
+              <span :if={@agenda_landing_saved?} class="agenda-landing-saved">
+                <.icon name="hero-check" class="size-4" /> Saved
+              </span>
+            </p>
+          </form>
+        </div>
+
         <.form
           for={@password_form}
           id="password-form"
@@ -407,6 +444,43 @@ defmodule HuddlzWeb.ProfileLive do
         </.modal>
       </div>
     </Layouts.app>
+    """
+  end
+
+  # One card in the "open my agenda on" choice. The whole card is the hit
+  # target; the radio stays in the accessibility tree and keyboard order.
+  attr :value, :string, required: true
+  attr :current, :atom, required: true
+  attr :icon, :string, required: true
+  attr :title, :string, required: true
+  attr :desc, :string, required: true
+
+  defp agenda_landing_option(assigns) do
+    assigns =
+      assigns
+      |> assign(:active?, Atom.to_string(assigns.current) == assigns.value)
+      |> assign(:radio_id, "agenda-landing-" <> assigns.value)
+
+    ~H"""
+    <label class={["agenda-landing-option", @active? && "is-active"]} for={@radio_id}>
+      <input
+        id={@radio_id}
+        type="radio"
+        name="agenda_landing"
+        value={@value}
+        checked={@active?}
+        class="choice-control-input"
+        aria-label={@title}
+      />
+      <span class="agenda-landing-icon" aria-hidden="true">
+        <.icon name={@icon} class="size-5" />
+      </span>
+      <span class="agenda-landing-copy">
+        <span class="agenda-landing-title">{@title}</span>
+        <span class="agenda-landing-desc">{@desc}</span>
+      </span>
+      <span class="agenda-landing-radio" aria-hidden="true"></span>
+    </label>
     """
   end
 
@@ -661,6 +735,31 @@ defmodule HuddlzWeb.ProfileLive do
   @impl true
   def handle_event("cancel_remove_avatar", _params, socket) do
     {:noreply, assign(socket, :remove_avatar_dialog_open, false)}
+  end
+
+  # Choosing a card saves straight away, the way the appearance menu does:
+  # a one-field preference does not need its own Save button. The action
+  # accepts only `:groups` or `:mine` (the Ash enum does the validating),
+  # so an unexpected value comes back as an error, not a crash.
+  def handle_event("set_agenda_landing", %{"agenda_landing" => choice}, socket) do
+    user = socket.assigns.current_user
+
+    user
+    |> Ash.Changeset.for_update(:update_agenda_landing, %{agenda_landing: choice}, actor: user)
+    |> Ash.update()
+    |> case do
+      {:ok, updated} ->
+        {:noreply,
+         socket
+         |> assign(:current_user, %{user | agenda_landing: updated.agenda_landing})
+         |> assign(:agenda_landing_saved?, true)}
+
+      {:error, _changeset} ->
+        {:noreply,
+         socket
+         |> assign(:agenda_landing_saved?, false)
+         |> put_flash(:error, "Could not save your agenda preference")}
+    end
   end
 
   @impl true
