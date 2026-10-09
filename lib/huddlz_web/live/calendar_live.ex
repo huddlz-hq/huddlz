@@ -177,15 +177,24 @@ defmodule HuddlzWeb.CalendarLive do
     |> stream(:legend_items, legend_items, reset: true)
   end
 
-  # The first run is a fact about the person, not about the scope they are
-  # looking at: they have nothing of their own and their groups have
-  # nothing on either. Nearby is excluded because it has its own three
-  # states — no saved location, searching, nothing in range — and a
-  # first-run panel on top of those would be a second answer to the same
-  # question.
+  # The first run: the person has nothing of their own anywhere, and the
+  # filter they are looking at has nothing to show either. Both halves are
+  # needed. Dropping the second would put a first-run panel over a Groups
+  # list that has huddlz in it; dropping the first would make it a
+  # per-filter empty state, which the views already have.
+  #
+  # The scope matters because the filter chosen decides which copy is
+  # true: on RSVPs the page is empty because nothing has been RSVP'd to,
+  # and on Groups because no group has been joined. Nearby is excluded —
+  # it has its own three states (no saved location, searching, nothing in
+  # range), and a first-run panel on top of those would be a second answer
+  # to the same question.
   defp first_run?(%{scope: :nearby}), do: false
 
-  defp first_run?(%{own_entries: [], everything_entries: []}), do: true
+  defp first_run?(%{scope: :mine, own_entries: []}), do: true
+
+  defp first_run?(%{scope: :groups, own_entries: [], everything_entries: []}), do: true
+
   defp first_run?(_assigns), do: false
 
   defp scope_entries(%{assigns: %{scope: :groups}} = socket),

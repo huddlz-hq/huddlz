@@ -40,7 +40,7 @@ Feature: Nearby huddlz on the agenda
     And I belong to "Nearby Portland Elixir", which has scheduled "Hands-on with Ash Framework"
     And I am going to "Async Rust reading group" near my home location
     And a group I have not joined has scheduled "Saturday trail run" near my home location
-    When I open the agenda
+    When I open the agenda on just my RSVPs
     Then the agenda lists "Async Rust reading group" as going
     And the agenda does not list "Hands-on with Ash Framework"
     And the agenda does not list "Saturday trail run"
