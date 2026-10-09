@@ -120,8 +120,9 @@ defmodule HuddlzWeb.GroupLive.Show do
 
   defp assign_join_source(socket, _slug), do: socket
 
-  # Where sign-in sends the person back to. A tag that came with the visit
-  # goes along, so signing in on the way does not lose where the join began.
+  # Where sign-in sends the person back to, for both the join call to action
+  # and the topbar's sign-in and sign-up. A tag that came with the visit goes
+  # along, so signing in on the way does not lose where the join began.
   defp return_path(group, :group_page), do: ~p"/groups/#{group.slug}"
   defp return_path(group, source), do: ~p"/groups/#{group.slug}?#{[from: source]}"
 
@@ -196,6 +197,7 @@ defmodule HuddlzWeb.GroupLive.Show do
       unread_notification_count={@unread_notification_count}
       sidebar_owned_groups={@sidebar_owned_groups}
       active="discover"
+      return_to={return_path(@group, @join_source)}
     >
       <HuddlzWeb.StructuredData.group group={@group} url={@canonical_url} />
       <div class="huddl-frame group-frame">
