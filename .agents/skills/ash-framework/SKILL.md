@@ -24,6 +24,7 @@ metadata:
 - [query_filter](references/ash/query_filter.md)
 - [querying_data](references/ash/querying_data.md)
 - [relationships](references/ash/relationships.md)
+- [temporal](references/ash/temporal.md)
 - [testing](references/ash/testing.md)
 
 ### ash_ai
