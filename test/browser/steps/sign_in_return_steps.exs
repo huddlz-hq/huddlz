@@ -205,7 +205,12 @@ defmodule BrowserSignInReturnSteps do
   end
 
   step "I join the group after signing in", context do
-    Map.put(context, :conn, click_button(context.conn, "Join group"))
+    conn =
+      context.conn
+      |> assert_has(".phx-connected")
+      |> click_button("Join group")
+
+    Map.put(context, :conn, conn)
   end
 
   step "my join retains its notification source", context do
