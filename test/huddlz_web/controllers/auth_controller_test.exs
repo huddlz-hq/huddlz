@@ -53,7 +53,7 @@ defmodule HuddlzWeb.AuthControllerTest do
         |> recycle()
         |> get(~p"/profile")
 
-      assert redirected_to(signed_out_conn) == ~p"/sign-in"
+      assert redirected_to(signed_out_conn) == ~p"/sign-in?#{[return_to: "/profile"]}"
     end
 
     test "disconnects LiveViews using the signed-in session", %{conn: conn} do
@@ -71,6 +71,37 @@ defmodule HuddlzWeb.AuthControllerTest do
         payload: %{}
       }
     end
+  end
+
+  test "password reset starts a usable session while an earlier session remains revoked", %{
+    conn: conn
+  } do
+    member =
+      generate(user_with_password()) |> Ash.Seed.update!(%{confirmed_at: DateTime.utc_now()})
+
+    earlier = login(build_conn(), member)
+
+    {:ok, reset_token, _} =
+      AshAuthentication.Jwt.token_for_user(
+        member,
+        %{"act" => "reset_password_with_token"},
+        domain: Huddlz.Accounts
+      )
+
+    conn =
+      post(conn, "/auth/user/password/reset", %{
+        "user" => %{
+          "reset_token" => reset_token,
+          "password" => "ChangedPassword123!",
+          "password_confirmation" => "ChangedPassword123!"
+        }
+      })
+
+    assert redirected_to(conn) == "/"
+    assert get_session(conn, :return_to) == nil
+    assert conn |> recycle() |> get("/profile/api-keys") |> html_response(200) =~ "API keys"
+    old = earlier |> recycle() |> get("/profile/api-keys")
+    assert URI.parse(redirected_to(old)).path == "/sign-in"
   end
 
   defp create_test_user do

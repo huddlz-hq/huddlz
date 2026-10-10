@@ -24,7 +24,7 @@ defmodule HuddlzWeb.AuthLive.SignIn do
         phx-submit="sign_in_with_password"
         phx-change="validate_password"
         phx-trigger-action={@trigger_action}
-        action={sign_in_path(@return_to)}
+        action={AuthReturnTo.path("/auth/user/password/sign_in", @return_to)}
         method="post"
         novalidate
         class="auth-card"
@@ -53,10 +53,11 @@ defmodule HuddlzWeb.AuthLive.SignIn do
       <Components.sign_in_token_form token={@sign_in_token} return_to={@return_to} />
 
       <div class="auth-aside">
-        <.link navigate={~p"/reset"}>Forgot your password?</.link>
+        <.link navigate={AuthReturnTo.path(~p"/reset", @return_to)}>Forgot your password?</.link>
       </div>
       <div class="auth-aside">
-        Don't have an account? <.link navigate={register_path(@return_to)}>Sign up</.link>
+        Don't have an account?
+        <.link navigate={AuthReturnTo.path(~p"/register", @return_to)}>Sign up</.link>
       </div>
     </Layouts.auth_shell>
     """
@@ -163,14 +164,4 @@ defmodule HuddlzWeb.AuthLive.SignIn do
 
     assign(socket, :password_form, to_form(form))
   end
-
-  defp sign_in_path(nil), do: "/auth/user/password/sign_in"
-
-  defp sign_in_path(return_to) do
-    "/auth/user/password/sign_in?" <> URI.encode_query(return_to: return_to)
-  end
-
-  defp register_path(nil), do: ~p"/register"
-
-  defp register_path(return_to), do: ~p"/register?#{[return_to: return_to]}"
 end

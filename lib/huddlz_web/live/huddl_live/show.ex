@@ -12,6 +12,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
   alias Huddlz.Communities.GroupMember
   alias Huddlz.Storage.HuddlCoverImages
   alias Huddlz.Storage.HuddlPhotos
+  alias HuddlzWeb.AuthReturnTo
   alias HuddlzWeb.Avatar
   alias HuddlzWeb.Components.Modal
   alias HuddlzWeb.HuddlStatus
@@ -89,6 +90,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
     <Layouts.app
       flash={@flash}
       current_user={@current_user}
+      return_to={@auth_return_to}
       unread_notification_count={@unread_notification_count}
       sidebar_owned_groups={@sidebar_owned_groups}
       active="discover"
@@ -897,7 +899,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
     ~H"""
     <.button
       variant={:primary}
-      navigate={rsvp_sign_in_path(@huddl.group.slug, @huddl.id)}
+      navigate={AuthReturnTo.path(~p"/sign-in", @auth_return_to)}
       class="rsvp-cta"
     >
       Sign in to RSVP
@@ -1054,11 +1056,6 @@ defmodule HuddlzWeb.HuddlLive.Show do
   # status banner that can stay in the aside.
   defp dock_rsvp?(%{status: status}) when status in [:draft, :completed, :cancelled], do: nil
   defp dock_rsvp?(_huddl), do: true
-
-  defp rsvp_sign_in_path(group_slug, huddl_id) do
-    return_to = "/groups/#{group_slug}/huddlz/#{huddl_id}"
-    "/sign-in?" <> URI.encode_query(return_to: return_to)
-  end
 
   defp upload_one_photo(path, entry, huddl_id, user) do
     case HuddlPhotos.store(path, entry.client_name, entry.client_type, huddl_id) do

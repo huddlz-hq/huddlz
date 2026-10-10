@@ -6,6 +6,45 @@ defmodule HuddlzWeb.LayoutsTest do
 
   alias HuddlzWeb.Layouts
 
+  describe "signed-out authentication links" do
+    test "both links preserve a safe destination with query values" do
+      path = "/discover?time_zone=America%2FNew_York&q=Elixir%2FPhoenix"
+      document = render_signed_out(path)
+
+      for link <- LazyHTML.query(document, ".content-actions a") do
+        [href] = LazyHTML.attribute(link, "href")
+        assert URI.decode_query(URI.parse(href).query)["return_to"] == path
+      end
+    end
+
+    test "unsafe component inputs never reach either authentication link" do
+      for path <- [
+            "https://evil.example",
+            "//evil.example",
+            "/\\evil.example",
+            "/%2Fevil.example",
+            "/%5cevil.example",
+            nil
+          ] do
+        hrefs =
+          render_signed_out(path)
+          |> LazyHTML.query(".content-actions a")
+          |> Enum.flat_map(&LazyHTML.attribute(&1, "href"))
+
+        assert hrefs == ["/sign-in", "/register"]
+      end
+    end
+  end
+
+  defp render_signed_out(path) do
+    assigns = %{return_to: path}
+
+    rendered_to_string(~H"""
+    <Layouts.app flash={%{}} return_to={@return_to}>Content</Layouts.app>
+    """)
+    |> LazyHTML.from_fragment()
+  end
+
   describe "app/1 notification navigation" do
     test "renders zero, one, and capped unread states in the persistent topbar" do
       zero = render_app(0)

@@ -6,6 +6,7 @@ defmodule HuddlzWeb.Layouts do
 
   alias Huddlz.Accounts.User
   alias Huddlz.Admin.Impersonation
+  alias HuddlzWeb.AuthReturnTo
   alias HuddlzWeb.Avatar
 
   embed_templates "layouts/*"
@@ -51,6 +52,11 @@ defmodule HuddlzWeb.Layouts do
     doc: "groups the current_user organizes — rendered as sb-org-row entries"
 
   attr :query, :string, default: "", doc: "current search query — prefilled in topbar input"
+
+  attr :return_to, :string,
+    default: nil,
+    doc: "page to come back to after the signed-out Sign in / Sign up links"
+
   slot :inner_block, required: true
 
   def app(assigns) do
@@ -339,8 +345,8 @@ defmodule HuddlzWeb.Layouts do
               </span>
             </.link>
           <% else %>
-            <.link class="btn-secondary" navigate={~p"/sign-in"}>Sign in</.link>
-            <.link class="btn-primary" navigate={~p"/register"}>Sign up</.link>
+            <.link class="btn-secondary" navigate={AuthReturnTo.path(~p"/sign-in", @return_to)}>Sign in</.link>
+            <.link class="btn-primary" navigate={AuthReturnTo.path(~p"/register", @return_to)}>Sign up</.link>
           <% end %>
         </div>
       </header>

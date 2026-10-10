@@ -7,6 +7,7 @@ defmodule HuddlzWeb.AuthController do
   alias Huddlz.Accounts.Token
   alias Huddlz.Accounts.User
   alias Huddlz.Accounts.User.Errors.ConfirmationAddressChanged
+  alias HuddlzWeb.AuthReturnSession
   alias HuddlzWeb.AuthReturnTo
   alias HuddlzWeb.BrowserSession
 
@@ -22,7 +23,23 @@ defmodule HuddlzWeb.AuthController do
     |> redirect(to: ~p"/account-suspended")
   end
 
-  def success(conn, activity, user, _token) do
+  def success(conn, {:password, :reset} = activity, user, _token) do
+    # Password changes revoke every existing token, including the reset action's
+    # generated token. Create this browser's session after that revocation.
+    case AshAuthentication.Jwt.token_for_user(user, %{}, domain: Huddlz.Accounts) do
+      {:ok, token, _claims} ->
+        complete_success(conn, activity, Ash.Resource.put_metadata(user, :token, token))
+
+      :error ->
+        conn
+        |> put_flash(:info, "Your password was reset. Please sign in with your new password.")
+        |> redirect(to: sign_in_path(conn))
+    end
+  end
+
+  def success(conn, activity, user, _token), do: complete_success(conn, activity, user)
+
+  defp complete_success(conn, activity, user) do
     return_to =
       if activity == {:confirm_new_user, :confirm} do
         ConfirmationDestination.validate(user.__metadata__[:confirmation_destination]) || ~p"/"
@@ -89,7 +106,7 @@ defmodule HuddlzWeb.AuthController do
 
     conn
     |> put_flash(:error, message)
-    |> redirect(to: ~p"/sign-in")
+    |> redirect(to: sign_in_path(conn))
   end
 
   defp previous_address?(%ConfirmationAddressChanged{}), do: true
@@ -120,9 +137,10 @@ defmodule HuddlzWeb.AuthController do
     end
   end
 
-  defp return_to(conn) do
-    [conn.params["return_to"], get_session(conn, :return_to)]
-    |> Enum.find_value(&AuthReturnTo.validate/1)
-    |> Kernel.||(~p"/")
-  end
+  defp destination(%{params: %{"return_to" => return_to}}), do: AuthReturnTo.validate(return_to)
+  defp destination(conn), do: AuthReturnSession.destination(get_session(conn))
+
+  defp return_to(conn), do: destination(conn) || ~p"/"
+
+  defp sign_in_path(conn), do: AuthReturnTo.path(~p"/sign-in", destination(conn))
 end

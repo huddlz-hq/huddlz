@@ -7,10 +7,12 @@ defmodule HuddlzWeb.AuthLive.ResetPasswordConfirm do
 
   alias AshPhoenix.Form
   alias Huddlz.Accounts.User
+  alias HuddlzWeb.AuthReturnSession
+  alias HuddlzWeb.AuthReturnTo
   alias HuddlzWeb.FormFocus
 
   @impl true
-  def mount(%{"token" => token}, _session, socket) do
+  def mount(%{"token" => token}, session, socket) do
     strategy = AshAuthentication.Info.strategy!(User, :password)
     domain = AshAuthentication.Info.authentication_domain!(User)
 
@@ -18,6 +20,7 @@ defmodule HuddlzWeb.AuthLive.ResetPasswordConfirm do
       socket
       |> assign(:page_title, "Set new password")
       |> assign(:body_class, "is-auth")
+      |> assign(:return_to, AuthReturnSession.destination(session))
 
     with {:ok, %{"sub" => subject}, _resource} <- AshAuthentication.Jwt.verify(token, User),
          {:ok, user} <- AshAuthentication.subject_to_user(subject, User) do
@@ -43,11 +46,12 @@ defmodule HuddlzWeb.AuthLive.ResetPasswordConfirm do
     end
   end
 
-  def mount(_params, _session, socket) do
+  def mount(_params, session, socket) do
     {:ok,
      socket
      |> assign(:page_title, "Set new password")
      |> assign(:body_class, "is-auth")
+     |> assign(:return_to, AuthReturnSession.destination(session))
      |> assign(:token_valid, false)
      |> assign(:trigger_action, false)}
   end
@@ -77,7 +81,7 @@ defmodule HuddlzWeb.AuthLive.ResetPasswordConfirm do
           />
 
           <%= if @form[:reset_token].errors != [] do %>
-            <.expired_token_state />
+            <.expired_token_state return_to={@return_to} />
           <% else %>
             <div class="form-grid">
               <.input
@@ -102,7 +106,7 @@ defmodule HuddlzWeb.AuthLive.ResetPasswordConfirm do
           <% end %>
         </.form>
       <% else %>
-        <.expired_token_state />
+        <.expired_token_state return_to={@return_to} />
       <% end %>
     </Layouts.auth_shell>
     """
@@ -116,7 +120,7 @@ defmodule HuddlzWeb.AuthLive.ResetPasswordConfirm do
       </div>
       <h2>This password reset link is invalid or has expired</h2>
       <p>The link may have expired or already been used. Request a fresh one.</p>
-      <.link navigate={~p"/reset"} class="btn-primary">Request new reset link</.link>
+      <.link navigate={AuthReturnTo.path(~p"/reset", @return_to)} class="btn-primary">Request new reset link</.link>
     </div>
     """
   end
