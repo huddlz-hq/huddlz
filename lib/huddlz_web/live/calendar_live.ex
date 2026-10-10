@@ -16,8 +16,8 @@ defmodule HuddlzWeb.CalendarLive do
 
   Every piece of state is in the URL, so closing the panel, the browser's
   back button and returning from a huddl all land on the same view.
-  `?scope=groups` widens every view from the person's own RSVPs to
-  everything their groups have scheduled.
+  Every view opens on everything the person's groups have scheduled;
+  `?scope=mine` narrows it to their own RSVPs.
   """
   use HuddlzWeb, :live_view
 
@@ -190,8 +190,10 @@ defmodule HuddlzWeb.CalendarLive do
       else: Date.beginning_of_week(month_first, :sunday)
   end
 
-  defp parse_scope("groups"), do: :groups
-  defp parse_scope(_), do: :mine
+  # Groups is the default: the huddl someone arrives for is usually one
+  # their groups have on, and it is not on their RSVPs yet by definition.
+  defp parse_scope("mine"), do: :mine
+  defp parse_scope(_), do: :groups
 
   defp first_of_month(date), do: %{date | day: 1}
 
@@ -337,7 +339,7 @@ defmodule HuddlzWeb.CalendarLive do
       [
         month: view == :month && month_param(month, nav.today),
         week: view == :week && week_param(week, nav.today),
-        scope: scope == :groups && "groups",
+        scope: scope == :mine && "mine",
         day: day && Date.to_iso8601(day)
       ]
       |> Enum.filter(fn {_key, value} -> value end)
@@ -665,9 +667,9 @@ defmodule HuddlzWeb.CalendarLive do
             nav={@nav}
             open_day={@open_day}
           />
-          <.first_run_empty :if={@first_run?} />
+          <.first_run_empty :if={@first_run?} scope={@scope} />
         <% :week -> %>
-          <.week_view days={@week_days} today={@today} first_run?={@first_run?} />
+          <.week_view days={@week_days} today={@today} first_run?={@first_run?} scope={@scope} />
         <% :agenda -> %>
           <.agenda_view
             days={@agenda_days}
@@ -675,6 +677,7 @@ defmodule HuddlzWeb.CalendarLive do
             today={@today}
             nav={@nav}
             first_run?={@first_run?}
+            scope={@scope}
           />
       <% end %>
 
@@ -873,8 +876,11 @@ defmodule HuddlzWeb.CalendarLive do
 
   # The first run: no huddl in any month. Says what the page holds and
   # offers the action that fills it. The agenda is the signed-in home, so
-  # its copy speaks of the agenda rather than the calendar.
+  # its copy speaks of the agenda rather than the calendar. Under the
+  # Groups filter, the default, an empty page usually means the person has
+  # not joined a group yet, so the copy names that instead of RSVPs.
   attr :agenda?, :boolean, default: false
+  attr :scope, :atom, default: :groups
 
   defp first_run_empty(assigns) do
     ~H"""
@@ -884,10 +890,14 @@ defmodule HuddlzWeb.CalendarLive do
       title={if @agenda?, do: "Nothing on your agenda yet", else: "Your calendar is empty"}
       data-first-run
     >
-      <%= if @agenda? do %>
-        huddlz you RSVP to show up here, soonest first.
-      <% else %>
-        huddlz you RSVP to show up here, in their own time zone.
+      <%= cond do %>
+        <% @scope == :groups -> %>
+          Join a group and its huddlz show up here, soonest first: the ones you have
+          RSVP'd to and the ones still open to you.
+        <% @agenda? -> %>
+          huddlz you RSVP to show up here, soonest first.
+        <% true -> %>
+          huddlz you RSVP to show up here, in their own time zone.
       <% end %>
       <:action>
         <.button variant={:primary} navigate={~p"/discover"}>
@@ -903,11 +913,12 @@ defmodule HuddlzWeb.CalendarLive do
   attr :days, :list, required: true
   attr :today, Date, required: true
   attr :first_run?, :boolean, default: false
+  attr :scope, :atom, default: :groups
 
   defp week_view(assigns) do
     ~H"""
     <.agenda_list id="calendar-week" entry_prefix="calendar-entry" days={@days} today={@today} />
-    <.first_run_empty :if={@first_run?} />
+    <.first_run_empty :if={@first_run?} scope={@scope} />
     """
   end
 
@@ -995,15 +1006,20 @@ defmodule HuddlzWeb.CalendarLive do
   attr :today, Date, required: true
   attr :nav, :map, required: true
   attr :first_run?, :boolean, default: false
+  attr :scope, :atom, default: :groups
 
   defp agenda_view(assigns) do
     ~H"""
     <%= if @first_run? do %>
-      <.first_run_empty agenda?={true} />
+      <.first_run_empty agenda?={true} scope={@scope} />
     <% else %>
       <%= if Enum.all?(@days, &(&1.entries == [])) do %>
         <.empty_state id="calendar-agenda-empty" icon="hero-calendar" title="Nothing coming up">
-          Your next RSVP will land here.
+          <%= if @scope == :groups do %>
+            Nothing your groups have scheduled is coming up.
+          <% else %>
+            Your next RSVP will land here.
+          <% end %>
           <:action>
             <.button variant={:secondary} navigate={~p"/discover"}>Browse huddlz</.button>
           </:action>

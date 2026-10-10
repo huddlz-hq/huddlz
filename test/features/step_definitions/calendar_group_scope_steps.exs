@@ -43,6 +43,11 @@ defmodule CalendarGroupScopeSteps do
     context
   end
 
+  step "I open the agenda on just my RSVPs", %{conn: conn} = context do
+    session = visit(conn, "/agenda?scope=mine")
+    Map.merge(context, %{conn: session, session: session})
+  end
+
   step "I switch to everything from my groups", %{session: session} = context do
     session = click_link(session, "#calendar-scope-groups", "Groups")
     Map.merge(context, %{conn: session, session: session})
