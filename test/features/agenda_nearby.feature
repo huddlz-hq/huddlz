@@ -16,6 +16,7 @@ Feature: Nearby huddlz on the agenda
     When I open the agenda
     And I switch to huddlz near me
     Then the agenda lists "Saturday trail run" without an RSVP status
+    And I should see "huddlz near you that aren't on your agenda yet."
 
   Scenario: Nearby leaves out huddlz I have already responded to
     Given my home search location is set

@@ -175,6 +175,22 @@ defmodule HuddlzWeb.CalendarLive do
     |> stream(:legend_items, legend_items, reset: true)
   end
 
+  # The page head says what the selected filter holds, so switching filters
+  # never leaves it describing a different list.
+  defp scope_summary(:agenda, :mine),
+    do: "What's next across the huddlz you're hosting, attending, or watching from the waitlist."
+
+  defp scope_summary(:agenda, :groups),
+    do: "What's next across your groups, plus anything else you've RSVP'd to."
+
+  defp scope_summary(:agenda, :nearby), do: "huddlz near you that aren't on your agenda yet."
+
+  defp scope_summary(_calendar, :mine),
+    do: "huddlz you're hosting, attending, or watching from the waitlist."
+
+  defp scope_summary(_calendar, _scope),
+    do: "huddlz your groups have scheduled, plus anything else you've RSVP'd to."
+
   # The first run is decided per filter: an empty Groups agenda means no
   # group has anything on, an empty RSVPs agenda means no responses yet.
   # Nearby has its own empty states, so it never draws the first run.
@@ -766,13 +782,13 @@ defmodule HuddlzWeb.CalendarLive do
         <div :if={@view_mode == :agenda}>
           <h1>Agenda</h1>
           <p>
-            What's next across the huddlz you're hosting, attending, or watching from the waitlist. Times use <strong id="calendar-time-zone">{@time_zone}</strong>.
+            {scope_summary(@view_mode, @scope)} Times use <strong id="calendar-time-zone">{@time_zone}</strong>.
           </p>
         </div>
         <div :if={@view_mode != :agenda}>
           <h1>Calendar</h1>
           <p>
-            huddlz you're hosting, attending, or watching from the waitlist. Calendar dates use <strong id="calendar-time-zone">{@time_zone}</strong>.
+            {scope_summary(@view_mode, @scope)} Calendar dates use <strong id="calendar-time-zone">{@time_zone}</strong>.
           </p>
         </div>
       </div>

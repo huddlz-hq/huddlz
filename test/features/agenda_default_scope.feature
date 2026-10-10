@@ -43,3 +43,13 @@ Feature: The agenda opens on my groups
     Given I am signed in as "loner+default-scope@example.com"
     When I open the agenda
     Then the agenda invites me to find a huddl
+
+  Scenario: The agenda and calendar say what the filter shows
+    Given I am signed in as "member+default-scope@example.com"
+    And I belong to "Default Scope Portland Elixir", which has scheduled "Hands-on with Ash Framework"
+    When I open the agenda
+    Then I should see "What's next across your groups, plus anything else you've RSVP'd to."
+    When I switch to just my RSVPs
+    Then I should see "What's next across the huddlz you're hosting, attending, or watching from the waitlist."
+    When I visit "/calendar/week"
+    Then I should see "huddlz your groups have scheduled, plus anything else you've RSVP'd to."
