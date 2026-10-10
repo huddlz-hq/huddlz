@@ -24,8 +24,8 @@ defmodule HuddlzWeb.Endpoint do
   ]
 
   @live_connect_info if(Application.compile_env(:huddlz, :sql_sandbox?, false),
-                       do: [:user_agent, session: @session_options],
-                       else: [session: @session_options]
+                       do: [:uri, :user_agent, session: @session_options],
+                       else: [:uri, session: @session_options]
                      )
 
   socket "/live", Phoenix.LiveView.Socket,

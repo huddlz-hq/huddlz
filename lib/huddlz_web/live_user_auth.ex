@@ -14,6 +14,7 @@ defmodule HuddlzWeb.LiveUserAuth do
   alias Huddlz.Accounts.User
   alias Huddlz.Communities.MembershipEvents
   alias Huddlz.Notifications
+  alias HuddlzWeb.AuthReturnTo
 
   # This is used for nested liveviews to fetch the current user.
   # To use, place the following at the top of that liveview:
@@ -35,7 +36,7 @@ defmodule HuddlzWeb.LiveUserAuth do
     if socket.assigns[:current_user] do
       {:cont, socket}
     else
-      {:halt, Phoenix.LiveView.redirect(socket, to: ~p"/sign-in")}
+      {:halt, Phoenix.LiveView.redirect(socket, to: sign_in_path(socket))}
     end
   end
 
@@ -89,7 +90,7 @@ defmodule HuddlzWeb.LiveUserAuth do
   def on_mount(:admin_required, _params, _session, socket) do
     case socket.assigns[:current_user] do
       nil ->
-        {:halt, Phoenix.LiveView.redirect(socket, to: ~p"/sign-in")}
+        {:halt, Phoenix.LiveView.redirect(socket, to: sign_in_path(socket))}
 
       user ->
         authorize_admin(user, socket)
@@ -110,6 +111,14 @@ defmodule HuddlzWeb.LiveUserAuth do
   # entries in the sidebar.
   def on_mount(:app, _params, session, socket) do
     reject_suspended(socket, fn -> mount_app(session, socket) end)
+  end
+
+  # Sends a signed-out person to sign in, then back to the page they asked
+  # for. The requested address is connect info, so it is read during mount.
+  defp sign_in_path(socket) do
+    socket
+    |> Phoenix.LiveView.get_connect_info(:uri)
+    |> AuthReturnTo.sign_in_path()
   end
 
   defp mount_app(session, socket) do

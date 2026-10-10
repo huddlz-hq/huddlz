@@ -15,6 +15,7 @@ defmodule HuddlzWeb.HuddlLive do
 
   alias Huddlz.Communities
   alias Huddlz.TimeZone
+  alias HuddlzWeb.AuthReturnTo
   alias HuddlzWeb.Layouts
   alias HuddlzWeb.Live.Helpers.BrowserTimeZone
   require Logger
@@ -74,7 +75,7 @@ defmodule HuddlzWeb.HuddlLive do
   end
 
   @impl true
-  def handle_params(params, _url, socket) do
+  def handle_params(params, url, socket) do
     scope = parse_scope(params["scope"])
     yours = parse_yours(params["yours"], scope)
 
@@ -82,7 +83,7 @@ defmodule HuddlzWeb.HuddlLive do
       {:noreply,
        socket
        |> put_flash(:error, "Sign in to view #{sign_in_prompt(yours)}.")
-       |> push_navigate(to: ~p"/sign-in")}
+       |> push_navigate(to: url |> URI.parse() |> AuthReturnTo.sign_in_path())}
     else
       page = parse_page(params["page"])
       canonical_url = url(~p"/discover?#{params}")

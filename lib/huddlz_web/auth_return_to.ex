@@ -14,6 +14,26 @@ defmodule HuddlzWeb.AuthReturnTo do
 
   def validate(_path), do: nil
 
+  @doc """
+  The sign-in address that brings the person back to `destination` after
+  signing in, or the bare sign-in address when `destination` is not a safe
+  local path. Accepts a path or a request's `URI`.
+  """
+  @spec sign_in_path(URI.t() | String.t() | nil) :: String.t()
+  def sign_in_path(%URI{path: path, query: query}) when query in [nil, ""], do: sign_in_path(path)
+
+  def sign_in_path(%URI{path: path, query: query}) when is_binary(path),
+    do: sign_in_path(path <> "?" <> query)
+
+  def sign_in_path(%URI{}), do: "/sign-in"
+
+  def sign_in_path(destination) do
+    case validate(destination) do
+      nil -> "/sign-in"
+      return_to -> "/sign-in?" <> URI.encode_query(return_to: return_to)
+    end
+  end
+
   defp local_path?(%URI{scheme: nil, host: nil, path: "/" <> _}, path) do
     not String.starts_with?(path, "//") and
       not String.contains?(String.downcase(path), ["\\", "%2f", "%5c"])

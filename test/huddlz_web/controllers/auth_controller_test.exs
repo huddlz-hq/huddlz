@@ -53,7 +53,7 @@ defmodule HuddlzWeb.AuthControllerTest do
         |> recycle()
         |> get(~p"/profile")
 
-      assert redirected_to(signed_out_conn) == ~p"/sign-in"
+      assert redirected_to(signed_out_conn) == ~p"/sign-in?#{[return_to: "/profile"]}"
     end
 
     test "disconnects LiveViews using the signed-in session", %{conn: conn} do
