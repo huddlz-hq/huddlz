@@ -41,7 +41,7 @@ defmodule HuddlzWeb.AuthLive.ResetPassword do
           <p>
             If an account exists for that email, you will receive password reset instructions shortly.
           </p>
-          <.link navigate={sign_in_path(@return_to)} class="btn-primary">Back to sign in</.link>
+          <.link navigate={AuthReturnTo.path(~p"/sign-in", @return_to)} class="btn-primary">Back to sign in</.link>
         </div>
       <% else %>
         <h1>Reset your password</h1>
@@ -72,7 +72,7 @@ defmodule HuddlzWeb.AuthLive.ResetPassword do
         </.form>
 
         <div class="auth-aside">
-          <.link navigate={sign_in_path(@return_to)}>Back to sign in</.link>
+          <.link navigate={AuthReturnTo.path(~p"/sign-in", @return_to)}>Back to sign in</.link>
         </div>
       <% end %>
     </Layouts.auth_shell>
@@ -105,7 +105,4 @@ defmodule HuddlzWeb.AuthLive.ResetPassword do
        |> FormFocus.first_error("reset-password-form")}
     end
   end
-
-  defp sign_in_path(nil), do: ~p"/sign-in"
-  defp sign_in_path(return_to), do: ~p"/sign-in?#{[return_to: return_to]}"
 end

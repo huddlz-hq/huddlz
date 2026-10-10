@@ -114,9 +114,8 @@ defmodule HuddlzWeb.LiveUserAuth do
   end
 
   defp redirect_to_sign_in(socket, params) do
-    destination = AuthReturnTo.for_live_view(socket, params)
-    path = if destination, do: ~p"/sign-in?#{[return_to: destination]}", else: ~p"/sign-in"
-    Phoenix.LiveView.redirect(socket, to: path)
+    return_to = AuthReturnTo.for_live_view(socket, params)
+    Phoenix.LiveView.redirect(socket, to: AuthReturnTo.path(~p"/sign-in", return_to))
   end
 
   defp mount_app(session, socket) do
@@ -136,9 +135,7 @@ defmodule HuddlzWeb.LiveUserAuth do
       |> maybe_attach_theme_menu()
       |> watch_for_suspension()
       |> Phoenix.LiveView.attach_hook(:auth_return_to, :handle_params, fn _params, uri, socket ->
-        %URI{path: path, query: query} = URI.parse(uri)
-        destination = if query, do: path <> "?" <> query, else: path
-        {:cont, assign(socket, :auth_return_to, AuthReturnTo.validate(destination))}
+        {:cont, assign(socket, :auth_return_to, AuthReturnTo.from_uri(uri))}
       end)
 
     {:cont, socket}

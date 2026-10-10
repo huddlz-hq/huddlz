@@ -137,18 +137,10 @@ defmodule HuddlzWeb.AuthController do
     end
   end
 
-  defp destination(conn) do
-    if Map.has_key?(conn.params, "return_to"),
-      do: AuthReturnTo.validate(conn.params["return_to"]),
-      else: AuthReturnSession.destination(get_session(conn))
-  end
+  defp destination(%{params: %{"return_to" => return_to}}), do: AuthReturnTo.validate(return_to)
+  defp destination(conn), do: AuthReturnSession.destination(get_session(conn))
 
   defp return_to(conn), do: destination(conn) || ~p"/"
 
-  defp sign_in_path(conn) do
-    case destination(conn) do
-      nil -> ~p"/sign-in"
-      path -> ~p"/sign-in?#{[return_to: path]}"
-    end
-  end
+  defp sign_in_path(conn), do: AuthReturnTo.path(~p"/sign-in", destination(conn))
 end

@@ -12,6 +12,7 @@ defmodule HuddlzWeb.GroupLive.Show do
   alias Huddlz.Communities
   alias Huddlz.Communities.{GroupLocation, GroupMember, Huddl, MembershipEvents}
   alias Huddlz.Storage.GroupImages
+  alias HuddlzWeb.AuthReturnTo
   alias HuddlzWeb.Avatar
   alias HuddlzWeb.JoinSourceTag
   alias HuddlzWeb.Layouts
@@ -123,9 +124,9 @@ defmodule HuddlzWeb.GroupLive.Show do
 
   # Where sign-in sends the person back to. A tag that came with the visit
   # goes along, so signing in on the way does not lose where the join began.
-  defp return_path(path, :group_page), do: path
+  defp with_join_source(path, :group_page), do: path
 
-  defp return_path(path, source) do
+  defp with_join_source(path, source) do
     uri = URI.parse(path)
     query = uri.query |> to_string() |> Query.decode() |> Map.put("from", source)
     URI.to_string(%{uri | query: Query.encode(query)})
@@ -199,7 +200,7 @@ defmodule HuddlzWeb.GroupLive.Show do
     <Layouts.app
       flash={@flash}
       current_user={@current_user}
-      return_to={return_path(@auth_return_to, @join_source)}
+      return_to={with_join_source(@auth_return_to, @join_source)}
       unread_notification_count={@unread_notification_count}
       sidebar_owned_groups={@sidebar_owned_groups}
       active="discover"
@@ -331,7 +332,9 @@ defmodule HuddlzWeb.GroupLive.Show do
           <.button
             :if={is_nil(@current_user) and @group.is_public and is_nil(@group.archived_at)}
             variant={:primary}
-            navigate={~p"/sign-in?#{[return_to: return_path(@auth_return_to, @join_source)]}"}
+            navigate={
+              AuthReturnTo.path(~p"/sign-in", with_join_source(@auth_return_to, @join_source))
+            }
           >
             Sign in to join
           </.button>

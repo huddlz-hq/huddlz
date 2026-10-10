@@ -151,7 +151,8 @@ defmodule HuddlzWeb.AuthLive.Register do
       <Components.sign_in_token_form token={@sign_in_token} return_to={@return_to} />
 
       <div class="auth-aside">
-        Already have an account? <.link navigate={sign_in_path(@return_to)}>Sign in</.link>
+        Already have an account?
+        <.link navigate={AuthReturnTo.path(~p"/sign-in", @return_to)}>Sign in</.link>
       </div>
     </Layouts.auth_shell>
     """
@@ -226,7 +227,7 @@ defmodule HuddlzWeb.AuthLive.Register do
         :error,
         "Registration succeeded but automatic sign-in failed. Please sign in manually."
       )
-      |> redirect(to: sign_in_path(socket.assigns.return_to))
+      |> redirect(to: AuthReturnTo.path(~p"/sign-in", socket.assigns.return_to))
     end
   end
 
@@ -245,8 +246,4 @@ defmodule HuddlzWeb.AuthLive.Register do
       "Registration failed. Please check your inputs and try again."
     end
   end
-
-  defp sign_in_path(nil), do: ~p"/sign-in"
-
-  defp sign_in_path(return_to), do: ~p"/sign-in?#{[return_to: return_to]}"
 end

@@ -17,21 +17,19 @@ defmodule HuddlzWeb.AuthReturnSession do
   @impl true
   def call(%{method: "GET", path_info: [page]} = conn, _opts)
       when page in ["sign-in", "register", "reset"] do
-    path =
-      if conn.assigns[:current_user],
-        do: nil,
-        else: AuthReturnTo.validate(conn.query_params["return_to"])
-
-    case path do
-      nil ->
-        delete_session(conn, :return_to)
-
-      path ->
-        put_session(conn, :return_to, %{"path" => path, "at" => System.system_time(:second)})
-    end
+    remember(
+      conn,
+      conn.assigns[:current_user],
+      AuthReturnTo.validate(conn.query_params["return_to"])
+    )
   end
 
   def call(conn, _opts), do: conn
+
+  defp remember(conn, nil = _user, path) when is_binary(path),
+    do: put_session(conn, :return_to, %{"path" => path, "at" => System.system_time(:second)})
+
+  defp remember(conn, _user, _path), do: delete_session(conn, :return_to)
 
   @doc "Returns the unexpired, validated destination remembered in this browser."
   def destination(session, now \\ System.system_time(:second)) do

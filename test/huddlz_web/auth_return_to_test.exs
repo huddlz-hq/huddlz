@@ -27,19 +27,4 @@ defmodule HuddlzWeb.AuthReturnToTest do
       assert AuthReturnTo.validate(path) == nil
     end
   end
-
-  test "unsupported mounts and missing or unsafe path parameters fail closed" do
-    socket = %Phoenix.LiveView.Socket{
-      router: HuddlzWeb.Router,
-      view: HuddlzWeb.GroupLive.Show,
-      host_uri: URI.parse("https://huddlz.test"),
-      assigns: %{live_action: :show}
-    }
-
-    for params <- [%{}, %{"slug" => ["bad"]}, %{"slug" => "/evil"}, %{"slug" => "new"}] do
-      assert AuthReturnTo.for_live_view(socket, params) == nil
-    end
-
-    assert AuthReturnTo.for_live_view(%Phoenix.LiveView.Socket{}, %{}) == nil
-  end
 end

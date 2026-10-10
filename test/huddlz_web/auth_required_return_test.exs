@@ -1,5 +1,6 @@
 defmodule HuddlzWeb.AuthRequiredReturnTest do
   use HuddlzWeb.ConnCase, async: true
+  import Phoenix.LiveViewTest
   alias Plug.Conn.Query
 
   test "account and admin guards retain static and dynamic destinations before loading private data",
@@ -34,5 +35,18 @@ defmodule HuddlzWeb.AuthRequiredReturnTest do
       assert Query.decode(destination.query || "") ==
                Query.decode(expected.query || "")
     end
+  end
+
+  test "live navigation to an account page keeps its destination", %{conn: conn} do
+    {:ok, view, _html} = live(conn, "/help/agents")
+
+    assert {:error, {:redirect, %{to: to}}} =
+             live_redirect(view, to: "/organize/return-group/social?filter=Elixir%2FPhoenix")
+
+    assert to ==
+             "/sign-in?" <>
+               URI.encode_query(
+                 return_to: "/organize/return-group/social?filter=Elixir%2FPhoenix"
+               )
   end
 end

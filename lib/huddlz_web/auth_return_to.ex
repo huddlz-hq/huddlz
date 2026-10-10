@@ -8,7 +8,7 @@ defmodule HuddlzWeb.AuthReturnTo do
   @spec validate(term()) :: String.t() | nil
   def validate(path) when is_binary(path) do
     case URI.new(path) do
-      {:ok, uri} -> if local_path?(uri, path), do: path
+      {:ok, uri} -> if local_path?(uri), do: path
       _ -> nil
     end
   end
@@ -16,37 +16,40 @@ defmodule HuddlzWeb.AuthReturnTo do
   def validate(_path), do: nil
 
   @doc """
-  Reconstructs the destination of a routed LiveView before its mount loads data.
-
-  On connected navigation the connection URI is the websocket transport, not
-  the requested page. The router supplies the path; mount params supply its
-  path values and decoded query. Ambiguous or unsupported routes fail closed.
+  Returns the safe local path and query of a requested URI, or `nil`.
   """
-  def for_live_view(
-        %{
-          router: router,
-          view: view,
-          assigns: %{live_action: action},
-          host_uri: %URI{host: host}
-        },
-        params
-      )
-      when is_atom(router) and not is_nil(router) and is_map(params) do
-    routes =
-      Enum.filter(Phoenix.Router.routes(router), fn route ->
-        route.plug == Phoenix.LiveView.Plug and route.plug_opts == action and
-          match?({route_view, _, _} when route_view == view, route.metadata[:mfa])
-      end)
+  def from_uri(uri) do
+    %URI{path: path, query: query} = URI.parse(uri)
+    validate(if query, do: "#{path}?#{query}", else: path)
+  end
 
-    with [route] <- routes,
-         {:ok, path, keys} <- route_path(route.path, params),
-         %{route: pattern} <-
-           Phoenix.Router.route_info(router, "GET", path, host),
-         true <- pattern == route.path do
+  @doc """
+  Rebuilds the page a routed LiveView is mounting, before it loads any data.
+  A mount sees params, not its URI, so the router's path pattern is filled
+  back in from them and the remaining params become the query.
+  """
+  def for_live_view(%{router: router, view: view, assigns: %{live_action: action}}, params)
+      when is_atom(router) and not is_nil(router) and is_map(params) do
+    patterns =
+      for %{path: path, metadata: %{phoenix_live_view: {^view, ^action, _, _}}} <-
+            Phoenix.Router.routes(router),
+          do: path
+
+    with [pattern] <- patterns, false <- String.contains?(pattern, "*") do
+      {segments, keys} =
+        pattern
+        |> String.split("/")
+        |> Enum.map_reduce([], fn
+          ":" <> key, keys -> {URI.encode(params[key], &URI.char_unreserved?/1), [key | keys]}
+          segment, keys -> {segment, keys}
+        end)
+
+      path = Enum.join(segments, "/")
+
       query =
         params |> Map.drop(keys) |> Query.encode() |> URI.encode(&(&1 not in ~c"[]"))
 
-      validate(if query == "", do: path, else: path <> "?" <> query)
+      validate(if query == "", do: path, else: "#{path}?#{query}")
     else
       _ -> nil
     end
@@ -54,35 +57,21 @@ defmodule HuddlzWeb.AuthReturnTo do
 
   def for_live_view(_socket, _params), do: nil
 
-  defp route_path(pattern, params) do
-    pattern
-    |> String.split("/")
-    |> Enum.reduce_while({:ok, [], []}, fn
-      ":" <> key, {:ok, parts, keys} ->
-        case params[key] do
-          value when is_binary(value) ->
-            {:cont, {:ok, [URI.encode(value, &URI.char_unreserved?/1) | parts], [key | keys]}}
-
-          _ ->
-            {:halt, :error}
-        end
-
-      "*" <> _, _ ->
-        {:halt, :error}
-
-      part, {:ok, parts, keys} ->
-        {:cont, {:ok, [part | parts], keys}}
-    end)
-    |> case do
-      {:ok, parts, keys} -> {:ok, parts |> Enum.reverse() |> Enum.join("/"), keys}
-      :error -> :error
+  @doc """
+  Adds a safe `return_to` to an authentication page's path. Unsafe or missing
+  destinations leave the path bare.
+  """
+  def path(path, return_to) do
+    case validate(return_to) do
+      nil -> path
+      return_to -> path <> "?" <> URI.encode_query(return_to: return_to)
     end
   end
 
-  defp local_path?(%URI{scheme: nil, host: nil, path: "/" <> _ = path}, _destination) do
+  defp local_path?(%URI{scheme: nil, host: nil, path: "/" <> _ = path}) do
     not String.starts_with?(path, "//") and
       not String.contains?(String.downcase(path), ["\\", "%2f", "%5c"])
   end
 
-  defp local_path?(_uri, _path), do: false
+  defp local_path?(_uri), do: false
 end

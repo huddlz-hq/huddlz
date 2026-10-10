@@ -8,6 +8,7 @@ defmodule HuddlzWeb.AuthLive.ResetPasswordConfirm do
   alias AshPhoenix.Form
   alias Huddlz.Accounts.User
   alias HuddlzWeb.AuthReturnSession
+  alias HuddlzWeb.AuthReturnTo
   alias HuddlzWeb.FormFocus
 
   @impl true
@@ -119,13 +120,10 @@ defmodule HuddlzWeb.AuthLive.ResetPasswordConfirm do
       </div>
       <h2>This password reset link is invalid or has expired</h2>
       <p>The link may have expired or already been used. Request a fresh one.</p>
-      <.link navigate={reset_path(@return_to)} class="btn-primary">Request new reset link</.link>
+      <.link navigate={AuthReturnTo.path(~p"/reset", @return_to)} class="btn-primary">Request new reset link</.link>
     </div>
     """
   end
-
-  defp reset_path(nil), do: ~p"/reset"
-  defp reset_path(return_to), do: ~p"/reset?#{[return_to: return_to]}"
 
   @impl true
   def handle_event("validate", %{"user" => params}, socket) do
