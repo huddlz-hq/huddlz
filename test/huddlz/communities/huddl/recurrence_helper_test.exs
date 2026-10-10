@@ -80,7 +80,7 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelperTest do
       expected_second = Date.add(source_date, 14)
       expected_third = Date.add(source_date, 21)
 
-      assert dates == Enum.sort([expected_first, expected_second, expected_third])
+      assert dates == Enum.sort([expected_first, expected_second, expected_third], Date)
     end
 
     test "generates no huddlz when repeat_until is before next occurrence", ctx do
