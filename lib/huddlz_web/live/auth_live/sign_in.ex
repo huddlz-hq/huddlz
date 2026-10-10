@@ -53,7 +53,7 @@ defmodule HuddlzWeb.AuthLive.SignIn do
       <Components.sign_in_token_form token={@sign_in_token} return_to={@return_to} />
 
       <div class="auth-aside">
-        <.link navigate={~p"/reset"}>Forgot your password?</.link>
+        <.link navigate={reset_path(@return_to)}>Forgot your password?</.link>
       </div>
       <div class="auth-aside">
         Don't have an account? <.link navigate={register_path(@return_to)}>Sign up</.link>
@@ -173,4 +173,7 @@ defmodule HuddlzWeb.AuthLive.SignIn do
   defp register_path(nil), do: ~p"/register"
 
   defp register_path(return_to), do: ~p"/register?#{[return_to: return_to]}"
+
+  defp reset_path(nil), do: ~p"/reset"
+  defp reset_path(return_to), do: ~p"/reset?#{[return_to: return_to]}"
 end

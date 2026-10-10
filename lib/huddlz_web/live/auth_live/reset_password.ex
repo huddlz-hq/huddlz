@@ -9,10 +9,11 @@ defmodule HuddlzWeb.AuthLive.ResetPassword do
   alias AshPhoenix.Form
   alias Huddlz.Accounts.User
   alias HuddlzWeb.AuthFormErrors
+  alias HuddlzWeb.AuthReturnTo
   alias HuddlzWeb.FormFocus
 
   @impl true
-  def mount(_params, _session, socket) do
+  def mount(params, _session, socket) do
     form =
       Form.for_action(User, :request_password_reset_token,
         post_process_errors: &AuthFormErrors.post_process/3
@@ -23,7 +24,8 @@ defmodule HuddlzWeb.AuthLive.ResetPassword do
      |> assign(:page_title, "Reset password")
      |> assign(:body_class, "is-auth")
      |> assign(:form, to_form(form))
-     |> assign(:submitted, false)}
+     |> assign(:submitted, false)
+     |> assign(:return_to, AuthReturnTo.validate(params["return_to"]))}
   end
 
   @impl true
@@ -39,7 +41,7 @@ defmodule HuddlzWeb.AuthLive.ResetPassword do
           <p>
             If an account exists for that email, you will receive password reset instructions shortly.
           </p>
-          <.link navigate={~p"/sign-in"} class="btn-primary">Back to sign in</.link>
+          <.link navigate={sign_in_path(@return_to)} class="btn-primary">Back to sign in</.link>
         </div>
       <% else %>
         <h1>Reset your password</h1>
@@ -70,7 +72,7 @@ defmodule HuddlzWeb.AuthLive.ResetPassword do
         </.form>
 
         <div class="auth-aside">
-          <.link navigate={~p"/sign-in"}>Back to sign in</.link>
+          <.link navigate={sign_in_path(@return_to)}>Back to sign in</.link>
         </div>
       <% end %>
     </Layouts.auth_shell>
@@ -103,4 +105,7 @@ defmodule HuddlzWeb.AuthLive.ResetPassword do
        |> FormFocus.first_error("reset-password-form")}
     end
   end
+
+  defp sign_in_path(nil), do: ~p"/sign-in"
+  defp sign_in_path(return_to), do: ~p"/sign-in?#{[return_to: return_to]}"
 end

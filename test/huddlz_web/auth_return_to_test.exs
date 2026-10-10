@@ -8,6 +8,13 @@ defmodule HuddlzWeb.AuthReturnToTest do
              "/groups/book-club/huddlz/123?tab=rsvp"
   end
 
+  test "encoded separators are allowed in queries but rejected in paths" do
+    for value <- ["%2f", "%2F", "%5c", "%5C"] do
+      assert AuthReturnTo.validate("/discover?q=a#{value}b") == "/discover?q=a#{value}b"
+      assert AuthReturnTo.validate("/groups/a#{value}b") == nil
+    end
+  end
+
   test "rejects external and malformed return paths" do
     for path <- [
           "https://evil.example",
@@ -19,5 +26,20 @@ defmodule HuddlzWeb.AuthReturnToTest do
         ] do
       assert AuthReturnTo.validate(path) == nil
     end
+  end
+
+  test "unsupported mounts and missing or unsafe path parameters fail closed" do
+    socket = %Phoenix.LiveView.Socket{
+      router: HuddlzWeb.Router,
+      view: HuddlzWeb.GroupLive.Show,
+      host_uri: URI.parse("https://huddlz.test"),
+      assigns: %{live_action: :show}
+    }
+
+    for params <- [%{}, %{"slug" => ["bad"]}, %{"slug" => "/evil"}, %{"slug" => "new"}] do
+      assert AuthReturnTo.for_live_view(socket, params) == nil
+    end
+
+    assert AuthReturnTo.for_live_view(%Phoenix.LiveView.Socket{}, %{}) == nil
   end
 end

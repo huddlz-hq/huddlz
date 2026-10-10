@@ -40,6 +40,7 @@ defmodule HuddlzWeb.HelpLive.Agents do
     <Layouts.app
       flash={@flash}
       current_user={@current_user}
+      return_to={@auth_return_to}
       unread_notification_count={@unread_notification_count}
       sidebar_owned_groups={@sidebar_owned_groups}
       active="help"
@@ -157,7 +158,9 @@ defmodule HuddlzWeb.HelpLive.Agents do
 
   defp key_action(assigns) do
     ~H"""
-    <div><.link class="btn-secondary" navigate={~p"/sign-in"}>Sign in to create a key</.link></div>
+    <div>
+      <.link class="btn-secondary" navigate={~p"/sign-in?#{[return_to: ~p"/profile/api-keys"]}"}>Sign in to create a key</.link>
+    </div>
     """
   end
 

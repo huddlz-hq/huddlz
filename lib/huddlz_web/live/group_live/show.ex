@@ -18,6 +18,7 @@ defmodule HuddlzWeb.GroupLive.Show do
   alias HuddlzWeb.MetaHelpers
   alias HuddlzWeb.ReportAccount
   alias Phoenix.LiveView.JS
+  alias Plug.Conn.Query
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_optional}
   on_mount {HuddlzWeb.LiveUserAuth, :app}
@@ -122,8 +123,13 @@ defmodule HuddlzWeb.GroupLive.Show do
 
   # Where sign-in sends the person back to. A tag that came with the visit
   # goes along, so signing in on the way does not lose where the join began.
-  defp return_path(group, :group_page), do: ~p"/groups/#{group.slug}"
-  defp return_path(group, source), do: ~p"/groups/#{group.slug}?#{[from: source]}"
+  defp return_path(path, :group_page), do: path
+
+  defp return_path(path, source) do
+    uri = URI.parse(path)
+    query = uri.query |> to_string() |> Query.decode() |> Map.put("from", source)
+    URI.to_string(%{uri | query: Query.encode(query)})
+  end
 
   defp subscribe_to_membership_changes(socket, group) do
     if connected?(socket) and socket.assigns.subscribed_group_id != group.id do
@@ -193,6 +199,7 @@ defmodule HuddlzWeb.GroupLive.Show do
     <Layouts.app
       flash={@flash}
       current_user={@current_user}
+      return_to={return_path(@auth_return_to, @join_source)}
       unread_notification_count={@unread_notification_count}
       sidebar_owned_groups={@sidebar_owned_groups}
       active="discover"
@@ -324,7 +331,7 @@ defmodule HuddlzWeb.GroupLive.Show do
           <.button
             :if={is_nil(@current_user) and @group.is_public and is_nil(@group.archived_at)}
             variant={:primary}
-            navigate={~p"/sign-in?#{[return_to: return_path(@group, @join_source)]}"}
+            navigate={~p"/sign-in?#{[return_to: return_path(@auth_return_to, @join_source)]}"}
           >
             Sign in to join
           </.button>

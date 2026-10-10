@@ -192,11 +192,9 @@ Feature: Password Authentication
       | password_confirmation | NewSecurePass456! |
     And I submit the password reset form
     Then I should see "Your password has successfully been reset"
-    When I am on the sign-in page
-    And I fill in the password sign-in form with:
-      | email    | resetpwd@example.com |
-      | password | NewSecurePass456!    |
-    And I submit the password sign-in form
+    And I should be signed in
+    When I visit "/agenda"
+    And I sign out and sign in again as "resetpwd@example.com" with password "NewSecurePass456!"
     Then I should be signed in
 
   Scenario: User visits password reset with invalid token

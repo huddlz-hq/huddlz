@@ -82,7 +82,7 @@ defmodule HuddlzWeb.HuddlLive do
       {:noreply,
        socket
        |> put_flash(:error, "Sign in to view #{sign_in_prompt(yours)}.")
-       |> push_navigate(to: ~p"/sign-in")}
+       |> push_navigate(to: ~p"/sign-in?#{[return_to: socket.assigns.auth_return_to]}")}
     else
       page = parse_page(params["page"])
       canonical_url = url(~p"/discover?#{params}")
@@ -614,6 +614,7 @@ defmodule HuddlzWeb.HuddlLive do
     <Layouts.app
       flash={@flash}
       current_user={@current_user}
+      return_to={@auth_return_to}
       unread_notification_count={@unread_notification_count}
       sidebar_owned_groups={@sidebar_owned_groups}
       active="discover"

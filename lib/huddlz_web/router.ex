@@ -31,6 +31,7 @@ defmodule HuddlzWeb.Router do
     plug HuddlzWeb.JoinSourceTag
     plug :load_from_session_unless_loaded
     plug HuddlzWeb.BrowserSession
+    plug HuddlzWeb.AuthReturnSession
     plug HuddlzWeb.RejectSuspended, :browser
     plug HuddlzWeb.MarkActive
     plug :prevent_authenticated_page_caching

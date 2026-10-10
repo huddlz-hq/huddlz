@@ -6,6 +6,7 @@ defmodule HuddlzWeb.Layouts do
 
   alias Huddlz.Accounts.User
   alias Huddlz.Admin.Impersonation
+  alias HuddlzWeb.AuthReturnTo
   alias HuddlzWeb.Avatar
 
   embed_templates "layouts/*"
@@ -51,12 +52,14 @@ defmodule HuddlzWeb.Layouts do
     doc: "groups the current_user organizes — rendered as sb-org-row entries"
 
   attr :query, :string, default: "", doc: "current search query — prefilled in topbar input"
+  attr :return_to, :string, default: nil
   slot :inner_block, required: true
 
   def app(assigns) do
     assigns =
       assigns
       |> assign_new(:signed_in, fn -> assigns.current_user != nil end)
+      |> assign(:return_to, AuthReturnTo.validate(assigns.return_to))
 
     ~H"""
     <.skip_link />
@@ -339,8 +342,8 @@ defmodule HuddlzWeb.Layouts do
               </span>
             </.link>
           <% else %>
-            <.link class="btn-secondary" navigate={~p"/sign-in"}>Sign in</.link>
-            <.link class="btn-primary" navigate={~p"/register"}>Sign up</.link>
+            <.link class="btn-secondary" navigate={auth_path("/sign-in", @return_to)}>Sign in</.link>
+            <.link class="btn-primary" navigate={auth_path("/register", @return_to)}>Sign up</.link>
           <% end %>
         </div>
       </header>
@@ -353,6 +356,9 @@ defmodule HuddlzWeb.Layouts do
     </div>
     """
   end
+
+  defp auth_path(path, nil), do: path
+  defp auth_path(path, return_to), do: path <> "?" <> URI.encode_query(return_to: return_to)
 
   attr :current_user, :map, default: nil
 

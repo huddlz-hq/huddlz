@@ -14,6 +14,7 @@ defmodule HuddlzWeb.LiveUserAuth do
   alias Huddlz.Accounts.User
   alias Huddlz.Communities.MembershipEvents
   alias Huddlz.Notifications
+  alias HuddlzWeb.AuthReturnTo
 
   # This is used for nested liveviews to fetch the current user.
   # To use, place the following at the top of that liveview:
@@ -31,11 +32,11 @@ defmodule HuddlzWeb.LiveUserAuth do
     end
   end
 
-  def on_mount(:live_user_required, _params, _session, socket) do
+  def on_mount(:live_user_required, params, _session, socket) do
     if socket.assigns[:current_user] do
       {:cont, socket}
     else
-      {:halt, Phoenix.LiveView.redirect(socket, to: ~p"/sign-in")}
+      {:halt, redirect_to_sign_in(socket, params)}
     end
   end
 
@@ -86,10 +87,10 @@ defmodule HuddlzWeb.LiveUserAuth do
   # lives on the User resource (`User.admin?/1` + the `:is_admin` calculation),
   # so this hook stays in sync with the policy bypass that uses the same role
   # check on every Ash action.
-  def on_mount(:admin_required, _params, _session, socket) do
+  def on_mount(:admin_required, params, _session, socket) do
     case socket.assigns[:current_user] do
       nil ->
-        {:halt, Phoenix.LiveView.redirect(socket, to: ~p"/sign-in")}
+        {:halt, redirect_to_sign_in(socket, params)}
 
       user ->
         authorize_admin(user, socket)
@@ -112,6 +113,12 @@ defmodule HuddlzWeb.LiveUserAuth do
     reject_suspended(socket, fn -> mount_app(session, socket) end)
   end
 
+  defp redirect_to_sign_in(socket, params) do
+    destination = AuthReturnTo.for_live_view(socket, params)
+    path = if destination, do: ~p"/sign-in?#{[return_to: destination]}", else: ~p"/sign-in"
+    Phoenix.LiveView.redirect(socket, to: path)
+  end
+
   defp mount_app(session, socket) do
     body_class = if socket.assigns[:current_user], do: "", else: "is-signed-out"
 
@@ -128,6 +135,11 @@ defmodule HuddlzWeb.LiveUserAuth do
       |> maybe_subscribe_to_unread_count()
       |> maybe_attach_theme_menu()
       |> watch_for_suspension()
+      |> Phoenix.LiveView.attach_hook(:auth_return_to, :handle_params, fn _params, uri, socket ->
+        %URI{path: path, query: query} = URI.parse(uri)
+        destination = if query, do: path <> "?" <> query, else: path
+        {:cont, assign(socket, :auth_return_to, AuthReturnTo.validate(destination))}
+      end)
 
     {:cont, socket}
   end
