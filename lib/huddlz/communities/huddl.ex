@@ -10,7 +10,7 @@ defmodule Huddlz.Communities.Huddl do
     domain: Huddlz.Communities,
     data_layer: AshPostgres.DataLayer,
     authorizers: [Ash.Policy.Authorizer],
-    notifiers: [Ash.Notifier.PubSub],
+    notifiers: [Ash.Notifier.PubSub, Huddlz.Communities.ActivityLog],
     extensions: [AshOban, AshJsonApi.Resource, AshGraphql.Resource, AshPaperTrail.Resource],
     primary_read_warning?: false
 
@@ -38,6 +38,9 @@ defmodule Huddlz.Communities.Huddl do
       update :cancel_rsvp_to_huddl, :cancel_rsvp
       update :record_huddl_turnout, :record_turnout
       update :skip_huddl_turnout, :skip_turnout
+      update :skip_huddl_on_social_connection, :skip_social_connection
+      update :unskip_huddl_on_social_connection, :unskip_social_connection
+      update :post_huddl_now, :post_social_now
       destroy :delete_huddl, :destroy
     end
   end
@@ -90,6 +93,9 @@ defmodule Huddlz.Communities.Huddl do
       patch :cancel_rsvp, route: "/:id/cancel_rsvp"
       patch :record_turnout, route: "/:id/record_turnout"
       patch :skip_turnout, route: "/:id/skip_turnout"
+      patch :skip_social_connection, route: "/:id/skip_social_connection"
+      patch :unskip_social_connection, route: "/:id/unskip_social_connection"
+      patch :post_social_now, route: "/:id/post_social_now"
       delete :destroy
     end
   end
@@ -200,7 +206,14 @@ defmodule Huddlz.Communities.Huddl do
   end
 
   paper_trail do
-    ignore_actions [:send_24h_reminder, :send_1h_reminder]
+    ignore_actions [
+      :send_24h_reminder,
+      :send_1h_reminder,
+      :skip_social_connection,
+      :unskip_social_connection,
+      :post_social_now
+    ]
+
     change_tracking_mode :snapshot
     store_action_name? true
     reference_source? false
@@ -379,6 +392,45 @@ defmodule Huddlz.Communities.Huddl do
       description "Dismiss the turnout prompt for this huddl. Turnout can still be recorded later."
 
       change set_attribute(:turnout_skipped_at, &DateTime.utc_now/0)
+    end
+
+    update :skip_social_connection do
+      description "Leave this huddl off one of the group's social connections: its remaining posts there are dropped, follow-ups included"
+      require_atomic? false
+      accept []
+
+      argument :social_connection_id, :uuid do
+        allow_nil? false
+      end
+
+      change Huddlz.Communities.Changes.RequireActiveGroup
+      change {Huddlz.Communities.Huddl.Changes.SteerSocialPosts, to: :skip}
+    end
+
+    update :unskip_social_connection do
+      description "Post this huddl on a social connection again, planning its posts afresh from the schedule; moments that have passed are skipped"
+      require_atomic? false
+      accept []
+
+      argument :social_connection_id, :uuid do
+        allow_nil? false
+      end
+
+      change Huddlz.Communities.Changes.RequireActiveGroup
+      change {Huddlz.Communities.Huddl.Changes.SteerSocialPosts, to: :unskip}
+    end
+
+    update :post_social_now do
+      description "Post this huddl to one of the group's social connections right away, on top of its schedule"
+      require_atomic? false
+      accept []
+
+      argument :social_connection_id, :uuid do
+        allow_nil? false
+      end
+
+      change Huddlz.Communities.Changes.RequireActiveGroup
+      change {Huddlz.Communities.Huddl.Changes.SteerSocialPosts, to: :post_now}
     end
 
     update :update do
@@ -910,6 +962,15 @@ defmodule Huddlz.Communities.Huddl do
                    )
     end
 
+    policy action([:skip_social_connection, :unskip_social_connection, :post_social_now]) do
+      description "Group owners and organizers steer a huddl's social posts"
+      authorize_if expr(group.owner_id == ^actor(:id))
+
+      authorize_if expr(
+                     exists(group.group_members, user_id == ^actor(:id) and role == :organizer)
+                   )
+    end
+
     policy action([:publish, :cancel]) do
       description "Only group owners and organizers can change a huddl lifecycle"
       authorize_if expr(group.owner_id == ^actor(:id))
@@ -1207,6 +1268,10 @@ defmodule Huddlz.Communities.Huddl do
     end
 
     has_many :huddl_cover_images, Huddlz.Communities.HuddlCoverImage do
+      destination_attribute :huddl_id
+    end
+
+    has_many :social_skips, Huddlz.Communities.SocialSkip do
       destination_attribute :huddl_id
     end
   end

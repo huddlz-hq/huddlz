@@ -2548,6 +2548,8 @@ body .row.social-post-row { grid-template-columns: 170px minmax(0, 1fr) auto; }
 body .row.social-post-row .row-title { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 body .row.social-post-row .row-title .meta { display: block; }
 body .social-post-time { color: var(--muted); font-variant-numeric: tabular-nums; }
+body .row.social-post-row .row-title a { color: inherit; text-decoration: none; transition: color 120ms ease; }
+body .row.social-post-row .row-title a:hover { color: var(--accent-ink); }
 body .social-moments { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
 body .social-actions { display: flex; gap: 8px; }
 
@@ -2562,6 +2564,90 @@ body .place-mark {
   color: var(--soft);
   font-size: 15px;
   font-weight: 700;
+}
+
+/* Organize · one huddl: a breadcrumb back to the list, the huddl's head,
+   and its Social posts panel (one block per social connection, then the
+   copy line). */
+body .org-crumbs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+body .org-crumbs a { color: var(--accent-ink); font-weight: 600; text-decoration: none; }
+body .org-crumbs a:hover { text-decoration: underline; }
+body .org-huddl-head h1 { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+body .org-huddl-head p { margin: 4px 0 0; }
+
+body .panel.social-posts { padding: 0; }
+body .social-posts .panel-head { margin: 0; }
+
+body .social-posts-place {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--line);
+}
+
+body .social-posts-place-head {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+
+body .social-posts-place-head .row-title {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  font-weight: 600;
+}
+
+body .social-posts-place-head .meta { color: var(--muted); font-size: 13px; font-weight: 400; }
+
+body .social-posts-note,
+body .social-posts-list,
+body .social-posts-actions { margin: 0; padding-left: 52px; }
+
+body .social-posts-note { color: var(--muted); font-size: 13px; }
+body .social-posts-list { display: flex; flex-direction: column; gap: 8px; list-style: none; }
+
+body .social-posts-post {
+  display: grid;
+  grid-template-columns: 160px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  color: var(--soft);
+  font-size: 13px;
+}
+
+body .social-posts-copy {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 24px;
+}
+
+body .social-posts-copy .muted { flex: 1 1 220px; font-size: 13px; }
+
+@media (max-width: 760px) {
+  body .social-posts-place,
+  body .social-posts-copy { padding-inline: 16px; }
+  body .social-posts-note,
+  body .social-posts-list,
+  body .social-posts-actions { padding-left: 0; }
+  body .social-posts-post { grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; }
+  body .social-posts-post .social-post-time { grid-column: 1 / -1; }
+  body .social-posts-actions .btn-sm,
+  body .social-posts-copy .btn-sm { height: 44px; }
+  body .social-posts-copy .btn-sm { width: 100%; justify-content: center; }
 }
 
 body .place-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
