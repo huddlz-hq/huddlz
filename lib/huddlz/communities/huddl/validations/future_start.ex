@@ -1,11 +1,13 @@
 defmodule Huddlz.Communities.Huddl.Validations.FutureStart do
   @moduledoc """
-  Requires a new huddl, or a copy, to start after now.
+  Requires a new huddl, including a copy, to start after now.
 
   Runs once the start has been resolved in the huddl time zone, so a huddl
   later today counts as future wherever it meets. A day before today flags
-  the date; a start time already passed today flags the start time. A copy
+  the date; a start time already passed today flags the start time. A huddl
   given a start timestamp instead of a date flags that timestamp.
+
+  Instances a series generates for itself are exempt; they follow the series.
   """
 
   use Ash.Resource.Validation
@@ -15,10 +17,10 @@ defmodule Huddlz.Communities.Huddl.Validations.FutureStart do
     starts_at = Ash.Changeset.get_attribute(changeset, :starts_at)
 
     cond do
+      changeset.context[:series_instance?] -> :ok
       is_nil(starts_at) or DateTime.after?(starts_at, DateTime.utc_now()) -> :ok
       date = Ash.Changeset.get_argument(changeset, :date) -> past_schedule(changeset, date)
-      Ash.Changeset.get_argument(changeset, :copied_from_id) -> past(:starts_at)
-      true -> :ok
+      true -> past(:starts_at)
     end
   end
 
