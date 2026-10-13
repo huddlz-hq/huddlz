@@ -6685,7 +6685,7 @@ body .form-row-inline {
   flex-direction: row;
   flex-wrap: wrap;
   gap: 14px;
-  align-items: flex-end;
+  align-items: flex-start;
 }
 
 body .form-row-inline > div { display: flex; flex-direction: column; gap: 6px; }
