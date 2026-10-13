@@ -7,7 +7,9 @@ defmodule Huddlz.Communities.Huddl.Validations.FutureStart do
   the date; a start time already passed today flags the start time. A huddl
   given a start timestamp instead of a date flags that timestamp.
 
-  Instances a series generates for itself are exempt; they follow the series.
+  Code that records a huddl rather than scheduling one, such as a series
+  generating its own instances or the dev seeds' history, sets the private
+  `allow_past_start?` context to skip this check.
   """
 
   use Ash.Resource.Validation
@@ -17,7 +19,7 @@ defmodule Huddlz.Communities.Huddl.Validations.FutureStart do
     starts_at = Ash.Changeset.get_attribute(changeset, :starts_at)
 
     cond do
-      changeset.context[:series_instance?] -> :ok
+      changeset.context[:allow_past_start?] -> :ok
       is_nil(starts_at) or DateTime.after?(starts_at, DateTime.utc_now()) -> :ok
       date = Ash.Changeset.get_argument(changeset, :date) -> past_schedule(changeset, date)
       true -> past(:starts_at)

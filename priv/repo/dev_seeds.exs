@@ -338,7 +338,9 @@ if Enum.empty?(existing_groups) do
             group_location_id: book_location.id,
             group_id: book_group.id
           },
-          actor: bob
+          actor: bob,
+          # Seeded history and in-progress huddlz start before now.
+          context: %{allow_past_start?: true}
         )
         |> Ash.create()
 
@@ -383,7 +385,9 @@ if Enum.empty?(existing_groups) do
             group_location_id: hiking_location.id,
             group_id: hiking_group.id
           },
-          actor: carol
+          actor: carol,
+          # Seeded history and in-progress huddlz start before now.
+          context: %{allow_past_start?: true}
         )
         |> Ash.create()
 
@@ -415,7 +419,9 @@ if Enum.empty?(existing_groups) do
             virtual_link: "https://zoom.us/j/live#{i}",
             group_id: phoenix_group.id
           },
-          actor: alice
+          actor: alice,
+          # Seeded history and in-progress huddlz start before now.
+          context: %{allow_past_start?: true}
         )
         |> Ash.create()
 

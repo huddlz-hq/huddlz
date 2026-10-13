@@ -213,7 +213,7 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
 
     # Instances follow the series wherever it lands, including into the past
     # when an organizer edits an earlier huddl, so they skip FutureStart.
-    create_opts = Keyword.put(opts, :context, Map.put(context, :series_instance?, true))
+    create_opts = Keyword.put(opts, :context, Map.put(context, :allow_past_start?, true))
 
     instance =
       Huddl
