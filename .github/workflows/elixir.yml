@@ -101,6 +101,12 @@ jobs:
     - name: Compiles without warnings
       run: mix compile --warnings-as-errors
 
+    # Step: Fail when resources and their checked-in migrations, snapshots or
+    # generated code have drifted, e.g. an ash_postgres upgrade that wants a
+    # new ash_functions migration.
+    - name: No pending code generation
+      run: mix ash.codegen --check
+
     # Step: Execute the tests.
     - name: Run tests
       run: mix test
