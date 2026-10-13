@@ -21,9 +21,11 @@ jobs:
     # Set up a Postgres DB service. By default, Phoenix applications
     # use Postgres. This creates a database for running tests.
     # Additional services can be defined here if required.
+    # Keep every job's image on production's Postgres major (Fly Managed
+    # Postgres runs 16 with PostGIS 3.3; there is no 16-3.3 image).
     services:
       db:
-        image: postgis/postgis:18-3.6
+        image: postgis/postgis:16-3.4
         ports: ['5432:5432']
         env:
           POSTGRES_PASSWORD: postgres
@@ -124,7 +126,7 @@ jobs:
   seeds:
     services:
       db:
-        image: postgis/postgis:18-3.6
+        image: postgis/postgis:16-3.4
         ports: ['5432:5432']
         env:
           POSTGRES_PASSWORD: postgres
@@ -190,7 +192,7 @@ jobs:
     timeout-minutes: 15
     services:
       db:
-        image: postgis/postgis:18-3.6
+        image: postgis/postgis:16-3.4
         ports: ['5432:5432']
         env:
           POSTGRES_PASSWORD: postgres
