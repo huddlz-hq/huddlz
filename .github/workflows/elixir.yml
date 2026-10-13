@@ -21,9 +21,11 @@ jobs:
     # Set up a Postgres DB service. By default, Phoenix applications
     # use Postgres. This creates a database for running tests.
     # Additional services can be defined here if required.
+    # Keep every job's image on production's Postgres major (Fly Managed
+    # Postgres runs 16 with PostGIS 3.3; there is no 16-3.3 image).
     services:
       db:
-        image: postgis/postgis:17-3.5
+        image: postgis/postgis:16-3.4
         ports: ['5432:5432']
         env:
           POSTGRES_PASSWORD: postgres
@@ -39,24 +41,24 @@ jobs:
       # Specify the OTP and Elixir versions to use when building
       # and running the workflow steps.
       matrix:
-        otp: ['29.0.6']       # Define the OTP version [required]
+        otp: ['29.1.1']       # Define the OTP version [required]
         elixir: ['1.20.4']    # Define the elixir version [required]
     steps:
     # Step: Setup Elixir + Erlang image as the base.
     - name: Set up Elixir
-      uses: erlef/setup-beam@v1
+      uses: erlef/setup-beam@v1.24.1
       with:
         otp-version: ${{matrix.otp}}
         elixir-version: ${{matrix.elixir}}
 
     # Step: Check out the code.
     - name: Checkout code
-      uses: actions/checkout@v7
+      uses: actions/checkout@v7.0.1
 
     - name: Set up Node
-      uses: actions/setup-node@v7
+      uses: actions/setup-node@v7.1.0
       with:
-        node-version: '22'
+        node-version: '24'
 
     - name: Test JavaScript components
       run: npm test --prefix assets
@@ -68,7 +70,7 @@ jobs:
     # Step: Define how to cache deps. Restores existing cache if present.
     - name: Cache deps
       id: cache-deps
-      uses: actions/cache@v6
+      uses: actions/cache@v6.1.0
       env:
         cache-name: cache-elixir-deps
       with:
@@ -84,7 +86,7 @@ jobs:
     # they use (an upgraded library's structs stay stale in its dependents).
     - name: Cache compiled build
       id: cache-build
-      uses: actions/cache@v6
+      uses: actions/cache@v6.1.0
       env:
         cache-name: cache-compiled-build
       with:
@@ -130,7 +132,7 @@ jobs:
   seeds:
     services:
       db:
-        image: postgis/postgis:17-3.5
+        image: postgis/postgis:16-3.4
         ports: ['5432:5432']
         env:
           POSTGRES_PASSWORD: postgres
@@ -146,17 +148,17 @@ jobs:
       MIX_ENV: dev
     strategy:
       matrix:
-        otp: ['29.0.6']
+        otp: ['29.1.1']
         elixir: ['1.20.4']
     steps:
     - name: Set up Elixir
-      uses: erlef/setup-beam@v1
+      uses: erlef/setup-beam@v1.24.1
       with:
         otp-version: ${{matrix.otp}}
         elixir-version: ${{matrix.elixir}}
 
     - name: Checkout code
-      uses: actions/checkout@v7
+      uses: actions/checkout@v7.0.1
 
     # The example file works as-is: the placeholder Google Maps key makes
     # geocoding fail soft (warning + nil coordinates), which is exactly what
@@ -166,7 +168,7 @@ jobs:
 
     - name: Cache deps
       id: cache-deps
-      uses: actions/cache@v6
+      uses: actions/cache@v6.1.0
       env:
         cache-name: cache-elixir-deps
       with:
@@ -177,7 +179,7 @@ jobs:
 
     - name: Cache compiled build
       id: cache-build
-      uses: actions/cache@v6
+      uses: actions/cache@v6.1.0
       env:
         cache-name: cache-compiled-dev-build
       with:
@@ -196,7 +198,7 @@ jobs:
     timeout-minutes: 15
     services:
       db:
-        image: postgis/postgis:17-3.5
+        image: postgis/postgis:16-3.4
         ports: ['5432:5432']
         env:
           POSTGRES_PASSWORD: postgres
@@ -206,27 +208,27 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     steps:
-    - uses: actions/checkout@v7
-    - uses: erlef/setup-beam@v1
+    - uses: actions/checkout@v7.0.1
+    - uses: erlef/setup-beam@v1.24.1
       with:
-        otp-version: '29.0.6'
+        otp-version: '29.1.1'
         elixir-version: '1.20.4'
-    - uses: actions/setup-node@v7
+    - uses: actions/setup-node@v7.1.0
       with:
-        node-version: '22'
+        node-version: '24'
         cache: npm
         cache-dependency-path: assets/package-lock.json
     # The compiled build restores only on an exact mix.lock match; see the
     # test job's build cache.
     - name: Cache browser job dependencies
-      uses: actions/cache@v6
+      uses: actions/cache@v6.1.0
       with:
         path: deps
         key: ${{ runner.os }}-browser-deps-otp29-elixir1.20-${{ hashFiles('mix.lock') }}
         restore-keys: |
           ${{ runner.os }}-browser-deps-otp29-elixir1.20-
     - name: Cache browser job compilation
-      uses: actions/cache@v6
+      uses: actions/cache@v6.1.0
       with:
         path: _build/test
         key: ${{ runner.os }}-browser-build-otp29-elixir1.20-${{ hashFiles('mix.lock') }}
@@ -251,7 +253,7 @@ jobs:
       run: mix test.browser
     - name: Preserve first-attempt failure diagnostics
       if: failure()
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@v7.0.2
       with:
         name: browser-failure-diagnostics
         path: |
