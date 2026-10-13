@@ -126,12 +126,11 @@ defmodule Huddlz.Communities.Huddl.Changes.CopyFromHuddl do
 
   # A copy is scheduled either by date (start time and duration default to
   # the source's) or by a start timestamp (the end defaults to the source's
-  # length). Either way it must start in the future.
+  # length). Either way the action's FutureStart validation requires it to
+  # start in the future.
   defp put_schedule(changeset, source) do
     if supplied?(changeset, :starts_at) do
-      changeset
-      |> default_ends_at(source)
-      |> Ash.Changeset.before_action(&require_future_start/1)
+      default_ends_at(changeset, source)
     else
       changeset
       |> require_date()
@@ -147,16 +146,6 @@ defmodule Huddlz.Communities.Huddl.Changes.CopyFromHuddl do
       starts_at = Ash.Changeset.get_attribute(changeset, :starts_at)
       ends_at = DateTime.add(starts_at, duration_minutes(source), :minute)
       Ash.Changeset.change_attribute(changeset, :ends_at, ends_at)
-    end
-  end
-
-  defp require_future_start(changeset) do
-    starts_at = Ash.Changeset.get_attribute(changeset, :starts_at)
-
-    if DateTime.after?(starts_at, DateTime.utc_now()) do
-      changeset
-    else
-      Ash.Changeset.add_error(changeset, field: :starts_at, message: "must be in the future")
     end
   end
 

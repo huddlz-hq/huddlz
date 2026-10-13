@@ -480,6 +480,42 @@ defmodule LocationBasedTimeZonesSteps do
     Map.merge(context, %{session: session, conn: session})
   end
 
+  # East of UTC, the start read as UTC lands hours after now, which is how a
+  # huddl that already started used to be accepted. An hour ago, but never
+  # before midnight, so the date stays today in the group's time zone.
+  step "I try to schedule a virtual huddl that started earlier today", context do
+    group = List.first(context.groups)
+    now = DateTime.now!(group.time_zone)
+    an_hour_ago = DateTime.add(now, -1, :hour)
+
+    start_time =
+      if DateTime.to_date(an_hour_ago) == DateTime.to_date(now),
+        do: Calendar.strftime(an_hour_ago, "%H:%M"),
+        else: "00:00"
+
+    session =
+      (context[:session] || context[:conn])
+      |> visit("/groups/#{group.slug}/huddlz/new")
+      |> choose("Virtual")
+      |> fill_in("Title", with: "Earlier Today Huddl", exact: false)
+      |> fill_in("Date", with: Date.to_iso8601(DateTime.to_date(now)), exact: false)
+      |> fill_in("Start time", with: start_time, exact: false)
+      |> fill_in("Online link", with: "https://example.com/earlier", exact: false)
+      |> click_button("Schedule huddl")
+
+    Map.merge(context, %{session: session, conn: session})
+  end
+
+  step "the {string} field says {string}", %{args: [label, message]} = context do
+    assert message in field_errors(context.session, label)
+    context
+  end
+
+  step "the {string} field has no error", %{args: [label]} = context do
+    assert field_errors(context.session, label) == []
+    context
+  end
+
   step "the huddl {string} should not exist", %{args: [title]} = context do
     huddl =
       Huddlz.Communities.Huddl
@@ -839,5 +875,26 @@ defmodule LocationBasedTimeZonesSteps do
       physical_huddl: huddl,
       mountain_location: mountain_location
     })
+  end
+
+  # The errors announced with a field: the alerts among its accessible
+  # description.
+  defp field_errors(session, label) do
+    doc = session.view |> Phoenix.LiveViewTest.render() |> LazyHTML.from_fragment()
+
+    field_label =
+      doc
+      |> LazyHTML.query("label")
+      |> Enum.find(&(&1 |> LazyHTML.text() |> String.trim() == label))
+
+    assert field_label, "no #{label} field on the page"
+    [id] = LazyHTML.attribute(field_label, "for")
+
+    doc
+    |> LazyHTML.query("[id='#{id}']")
+    |> LazyHTML.attribute("aria-describedby")
+    |> Enum.flat_map(&String.split/1)
+    |> Enum.flat_map(&(doc |> LazyHTML.query("[id='#{&1}'][role='alert']") |> Enum.to_list()))
+    |> Enum.map(&(&1 |> LazyHTML.text() |> String.trim()))
   end
 end

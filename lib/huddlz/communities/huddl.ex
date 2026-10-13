@@ -284,7 +284,6 @@ defmodule Huddlz.Communities.Huddl do
       end
 
       validate one_of(:lifecycle_state, [:draft, :published])
-      validate Huddlz.Communities.Huddl.Validations.FutureDateValidation
 
       validate present(:frequency) do
         where argument_equals(:is_recurring, true)
@@ -301,6 +300,7 @@ defmodule Huddlz.Communities.Huddl do
       change Huddlz.Communities.Huddl.Changes.DefaultTimeZoneFromGroup
       change Huddlz.Communities.Huddl.Changes.ApplySavedLocation
       change Huddlz.Communities.Huddl.Changes.CalculateDateTimeFromInputs
+      validate Huddlz.Communities.Huddl.Validations.FutureStart
 
       validate Huddlz.Communities.Huddl.Validations.RecurrenceBoundary do
         where argument_equals(:is_recurring, true)
@@ -946,8 +946,6 @@ defmodule Huddlz.Communities.Huddl do
     publish :cancel, [:id]
     publish :complete, [:id]
   end
-
-  # changes section removed - validation is handled by FutureDateValidation module
 
   validations do
     validate string_length(:title, min: 3, max: 200) do

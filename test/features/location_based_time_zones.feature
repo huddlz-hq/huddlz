@@ -121,6 +121,13 @@ Feature: Location-based time zones
     Then I should see "does not exist in America/New_York because of daylight saving time"
     And the huddl "Spring Forward Huddl" should not exist
 
+  Scenario: A huddl that already started today is refused in its own time zone
+    Given my group "Tokyo Neighbors" is based in "Asia/Tokyo"
+    When I try to schedule a virtual huddl that started earlier today
+    Then the "Start time" field says "must be in the future"
+    And the "Date" field has no error
+    And the huddl "Earlier Today Huddl" should not exist
+
   Scenario: Calendar groups by the browser zone while showing the huddl zone
     Given I am attending a Denver huddl at 11:30 PM on July 15, 2030
     When I view Calendar from a browser in "America/New_York"

@@ -211,13 +211,17 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
     context = Keyword.get(opts, :context, %{})
     metadata = Map.put(context[:paper_trail_metadata] || %{}, :automatic?, true)
 
+    # Instances follow the series wherever it lands, including into the past
+    # when an organizer edits an earlier huddl, so they skip FutureStart.
+    create_opts = Keyword.put(opts, :context, Map.put(context, :allow_past_start?, true))
+
     instance =
       Huddl
       |> Ash.Changeset.new()
       |> Ash.Changeset.for_create(
         :create,
         instance_attrs(source, starts_at, ends_at, template),
-        opts
+        create_opts
       )
       |> Ash.Changeset.set_context(%{paper_trail_metadata: metadata})
       # Preserve series authorship after SetCreatorToActor runs, while the
