@@ -114,6 +114,31 @@ defmodule CopyHuddlSteps do
     Map.update!(context, :session, &click_button(&1, "Schedule huddl"))
   end
 
+  # West of UTC, the start read as UTC lands hours before now, which is how
+  # a huddl later today used to be refused.
+  step "I set it to start an hour from now", context do
+    starts_at =
+      DateTime.utc_now()
+      |> DateTime.add(1, :hour)
+      |> DateTime.truncate(:second)
+      |> Map.put(:second, 0)
+
+    local = DateTime.shift_zone!(starts_at, context.source.time_zone)
+
+    session =
+      context.session
+      |> fill_in("Date", with: Date.to_iso8601(DateTime.to_date(local)))
+      |> fill_in("Start time", with: Calendar.strftime(local, "%H:%M"))
+
+    Map.merge(context, %{session: session, chosen_start: starts_at})
+  end
+
+  step "the group has a new huddl starting an hour from now", context do
+    [copy] = copies(context)
+    assert DateTime.compare(copy.starts_at, context.chosen_start) == :eq
+    Map.put(context, :copy, copy)
+  end
+
   step "I leave the form without saving", context do
     Map.update!(context, :session, &click_link(&1, "Cancel"))
   end

@@ -13,6 +13,13 @@ Feature: Copy a huddl
     Then the group has a new upcoming "Hands-on with Ash Framework"
     And the past huddl is unchanged
 
+  Scenario: Copying onto a time later than now in the huddl's time zone
+    Given I organize a group with a past huddl "Hands-on with Ash Framework"
+    When I visit that huddl and choose to copy it
+    And I set it to start an hour from now
+    And I schedule the huddl
+    Then the group has a new huddl starting an hour from now
+
   Scenario: Copying from the organizer list
     Given I organize a group with a past huddl "Hands-on with Ash Framework"
     When I copy it from the past huddlz on the organizer page
