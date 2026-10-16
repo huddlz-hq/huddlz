@@ -712,7 +712,8 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
     end
 
     test "validates date must be in the future", %{conn: conn, owner: owner, group: group} do
-      yesterday = Date.utc_today() |> Date.add(-1)
+      # Yesterday where the huddl meets: the generated location is in Chicago
+      yesterday = DateTime.now!("America/Chicago") |> DateTime.to_date() |> Date.add(-1)
       date = Date.to_iso8601(yesterday)
 
       session =
