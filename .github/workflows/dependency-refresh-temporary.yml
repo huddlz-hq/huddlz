@@ -1,0 +1,41 @@
+name: Temporary dependency resolver
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  resolve:
+    if: github.head_ref == 'micah/elixir-deps-update-4ee997'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      MIX_ENV: dev
+      HEX_HTTP_CONCURRENCY: 2
+      HEX_HTTP_TIMEOUT: 120
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: erlef/setup-beam@v1.24.1
+        with:
+          otp-version: '29.1.2'
+          elixir-version: '1.20.4'
+      - run: cp .dev.env.example .dev.env && cp .test.env.example .test.env
+      - run: mix deps.update --all
+      - run: mix usage_rules.sync --yes
+      - run: mix usage_rules.sync --check
+      - run: mix hex.outdated --all || true
+      - run: mix hex.audit
+      - name: Collect generated dependency changes
+        if: always()
+        run: |
+          git add --intent-to-add -- mix.lock AGENTS.md .agents/skills
+          git diff --binary -- mix.lock AGENTS.md .agents/skills > dependency-update.patch
+      - uses: actions/upload-artifact@v7.0.2
+        if: always()
+        with:
+          name: dependency-update
+          path: dependency-update.patch
+          if-no-files-found: error
+          retention-days: 1
