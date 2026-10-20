@@ -98,7 +98,7 @@ defmodule Huddlz.MixProject do
       {:ash_paper_trail, "~> 0.8.0"},
       {:ash_phoenix, "~> 2.0"},
       {:sourceror, "~> 1.8", only: [:dev, :test]},
-      {:ash, "~> 3.0"},
+      {:ash, "~> 3.34"},
       {:ash_archival, "~> 2.0"},
       {:igniter, "~> 0.5", only: [:dev, :test]},
       {:faker_fork, "~> 0.19", only: [:dev, :test]},
@@ -140,7 +140,7 @@ defmodule Huddlz.MixProject do
       {:mox, "~> 1.0", only: :test},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:phoenix_test, "~> 0.12", only: :test},
-      {:phoenix_test_playwright, "~> 0.18.0", only: :test, runtime: false},
+      {:phoenix_test_playwright, "~> 0.19.0", only: :test, runtime: false},
       {:slugify, "~> 1.3"},
       {:remote_ip, "~> 1.1"},
       {:envious, "~> 1.0"}
