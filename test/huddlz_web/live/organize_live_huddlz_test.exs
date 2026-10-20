@@ -59,7 +59,7 @@ defmodule HuddlzWeb.OrganizeLiveHuddlzTest do
     |> refute_has(".org-list-more")
   end
 
-  test "cancelled huddlz link directly to their detail page", %{
+  test "cancelled huddlz link to their organizer page, not their edit page", %{
     conn: conn,
     group: group,
     owner: owner
@@ -80,7 +80,7 @@ defmodule HuddlzWeb.OrganizeLiveHuddlzTest do
     |> login(owner)
     |> visit(~p"/organize/#{group.slug}/huddlz?filter=cancelled")
     |> assert_has(
-      "#organize-huddl-link-#{cancelled_huddl.id}[href='/groups/#{group.slug}/huddlz/#{cancelled_huddl.id}']",
+      "#organize-huddl-link-#{cancelled_huddl.id}[href='/organize/#{group.slug}/huddlz/#{cancelled_huddl.id}']",
       text: "Cancelled Workshop"
     )
     |> refute_has(
