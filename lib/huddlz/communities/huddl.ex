@@ -59,6 +59,7 @@ defmodule Huddlz.Communities.Huddl do
       :thumbnail_url,
       :max_attendees,
       :attendance_state,
+      :organized_by_me,
       :lifecycle_state,
       :published_at,
       :cancelled_at,
@@ -492,6 +493,7 @@ defmodule Huddlz.Communities.Huddl do
     read :upcoming do
       filter expr(lifecycle_state == :published and ends_at > now())
       prepare Huddlz.Communities.Huddl.Preparations.FilterByVisibility
+      prepare Huddlz.Communities.Huddl.Preparations.HideBlockedOrganizers
       prepare build(sort: [starts_at: :asc])
     end
 
@@ -563,6 +565,7 @@ defmodule Huddlz.Communities.Huddl do
 
       prepare Huddlz.Communities.Huddl.Preparations.FilterByVisibility
       prepare Huddlz.Communities.Huddl.Preparations.ApplySearchFilters
+      prepare Huddlz.Communities.Huddl.Preparations.HideBlockedOrganizers
     end
 
     read :by_group do
@@ -582,6 +585,7 @@ defmodule Huddlz.Communities.Huddl do
                  default_limit: 10
 
       prepare Huddlz.Communities.Huddl.Preparations.FilterByVisibility
+      prepare Huddlz.Communities.Huddl.Preparations.HideBlockedOrganizers
       prepare build(sort: [starts_at: :asc])
     end
 
@@ -1207,6 +1211,12 @@ defmodule Huddlz.Communities.Huddl do
     has_many :huddl_cover_images, Huddlz.Communities.HuddlCoverImage do
       destination_attribute :huddl_id
     end
+
+    has_many :organizer_blocks, Huddlz.Accounts.UserBlock do
+      description "Blocks people have placed on this huddl's organizer"
+      source_attribute :creator_id
+      destination_attribute :blocked_user_id
+    end
   end
 
   calculations do
@@ -1226,6 +1236,12 @@ defmodule Huddlz.Communities.Huddl do
                         "none"
                     end
                   )
+    end
+
+    calculate :organized_by_me, :boolean do
+      public? true
+      description "Whether the current caller organized this huddl"
+      calculation expr(not is_nil(^actor(:id)) and creator_id == ^actor(:id))
     end
 
     calculate :status, :atom do

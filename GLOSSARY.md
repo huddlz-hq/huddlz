@@ -58,6 +58,10 @@ _Avoid_: Bot, integration, app
 **Account report**:
 A confirmed member's request for administrators to review an account they can already see, including the organizer of a public huddl without joining its group or RSVPing, for spam or another concern. A report does not itself suspend the account; its details and the reporter's identity are available only to huddlz staff for review.
 
+**Block**:
+A person's private choice to stop seeing huddlz someone else organizes, made from a huddl whose organizer they can see. Blocked organizers' huddlz leave that person's discovery and group lists; huddlz they already RSVPed to and links they open still work. The blocked person is not told and loses nothing they could see before. A block is not a report.
+_Avoid_: Mute, ban
+
 ## Communities and places
 
 **Group**:

@@ -59,11 +59,18 @@ defmodule Huddlz.Accounts do
 
     resource Huddlz.Accounts.AccountReport do
       define :report_account, action: :report
+      define :report_huddl_organizer, action: :report_organizer, args: [:huddl_id]
       define :get_account_report, action: :read, get_by: [:id]
       define :count_account_reports, action: :count_queue, args: [:handled]
       define :list_account_reports, action: :queue, args: [{:optional, :handled}]
       define :mark_report_handled, action: :mark_handled
       define :reopen_report, action: :reopen
+    end
+
+    resource Huddlz.Accounts.UserBlock do
+      define :block_huddl_organizer, action: :block_organizer, args: [:huddl_id]
+      define :list_blocks, action: :mine
+      define :unblock, action: :unblock
     end
   end
 end

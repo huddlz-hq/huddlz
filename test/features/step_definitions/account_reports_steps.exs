@@ -189,7 +189,10 @@ defmodule AccountReportsSteps do
           method in ["get", "post", "patch", "put", "delete"],
           do: {path, method}
 
-    assert [{"/api/json/account_reports", "post"}] = report_routes
+    assert Enum.sort(report_routes) == [
+             {"/api/json/account_reports", "post"},
+             {"/api/json/account_reports/organizer", "post"}
+           ]
     context
   end
 
