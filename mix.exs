@@ -90,7 +90,7 @@ defmodule Huddlz.MixProject do
       {:hammer, "~> 7.0"},
       {:usage_rules, "~> 1.0 and >= 1.2.8", only: [:dev]},
       {:bcrypt_elixir, "~> 3.0"},
-      {:ash_ops, "~> 0.2.4"},
+      {:ash_ops, "~> 0.3"},
       {:mix_test_watch, "~> 1.0", only: [:dev, :test], runtime: false},
       {:picosat_elixir, "~> 0.2"},
       {:ash_authentication_phoenix, "~> 2.0"},

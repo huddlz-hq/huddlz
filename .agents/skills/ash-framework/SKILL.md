@@ -117,6 +117,8 @@ mix usage_rules.search_docs "search term" -p ash -p ash_ai -p ash_archival -p as
 - `mix ash_ai.gen.chat.docs`
 - `mix ash_ai.gen.mcp` - Sets up an MCP server for your application
 - `mix ash_ai.gen.mcp.docs`
+- `mix ash_ai.gen.mcp_oauth` - Generates encrypted storage and routes for connecting to MCP servers that use OAuth
+- `mix ash_ai.gen.mcp_oauth.docs`
 - `mix ash_ai.gen.usage_rules`
 - `mix ash_ai.gen.usage_rules.docs`
 - `mix ash_ai.install` - Installs `AshAi`. Call with `mix igniter.install ash_ai`. Requires igniter to run.
