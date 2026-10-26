@@ -1,11 +1,17 @@
-name: Resolve dependency refresh
+name: Validate dependency release build
 on:
   push:
     branches: [chore/dependencies-2026-10-26]
 permissions:
   contents: read
 jobs:
-  resolve:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: Build release without publishing or deploying
+        run: docker build --tag huddlz-dependency-check .
+  unused:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7.0.1
@@ -13,16 +19,5 @@ jobs:
         with:
           otp-version: '29.1.2'
           elixir-version: '1.20.4'
-      - run: mix deps.update --all
-      - run: mix hex.outdated
-        continue-on-error: true
-      - run: mix hex.audit
-      - run: mix usage_rules.sync --yes
-      - uses: actions/upload-artifact@v7.0.2
-        with:
-          name: resolved-dependencies
-          include-hidden-files: true
-          path: |
-            mix.lock
-            AGENTS.md
-            .agents/skills
+      - run: mix deps.get
+      - run: mix deps.unlock --check-unused
