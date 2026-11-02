@@ -777,7 +777,9 @@ defmodule LocationBasedTimeZonesSteps do
   end
 
   step "the search should still use {string}", %{args: [time_zone]} = context do
-    PhoenixTest.assert_path(context.session, "/discover", query_params: %{"time_zone" => time_zone})
+    PhoenixTest.assert_path(context.session, "/discover",
+      query_params: %{"time_zone" => time_zone}
+    )
     context
   end
 
