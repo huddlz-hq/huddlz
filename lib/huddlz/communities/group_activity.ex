@@ -3,7 +3,8 @@ defmodule Huddlz.Communities.GroupActivity do
   An append-only log of what happened in a group: someone joined or left,
   RSVPd, cancelled, joined a waitlist or got a spot from it, accepted an
   invitation; a social connection was connected, edited, paused, resumed
-  or removed. Written by `Huddlz.Communities.ActivityLog` as those actions
+  or removed; a huddl was skipped on one, posted there again, or posted
+  there now. Written by `Huddlz.Communities.ActivityLog` as those actions
   run, since cancelling an RSVP and leaving a group delete their rows and
   would otherwise leave no trace.
 
@@ -32,7 +33,10 @@ defmodule Huddlz.Communities.GroupActivity do
     :edited_place,
     :paused_place,
     :resumed_place,
-    :removed_place
+    :removed_place,
+    :skipped_huddl_on_place,
+    :unskipped_huddl_on_place,
+    :posted_huddl_now
   ]
 
   graphql do

@@ -70,6 +70,16 @@ defmodule Huddlz.Communities do
       define :huddlz_due_for_join_suggestions, action: :due_for_join_suggestions
       define :record_turnout, action: :record_turnout
       define :skip_turnout, action: :skip_turnout
+
+      define :skip_social_connection,
+        action: :skip_social_connection,
+        args: [:social_connection_id]
+
+      define :unskip_social_connection,
+        action: :unskip_social_connection,
+        args: [:social_connection_id]
+
+      define :post_social_now, action: :post_social_now, args: [:social_connection_id]
       define :destroy_huddl, action: :destroy
     end
 
@@ -216,6 +226,11 @@ defmodule Huddlz.Communities do
     resource Huddlz.Communities.SocialPost do
       define :list_upcoming_social_posts, action: :upcoming_for_group, args: [:group_id]
       define :list_recent_social_posts, action: :recent_for_group, args: [:group_id]
+      define :list_huddl_social_posts, action: :for_huddl, args: [:huddl_id]
+    end
+
+    resource Huddlz.Communities.SocialSkip do
+      define :list_huddl_social_skips, action: :for_huddl, args: [:huddl_id]
     end
 
     resource Huddlz.Communities.GroupLocation do

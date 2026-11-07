@@ -10,7 +10,9 @@ defmodule Huddlz.Communities.ActivityLog do
   the membership row an acceptance creates is not logged again.
   Attendance: an RSVP, a waitlist entry, a cancelled RSVP, a withdrawn
   waitlist entry, and a promotion from the waitlist. Owner rows from group
-  creation and role changes are not activity.
+  creation and role changes are not activity. Social posts: a connection
+  connected, edited, paused, resumed or removed, and a huddl skipped on
+  one, posted there again, or posted there now (once it went out).
 
   A failure to log is reported, never raised: the action that caused it
   has already committed.
@@ -26,10 +28,12 @@ defmodule Huddlz.Communities.ActivityLog do
     GroupMember,
     Huddl,
     HuddlAttendee,
-    SocialConnection
+    SocialConnection,
+    SocialPost
   }
 
   @impl true
+  def requires_original_data?(SocialPost, %{name: :deliver}), do: true
   def requires_original_data?(_resource, _action), do: false
 
   @impl true
@@ -78,7 +82,73 @@ defmodule Huddlz.Communities.ActivityLog do
     end
   end
 
+  def notify(%Ash.Notifier.Notification{
+        resource: Huddl,
+        action: %{name: name},
+        data: huddl,
+        actor: actor
+      }) do
+    case steering_kind(name, huddl) do
+      nil -> :ok
+      kind -> record_steering(kind, huddl, actor)
+    end
+  end
+
+  def notify(%Ash.Notifier.Notification{
+        resource: SocialPost,
+        action: %{name: :deliver},
+        changeset: %{data: %{state: :scheduled}},
+        data: %{occasion: :now, state: :sent} = post
+      }) do
+    case Ash.get(SocialConnection, post.social_connection_id, authorize?: false) do
+      {:ok, %SocialConnection{} = connection} -> record_post_now(post, connection)
+      {:ok, nil} -> report(:posted_huddl_now, :connection_not_found)
+      {:error, error} -> report(:posted_huddl_now, error)
+    end
+  end
+
   def notify(_notification), do: :ok
+
+  defp record_post_now(post, connection) do
+    GroupActivity
+    |> Ash.Changeset.for_create(:record, %{
+      kind: :posted_huddl_now,
+      group_id: connection.group_id,
+      user_id: post.requested_by_id,
+      huddl_id: post.huddl_id,
+      detail: SocialConnection.place(connection),
+      impersonation_id: post.impersonation_id
+    })
+    |> Ash.create(authorize?: false)
+    |> case do
+      {:ok, _activity} -> :ok
+      {:error, error} -> report(:posted_huddl_now, error)
+    end
+  end
+
+  defp steering_kind(:skip_social_connection, _huddl), do: :skipped_huddl_on_place
+  defp steering_kind(:unskip_social_connection, _huddl), do: :unskipped_huddl_on_place
+
+  defp steering_kind(_action, _huddl), do: nil
+
+  defp record_steering(kind, huddl, %{id: actor_id} = actor) do
+    GroupActivity
+    |> Ash.Changeset.for_create(:record, %{
+      kind: kind,
+      group_id: huddl.group_id,
+      user_id: actor_id,
+      huddl_id: huddl.id,
+      detail: SocialConnection.place(huddl.__metadata__.social_connection),
+      impersonation_id: impersonation_id(actor)
+    })
+    |> Ash.create(authorize?: false)
+    |> case do
+      {:ok, _activity} -> :ok
+      {:error, error} -> report(kind, error)
+    end
+  end
+
+  defp record_steering(kind, _huddl, _actor), do: report(kind, :no_actor)
 
   defp connection_kind(:connect), do: :connected_place
   defp connection_kind(:reconnect), do: :connected_place

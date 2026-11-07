@@ -109,8 +109,12 @@ defmodule OrganizerHuddlzSteps do
     huddl = lookup_huddl(title)
     base = "/groups/#{huddl.group.slug}/huddlz/#{huddl.id}"
 
+    # The title opens the huddl in the organize workspace.
     session
-    |> assert_has("#organize-huddl-#{huddl.id} a[href='#{base}']", text: title)
+    |> assert_has(
+      "#organize-huddl-#{huddl.id} a[href='/organize/#{huddl.group.slug}/huddlz/#{huddl.id}']",
+      text: title
+    )
     |> assert_has("#organize-huddl-#{huddl.id} a[href='#{base}/edit']", text: action)
 
     context
