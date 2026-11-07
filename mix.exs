@@ -94,6 +94,10 @@ defmodule Huddlz.MixProject do
       {:mix_test_watch, "~> 1.0", only: [:dev, :test], runtime: false},
       {:picosat_elixir, "~> 0.2"},
       {:ash_authentication_phoenix, "~> 2.0"},
+      # ash_authentication 4.x caps assent below 0.3, but EEF-CVE-2026-117656 is only
+      # fixed in 0.3.2. We use the password strategy, which never calls assent.
+      # Drop this override when moving to ash_authentication 5.x.
+      {:assent, "~> 0.3.2", override: true},
       {:ash_postgres, "~> 2.0"},
       {:ash_paper_trail, "~> 0.8.0"},
       {:ash_phoenix, "~> 2.0"},
