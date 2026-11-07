@@ -23,7 +23,11 @@ defmodule Huddlz.MixProject do
           ~r/features\/support/,
           ~r/browser\/(steps|support)/
         ] ++ if(browser_tests?, do: [], else: [~r/browser/]),
-      usage_rules: usage_rules()
+      usage_rules: usage_rules(),
+      # assent's fix (0.3.2) needs ash_authentication 5.x. The advisory covers the
+      # Sign in with Apple callback; we only use the password strategy. Remove this
+      # when moving to ash_authentication 5.x.
+      hex: [ignore_advisories: ["EEF-CVE-2026-117656"]]
     ]
   end
 
