@@ -3,7 +3,7 @@ defmodule BrowserMobileRsvpSteps do
 
   import Huddlz.Generator
   import Huddlz.Test.BrowserHelpers
-  import PhoenixTest
+  import PhoenixTest, except: [visit: 2]
 
   step "I am viewing an upcoming huddl in a narrow browser", context do
     owner = generate(user(display_name: "Sam Rivera"))

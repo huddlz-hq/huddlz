@@ -4,7 +4,7 @@ defmodule BrowserCoverSteps do
   import ExUnit.Assertions
   import Huddlz.Generator
   import Huddlz.Test.BrowserHelpers
-  import PhoenixTest
+  import PhoenixTest, except: [visit: 2]
   import PhoenixTest.Playwright, only: [evaluate: 3]
 
   alias Huddlz.Storage.Local

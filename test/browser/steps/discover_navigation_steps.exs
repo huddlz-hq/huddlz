@@ -3,7 +3,7 @@ defmodule BrowserDiscoverNavigationSteps do
 
   import Huddlz.Generator
   import Huddlz.Test.BrowserHelpers
-  import PhoenixTest
+  import PhoenixTest, except: [visit: 2]
   import PhoenixTest.Playwright, only: [evaluate: 3]
 
   step "a public huddl titled {string} is upcoming", %{args: [title]} = context do

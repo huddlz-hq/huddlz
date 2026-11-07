@@ -3,7 +3,7 @@ defmodule BrowserCalendarDaySheetSteps do
 
   import Huddlz.Generator
   import Huddlz.Test.BrowserHelpers
-  import PhoenixTest
+  import PhoenixTest, except: [visit: 2]
 
   step "I am going to {string} on the 17th of next month", %{args: [title]} = context do
     attendee = generate(user(role: :user))

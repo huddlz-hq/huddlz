@@ -3,7 +3,7 @@ defmodule BrowserOverviewCardsSteps do
 
   import Huddlz.Generator
   import Huddlz.Test.BrowserHelpers
-  import PhoenixTest
+  import PhoenixTest, except: [visit: 2]
 
   alias Huddlz.Communities.HuddlAttendee
 
