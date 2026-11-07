@@ -110,10 +110,8 @@ jobs:
       run: mix ash.codegen --check
 
     # Step: Execute the tests.
-    - name: Run precommit checks
-      run: |
-        mix precommit
-        git diff --exit-code
+    - name: Run tests
+      run: mix test
 
     # Step: Check that the checked in code has already been formatted.
     # This step fails if something was found unformatted.
