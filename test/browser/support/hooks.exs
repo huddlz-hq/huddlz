@@ -39,6 +39,28 @@ defmodule BrowserHooks do
     # Cucumber's generated module atoms lack the Elixir prefix expected by
     # the adapter's artifact filenames. Keep the original scenario name.
     driver_context = Map.put(context, :module, __MODULE__)
-    Map.merge(context, Map.new(BrowserCase.do_setup(driver_context)))
+    context = Map.merge(context, Map.new(BrowserCase.do_setup(driver_context)))
+    answer_external_requests_locally(context.conn)
+    context
   end
+
+  # Pages link Google Fonts and embed Google Maps. A slow reply from Google
+  # holds the load event that visit waits for, so every external request gets
+  # an empty local response and pages render with the fallback font.
+  defp answer_external_requests_locally(conn) do
+    {:ok, _} =
+      PlaywrightEx.BrowserContext.route(
+        conn.context_id,
+        # Playwright resolves a bare "https://**" to "https://**/", which only
+        # matches URLs ending in a slash.
+        "https://*/**",
+        fn route, request ->
+          {:ok, _} = PlaywrightEx.Route.fulfill(route, content_type: content_type(request.url))
+        end,
+        timeout: 5_000
+      )
+  end
+
+  defp content_type("https://fonts.googleapis.com/" <> _), do: "text/css"
+  defp content_type(_url), do: "text/plain"
 end
