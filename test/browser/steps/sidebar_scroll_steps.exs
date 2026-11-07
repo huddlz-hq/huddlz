@@ -4,7 +4,7 @@ defmodule BrowserSidebarScrollSteps do
   import ExUnit.Assertions
   import Huddlz.Generator
   import Huddlz.Test.BrowserHelpers
-  import PhoenixTest
+  import PhoenixTest, except: [visit: 2]
   import PhoenixTest.Playwright, only: [press: 3]
 
   @sidebar "document.querySelector('#mobile-navigation-drawer')"

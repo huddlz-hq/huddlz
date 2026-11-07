@@ -59,4 +59,4 @@ Screenshots and traces are captured for every attempt under `_build/browser/scre
 assets/node_modules/.bin/playwright show-trace _build/browser/traces/<trace.zip>
 ```
 
-Assertions wait for observable browser state instead of sleeping. JavaScript used in steps observes layout, image loading, or native form submissions; it does not implement the application behavior. The failed-cover scenario intentionally requests a missing image, so its expected 404 is not a suite-wide console failure.
+Assertions wait for observable browser state instead of sleeping. Steps use `Huddlz.Test.BrowserHelpers.visit/2`, which also waits for the page's LiveView to connect; with PhoenixTest's own `visit`, a key pressed before the join render can be lost. After a full page load that `visit` did not make, such as a plain form post, call `await_live_view/1` before interacting. JavaScript used in steps observes layout, image loading, or native form submissions; it does not implement the application behavior. The failed-cover scenario intentionally requests a missing image, so its expected 404 is not a suite-wide console failure.

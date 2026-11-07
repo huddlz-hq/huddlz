@@ -3,7 +3,7 @@ defmodule BrowserNotificationPreferencesSteps do
 
   import Huddlz.Generator
   import Huddlz.Test.BrowserHelpers
-  import PhoenixTest
+  import PhoenixTest, except: [visit: 2]
   import PhoenixTest.Playwright, only: [click: 3]
 
   step "I have opened my notification preferences in a browser", context do

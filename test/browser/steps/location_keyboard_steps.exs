@@ -5,7 +5,7 @@ defmodule BrowserLocationKeyboardSteps do
   import Huddlz.Generator
   import Huddlz.Test.BrowserHelpers
   import Huddlz.Test.MoxHelpers
-  import PhoenixTest
+  import PhoenixTest, except: [visit: 2]
   import PhoenixTest.Playwright, only: [type: 3, press: 3, evaluate: 3]
 
   step "I have opened my profile in a browser", context do

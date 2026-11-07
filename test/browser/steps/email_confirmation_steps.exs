@@ -4,7 +4,7 @@ defmodule BrowserEmailConfirmationSteps do
   import ExUnit.Assertions
   import Huddlz.Generator
   import Huddlz.Test.BrowserHelpers
-  import PhoenixTest
+  import PhoenixTest, except: [visit: 2]
   import Swoosh.TestAssertions
 
   step "I have hidden the reminder for my unconfirmed address in a browser", context do
@@ -22,7 +22,13 @@ defmodule BrowserEmailConfirmationSteps do
   end
 
   step "I request confirmation from my profile", context do
-    Map.put(context, :conn, click_button(context.conn, "Resend confirmation"))
+    # Resending is a plain form post that reloads the profile.
+    conn =
+      context.conn
+      |> click_button("Resend confirmation")
+      |> await_live_view()
+
+    Map.put(context, :conn, conn)
   end
 
   step "a confirmation email is sent to my current address", context do
