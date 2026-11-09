@@ -418,6 +418,34 @@ defmodule Huddlz.Accounts.User do
       change set_attribute(:suspended_by_id, nil)
     end
 
+    update :delete_account do
+      description """
+      Delete the actor's own account after they confirm their password. The
+      row is anonymized rather than removed, so shared history keeps its
+      author; see `Huddlz.Accounts.User.Changes.DeleteAccount`.
+      """
+
+      require_atomic? false
+      accept []
+      argument :current_password, :string, sensitive?: true, allow_nil?: false
+
+      validate present(:current_password), message: "Enter your password to delete your account."
+
+      validate absent(:deleted_at) do
+        message "is already deleted"
+      end
+
+      change get_and_lock(:for_update)
+
+      validate {AshAuthentication.Strategy.Password.PasswordValidation,
+                strategy_name: :password, password_argument: :current_password} do
+        before_action? true
+        where present(:current_password)
+      end
+
+      change Huddlz.Accounts.User.Changes.DeleteAccount
+    end
+
     update :update_theme_preference do
       description "Choose whether huddlz follows the device appearance or stays light or dark"
       accept [:theme_preference]
@@ -760,6 +788,7 @@ defmodule Huddlz.Accounts.User do
     bypass actor_attribute_equals(:role, :admin) do
       forbid_if action(:update_role)
       forbid_if action([:suspend, :restore])
+      forbid_if action(:delete_account)
       authorize_if always()
     end
 
@@ -859,6 +888,11 @@ defmodule Huddlz.Accounts.User do
 
     policy action([:resend_confirmation, :remember_confirmation_destination]) do
       description "People can ask for their own confirmation email again"
+      authorize_if expr(id == ^actor(:id))
+    end
+
+    policy action(:delete_account) do
+      description "People can delete only their own account"
       authorize_if expr(id == ^actor(:id))
     end
 
@@ -975,6 +1009,10 @@ defmodule Huddlz.Accounts.User do
       constraints max_length: 500
     end
 
+    attribute :deleted_at, :utc_datetime_usec do
+      description "When the person deleted their account; the row is kept anonymized"
+    end
+
     attribute :theme_preference, Huddlz.Accounts.ThemePreference do
       description "Follow the device appearance, or always light or dark"
       allow_nil? false
@@ -1071,6 +1109,10 @@ defmodule Huddlz.Accounts.User do
   def admin?(%{is_admin: false}), do: false
   def admin?(%{role: :admin}), do: true
   def admin?(_), do: false
+
+  @doc "True once the person has deleted their account. Nil-safe."
+  def deleted?(%{deleted_at: %DateTime{}}), do: true
+  def deleted?(_), do: false
 
   @doc "True while the account is suspended. Nil-safe."
   def suspended?(%{suspended_at: %DateTime{}}), do: true
