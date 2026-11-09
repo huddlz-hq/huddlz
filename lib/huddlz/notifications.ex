@@ -78,7 +78,7 @@ defmodule Huddlz.Notifications do
     _ = Triggers.fetch!(trigger)
     payload = Map.delete(payload, "virtual_link")
 
-    if reaches_suspended?(user, trigger) do
+    if reachable?(user, trigger) do
       enqueue(user_id, trigger, payload)
     else
       {:ok, :skipped}
@@ -271,16 +271,19 @@ defmodule Huddlz.Notifications do
   """
   @spec should_deliver?(User.t(), atom(), map()) :: boolean()
   def should_deliver?(user, trigger, entry) do
-    reaches_suspended?(user, trigger) and user_can_receive?(user, entry.category) and
+    reachable?(user, trigger) and user_can_receive?(user, entry.category) and
       preference_allows?(user, trigger, entry)
   end
 
-  # A suspended account hears from huddlz exactly once, about the
-  # suspension itself. Nothing else reaches it, in-app or by email.
-  defp reaches_suspended?(%User{suspended_at: %DateTime{}}, trigger),
+  # A deleted account hears nothing at all. A suspended account hears from
+  # huddlz exactly once, about the suspension itself. Nothing else reaches
+  # it, in-app or by email.
+  defp reachable?(%User{deleted_at: %DateTime{}}, _trigger), do: false
+
+  defp reachable?(%User{suspended_at: %DateTime{}}, trigger),
     do: trigger == :account_suspended
 
-  defp reaches_suspended?(_user, _trigger), do: true
+  defp reachable?(_user, _trigger), do: true
 
   # Transactional security emails (password changed, account removed, etc.)
   # must go through even before email confirmation — otherwise an attacker
