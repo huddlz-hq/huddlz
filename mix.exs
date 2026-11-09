@@ -84,7 +84,7 @@ defmodule Huddlz.MixProject do
   defp deps do
     [
       {:absinthe_phoenix, "~> 2.0"},
-      {:ash_ai, "~> 1.1"},
+      {:ash_ai, "~> 1.5 and >= 1.5.1"},
       {:open_api_spex, "~> 3.0"},
       {:ash_graphql, "~> 1.0"},
       {:ash_json_api, "~> 1.0"},
