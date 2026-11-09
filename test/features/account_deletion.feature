@@ -27,7 +27,7 @@ Feature: People delete their own account
 
   Scenario: Deleting an account gives up group memberships and upcoming spots
     Given the huddl "Next Chapter" exists in group "Deletion Book Club" hosted by "owner801@example.com"
-    And "Next Chapter" has room for 1 people
+    And "Next Chapter" has room for 2 people
     And "leave801@example.com" has RSVPed to "Next Chapter"
     And "member801@example.com" is on the waitlist for "Next Chapter"
     And "leave801@example.com" is signed in to the app with password "Password123!"
@@ -40,6 +40,7 @@ Feature: People delete their own account
   Scenario: Shared history keeps a neutral name
     Given the past huddl "Last Chapter" exists in group "Deletion Book Club" hosted by "owner801@example.com"
     And "leave801@example.com" attended "Last Chapter"
+    And "member801@example.com" attended "Last Chapter"
     And "leave801@example.com" is signed in to the app with password "Password123!"
     When "leave801@example.com" deletes their account in the app with password "Password123!"
     And I am signed in as "member801@example.com"
