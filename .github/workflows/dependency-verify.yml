@@ -49,7 +49,8 @@ jobs:
           elixir-version: '1.20.5'
       - run: mix local.hex 2.7.0 --force
       - name: Remove advisory ignore only in this disposable audit checkout
-        run: sed -i 's/hex: \[ignore_advisories: \["EEF-CVE-2026-117656"\]\]/hex: []/' mix.exs
+        run: |
+          sed -i 's/hex: \[ignore_advisories: \["EEF-CVE-2026-117656"\]\]/hex: []/' mix.exs
       - run: mix deps.get
       - name: Audit without repository exceptions
         run: mix hex.audit
