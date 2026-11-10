@@ -3,7 +3,8 @@ defmodule BrowserShareLinksSteps do
 
   import ExUnit.Assertions
   import Huddlz.Generator
-  import PhoenixTest
+  import PhoenixTest, except: [visit: 2]
+  import Huddlz.Test.BrowserHelpers, only: [visit: 2]
 
   step "I am viewing a public {string} to share", %{args: [page]} = context do
     owner = generate(user())

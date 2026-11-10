@@ -3,7 +3,7 @@ defmodule BrowserSocialScheduleSteps do
 
   import Huddlz.Generator
   import Huddlz.Test.BrowserHelpers
-  import PhoenixTest
+  import PhoenixTest, except: [visit: 2]
   import PhoenixTest.Playwright, only: [press: 3]
 
   step "I am editing a social connection as its owner", context do
