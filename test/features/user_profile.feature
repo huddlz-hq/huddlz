@@ -54,6 +54,7 @@ Feature: User Profile Management
   @email_change_pending
   Scenario: Requesting a sign-in email change keeps the current address active
     Given the user "alice+user-profile@example.com" has password "OldPassword123!"
+    And I am signed in as "alice+user-profile@example.com"
     And I am on my profile page
     When I fill in "New email" with "alice.changed@example.com"
     And I fill in "Confirm current password" with "OldPassword123!"
@@ -65,6 +66,7 @@ Feature: User Profile Management
 
   Scenario: Rejecting an invalid sign-in email
     Given the user "alice+user-profile@example.com" has password "OldPassword123!"
+    And I am signed in as "alice+user-profile@example.com"
     And I am on my profile page
     When I fill in "New email" with "not-an-email"
     And I fill in "Confirm current password" with "OldPassword123!"
@@ -74,6 +76,7 @@ Feature: User Profile Management
 
   Scenario: Rejecting a sign-in email change with the wrong password
     Given the user "alice+user-profile@example.com" has password "OldPassword123!"
+    And I am signed in as "alice+user-profile@example.com"
     And I am on my profile page
     When I fill in "New email" with "alice.changed@example.com"
     And I fill in "Confirm current password" with "WrongPassword"
@@ -83,6 +86,7 @@ Feature: User Profile Management
 
   Scenario: Rejecting a sign-in email already used by another person
     Given the user "alice+user-profile@example.com" has password "OldPassword123!"
+    And I am signed in as "alice+user-profile@example.com"
     And the following users exist:
       | email                          | role | display_name |
       | taken+user-profile@example.com | user | Taken Email  |
