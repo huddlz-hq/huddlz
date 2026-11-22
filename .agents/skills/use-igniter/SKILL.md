@@ -26,7 +26,6 @@ mix usage_rules.search_docs "search term" -p igniter
 - `mix igniter.gen.task` - Generates a new igniter task
 - `mix igniter.install` - Install a package or packages, and run any associated installers.
 - `mix igniter.move_files` - Moves any relevant files to their 'correct' location.
-- `mix igniter.phx.install`
 - `mix igniter.refactor.rename_function` - Rename functions across a project with automatic reference updates.
 - `mix igniter.refactor.rename_module` - Rename a module across a project with automatic reference updates.
 - `mix igniter.refactor.unless_to_if_not` - Rewrites occurrences of `unless x` to `if !x` across the project.
@@ -34,5 +33,4 @@ mix usage_rules.search_docs "search term" -p igniter
 - `mix igniter.setup` - Creates or updates a .igniter.exs file, used to configure Igniter for end user's preferences.
 - `mix igniter.update_gettext` - Applies changes to resolve a warning introduced in gettext 0.26.0
 - `mix igniter.upgrade` - Fetch and upgrade dependencies. A drop in replacement for `mix deps.update` that also runs upgrade tasks.
-- `mix igniter.upgrade_igniter`
 <!-- usage-rules-skill-end -->
