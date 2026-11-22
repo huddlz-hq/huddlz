@@ -1,7 +1,6 @@
 defmodule BrowserSidebarScrollSteps do
   use Cucumber.StepDefinition
 
-  import ExUnit.Assertions
   import Huddlz.Generator
   import Huddlz.Test.BrowserHelpers
   import PhoenixTest, except: [visit: 2]
