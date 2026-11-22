@@ -92,6 +92,8 @@ Hooks.ClipboardCopy = {
     this.button = this.el.closest("button")
     if (!this.button) return
 
+    this.label = this.el.textContent.trim()
+
     this.handleClick = () => this.copy()
     this.button.addEventListener("click", this.handleClick)
   },
@@ -145,7 +147,7 @@ Hooks.ClipboardCopy = {
   flashStatus(message, duration = 1500) {
     clearTimeout(this.resetTimer)
     this.el.textContent = message
-    this.resetTimer = setTimeout(() => { this.el.textContent = "Copy link" }, duration)
+    this.resetTimer = setTimeout(() => { this.el.textContent = this.label }, duration)
   }
 }
 

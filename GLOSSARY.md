@@ -159,9 +159,9 @@ A group's link to one outside place where huddlz posts on the group's behalf, su
 _Avoid_: Integration, channel (that is Slack's word for the place), webhook
 
 **Social post**:
-One message about one huddl sent to one social connection: the huddl's title, local time, place and link. Only public huddlz are posted.
+One message about one huddl sent to one social connection: the huddl's title, local time, place and link. Only public huddlz are posted. Organizers can also post a huddl now, on top of its social schedule.
 _Avoid_: Announcement, share, reminder (the email to people who RSVPd)
 
 **Social schedule**:
-The moments at which a social connection posts each huddl, chosen per connection from a fixed list such as a week before and the morning of. A moment that has already passed is skipped, never sent late.
+The moments at which a social connection posts each huddl, chosen per connection from a fixed list such as a week before and the morning of. A moment that has already passed is skipped, never sent late. Organizers can skip one huddl on one connection: it then posts nothing about that huddl, follow-ups included, until posting is turned back on.
 _Avoid_: Automation, campaign, cadence

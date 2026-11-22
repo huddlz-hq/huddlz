@@ -1,14 +1,14 @@
 defmodule Huddlz.Communities.SocialPost.Occasion do
   @moduledoc """
   Why a social post goes out: one of the social schedule's moments, the one
-  post announcing a new series, or a follow-up saying a huddl that was
-  already posted has been cancelled or moved.
+  post announcing a new series, a follow-up saying a huddl that was already
+  posted has been cancelled or moved, or an organizer posting it now.
   """
 
   alias Huddlz.Communities.SocialConnection.Moment
 
   use Ash.Type.Enum,
-    values: Moment.values() ++ [:series, :cancelled, :moved]
+    values: Moment.values() ++ [:series, :cancelled, :moved, :now]
 
   def graphql_type(_), do: :social_post_occasion
 
@@ -21,5 +21,6 @@ defmodule Huddlz.Communities.SocialPost.Occasion do
   def label(:series), do: "New series"
   def label(:cancelled), do: "Cancelled"
   def label(:moved), do: "New time"
+  def label(:now), do: "Posted now"
   def label(moment), do: Moment.short(moment)
 end

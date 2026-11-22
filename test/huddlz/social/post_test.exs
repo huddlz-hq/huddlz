@@ -33,6 +33,16 @@ defmodule Huddlz.Social.PostTest do
                [huddl.title, "Today at 9:30 AM", "Online", @link]
     end
 
+    test "a post made now says today only on the day" do
+      today = huddl_like(eastern_today(), ~T[12:00:00], event_type: :virtual)
+      later = huddl_like(Date.add(eastern_today(), 3), ~T[18:00:00], event_type: :virtual)
+
+      assert "Today at 12:00 PM" in Post.lines(today, moment: :now, link: @link)
+
+      day = Calendar.strftime(Date.add(eastern_today(), 3), "%a, %b %-d")
+      assert "#{day} at 6:00 PM" in Post.lines(later, moment: :now, link: @link)
+    end
+
     test "other moments give the weekday and date where the huddl is" do
       huddl = huddl_like(~D[2026-10-01], ~T[18:00:00], [])
 
