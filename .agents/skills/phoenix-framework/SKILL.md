@@ -24,15 +24,11 @@ mix usage_rules.search_docs "search term" -p phoenix
 
 ## Available Mix Tasks
 
-- `mix compile.phoenix`
 - `mix phx` - Prints Phoenix help information
 - `mix phx.digest` - Digests and compresses static files
 - `mix phx.digest.clean` - Removes old versions of static assets.
 - `mix phx.gen` - Lists all available Phoenix generators
 - `mix phx.gen.auth` - Generates authentication logic for a resource
-- `mix phx.gen.auth.hashing_library`
-- `mix phx.gen.auth.injector`
-- `mix phx.gen.auth.migration`
 - `mix phx.gen.cert` - Generates a self-signed certificate for HTTPS testing
 - `mix phx.gen.channel` - Generates a Phoenix channel
 - `mix phx.gen.context` - Generates a context with functions around an Ecto schema
