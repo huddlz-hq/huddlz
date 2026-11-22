@@ -4,7 +4,7 @@ defmodule BrowserCoverCropSteps do
   import ExUnit.Assertions
   import Huddlz.Generator
   import Huddlz.Test.BrowserHelpers
-  import PhoenixTest, except: [visit: 2]
+  import PhoenixTest
 
   require Ash.Query
 

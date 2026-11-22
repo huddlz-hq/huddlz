@@ -3,7 +3,7 @@ defmodule BrowserCopyHuddlSteps do
 
   import Huddlz.Generator
   import Huddlz.Test.BrowserHelpers
-  import PhoenixTest, except: [visit: 2]
+  import PhoenixTest
 
   step "I opened a copied huddl on my phone", context do
     owner = generate(user(role: :user))

@@ -4,7 +4,7 @@ defmodule BrowserCoverUploadSteps do
   import ExUnit.Assertions
   import Huddlz.Generator
   import Huddlz.Test.BrowserHelpers
-  import PhoenixTest, except: [visit: 2]
+  import PhoenixTest
 
   alias Huddlz.Storage.GroupImages
 

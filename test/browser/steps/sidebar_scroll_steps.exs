@@ -1,9 +1,10 @@
 defmodule BrowserSidebarScrollSteps do
   use Cucumber.StepDefinition
 
+  import ExUnit.Assertions
   import Huddlz.Generator
   import Huddlz.Test.BrowserHelpers
-  import PhoenixTest, except: [visit: 2]
+  import PhoenixTest
   import PhoenixTest.Playwright, only: [press: 3]
 
   @sidebar "document.querySelector('#mobile-navigation-drawer')"

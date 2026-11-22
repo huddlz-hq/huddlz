@@ -4,7 +4,7 @@ defmodule BrowserMemberMenuSteps do
   import ExUnit.Assertions
   import Huddlz.Generator
   import Huddlz.Test.BrowserHelpers
-  import PhoenixTest, except: [visit: 2]
+  import PhoenixTest
   import PhoenixTest.Playwright, only: [press: 3]
 
   step "I have opened a group's roster in a browser", context do
@@ -22,6 +22,7 @@ defmodule BrowserMemberMenuSteps do
       context.conn
       |> sign_in(owner)
       |> visit("/organize/#{group.slug}/members")
+      |> assert_has("body .phx-connected")
       |> assert_has("h1", text: "Members")
 
     Map.merge(context, %{conn: conn, owner: owner, member: member, group: group})
