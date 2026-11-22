@@ -15,6 +15,7 @@ defmodule BrowserSocialScheduleSteps do
       context.conn
       |> sign_in(owner)
       |> visit("/organize/#{group.slug}/social")
+      |> assert_has("body .phx-connected")
       |> click_button("Edit")
       |> assert_has("#social-post-preview", text: "Morning-of post preview")
       # The sheet moves focus to its first control again two animation
