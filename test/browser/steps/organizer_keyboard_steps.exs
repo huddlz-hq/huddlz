@@ -3,8 +3,7 @@ defmodule BrowserOrganizerSteps do
 
   import Huddlz.Generator
   import Huddlz.Test.BrowserHelpers
-  import PhoenixTest
-  import PhoenixTest.Playwright, only: [press: 3]
+  import Fluffy.PhoenixTest
 
   step "I have opened a new huddl as its group organizer", context do
     owner = generate(user(role: :user))
@@ -22,9 +21,9 @@ defmodule BrowserOrganizerSteps do
   step "I tab into the format choices and choose virtual with an arrow key", context do
     conn =
       context.conn
-      |> press("textarea[name='form[description]']", "Tab")
+      |> unwrap(&Playwright.Page.press!(&1, "textarea[name='form[description]']", "Tab"))
       |> assert_has("#event-type-in_person:focus")
-      |> press(":focus", "ArrowRight")
+      |> unwrap(&Playwright.Page.press!(&1, ":focus", "ArrowRight"))
 
     Map.put(context, :conn, conn)
   end
@@ -43,14 +42,14 @@ defmodule BrowserOrganizerSteps do
   step "I enable recurrence and members only using Space", context do
     conn =
       context.conn
-      |> press("select[name='form[duration_minutes]']", "Tab")
+      |> unwrap(&Playwright.Page.press!(&1, "select[name='form[duration_minutes]']", "Tab"))
       |> assert_has("input[name='form[is_recurring]']:focus")
-      |> press(":focus", "Space")
+      |> unwrap(&Playwright.Page.press!(&1, ":focus", "Space"))
       |> assert_has("input[name='form[is_recurring]']:checked:focus-visible[aria-checked='true']")
       |> assert_has("select[name='form[frequency]']")
-      |> press("input[name='form[max_attendees]']", "Tab")
+      |> unwrap(&Playwright.Page.press!(&1, "input[name='form[max_attendees]']", "Tab"))
       |> assert_has("input[name='form[is_private]']:focus")
-      |> press(":focus", "Space")
+      |> unwrap(&Playwright.Page.press!(&1, ":focus", "Space"))
 
     Map.put(context, :conn, conn)
   end

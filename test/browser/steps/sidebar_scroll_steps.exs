@@ -1,11 +1,9 @@
 defmodule BrowserSidebarScrollSteps do
   use Cucumber.StepDefinition
 
-  import ExUnit.Assertions
   import Huddlz.Generator
   import Huddlz.Test.BrowserHelpers
-  import PhoenixTest
-  import PhoenixTest.Playwright, only: [press: 3]
+  import Fluffy.PhoenixTest
 
   @sidebar "document.querySelector('#mobile-navigation-drawer')"
 
@@ -59,13 +57,17 @@ defmodule BrowserSidebarScrollSteps do
   step "I tab through to Sign out", context do
     # Nothing is focused on a fresh page, so the first Tab starts from the body.
     conn =
-      Enum.reduce_while(1..60, press(context.conn, "body", "Tab"), fn _n, conn ->
-        conn = press(conn, ":focus", "Tab")
+      Enum.reduce_while(
+        1..60,
+        unwrap(context.conn, &Playwright.Page.press!(&1, "body", "Tab")),
+        fn _n, conn ->
+          conn = unwrap(conn, &Playwright.Page.press!(&1, ":focus", "Tab"))
 
-        if evaluate(conn, "document.activeElement.id === 'sign-out-link'"),
-          do: {:halt, conn},
-          else: {:cont, conn}
-      end)
+          if evaluate(conn, "document.activeElement.id === 'sign-out-link'"),
+            do: {:halt, conn},
+            else: {:cont, conn}
+        end
+      )
 
     Map.put(context, :conn, assert_has(conn, "#sign-out-link:focus"))
   end
@@ -135,22 +137,13 @@ defmodule BrowserSidebarScrollSteps do
       })()
       """)
 
-    {:ok, _} = PlaywrightEx.Page.mouse_move(conn.page_id, x: x, y: y, timeout: 5_000)
-
-    # The wheel call answers with an empty result; the next step observes the effect.
-    %{id: _} =
-      PlaywrightEx.send(
-        %{guid: conn.page_id, method: :mouse_wheel, params: %{delta_x: 0, delta_y: delta_y}},
-        timeout: 5_000
-      )
-
-    conn
+    unwrap(conn, fn page ->
+      mouse = Playwright.Page.mouse(page)
+      Playwright.Mouse.move!(mouse, x, y)
+      Playwright.Mouse.wheel!(mouse, 0, delta_y)
+    end)
   end
 
-  defp evaluate(conn, expression) do
-    {:ok, value} =
-      PlaywrightEx.Frame.evaluate(conn.frame_id, expression: expression, timeout: 5_000)
-
-    value
-  end
+  defp evaluate(conn, expression),
+    do: unwrap_and_return(conn, &Playwright.Page.evaluate!(&1, expression))
 end

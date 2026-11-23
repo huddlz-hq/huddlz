@@ -2,14 +2,13 @@ defmodule BrowserNavigationSteps do
   use Cucumber.StepDefinition
 
   import Huddlz.Test.BrowserHelpers
-  import PhoenixTest
-  import PhoenixTest.Playwright, only: [press: 3]
+  import Fluffy.PhoenixTest
 
   step "I open mobile navigation with the keyboard", context do
     conn =
       context.conn
       |> assert_browser("document.querySelector('#mobile-navigation-drawer').inert")
-      |> press("#mobile-nav-trigger", "Enter")
+      |> unwrap(&Playwright.Page.press!(&1, "#mobile-nav-trigger", "Enter"))
       |> assert_has("#mobile-nav-close:focus")
 
     Map.put(context, :conn, conn)
@@ -19,11 +18,11 @@ defmodule BrowserNavigationSteps do
     conn =
       context.conn
       |> assert_has("[data-mobile-nav-background][inert]")
-      |> press(":focus", "Shift+Tab")
+      |> unwrap(&Playwright.Page.press!(&1, ":focus", "Shift+Tab"))
       |> assert_has("#mobile-navigation-drawer a[aria-label='huddlz home']:focus")
-      |> press(":focus", "Shift+Tab")
+      |> unwrap(&Playwright.Page.press!(&1, ":focus", "Shift+Tab"))
       |> assert_has("#sidebar-user:focus")
-      |> press(":focus", "Tab")
+      |> unwrap(&Playwright.Page.press!(&1, ":focus", "Tab"))
       |> assert_has("#mobile-navigation-drawer a[aria-label='huddlz home']:focus")
       |> assert_browser("""
       (() => {
@@ -36,7 +35,7 @@ defmodule BrowserNavigationSteps do
   end
 
   step "I close mobile navigation with Escape", context do
-    Map.put(context, :conn, press(context.conn, ":focus", "Escape"))
+    Map.put(context, :conn, unwrap(context.conn, &Playwright.Page.press!(&1, ":focus", "Escape")))
   end
 
   step "focus returns to the navigation trigger and the page is usable", context do
@@ -45,7 +44,7 @@ defmodule BrowserNavigationSteps do
       |> assert_has("#mobile-nav-trigger:focus[aria-expanded='false']")
       |> assert_browser("document.querySelector('#mobile-navigation-drawer').inert")
       |> refute_has("[data-mobile-nav-background][inert]")
-      |> press(":focus", "Tab")
+      |> unwrap(&Playwright.Page.press!(&1, ":focus", "Tab"))
       |> assert_browser(
         "document.querySelector('[data-mobile-nav-background]').contains(document.activeElement)"
       )
@@ -56,7 +55,7 @@ defmodule BrowserNavigationSteps do
   step "I reopen mobile navigation and visit Groups", context do
     conn =
       context.conn
-      |> press("#mobile-nav-trigger", "Enter")
+      |> unwrap(&Playwright.Page.press!(&1, "#mobile-nav-trigger", "Enter"))
       |> click_link("#mobile-navigation-drawer a", "Groups")
 
     Map.put(context, :conn, conn)
@@ -69,7 +68,7 @@ defmodule BrowserNavigationSteps do
       |> assert_has(".phx-connected")
       |> assert_browser("document.querySelector('#mobile-navigation-drawer').inert")
       |> refute_has("[data-mobile-nav-background][inert]")
-      |> press("#mobile-nav-trigger", "Enter")
+      |> unwrap(&Playwright.Page.press!(&1, "#mobile-nav-trigger", "Enter"))
       |> assert_has("#mobile-nav-close:focus")
       |> assert_has("[data-mobile-nav-background][inert]")
 

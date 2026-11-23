@@ -213,11 +213,6 @@ jobs:
       with:
         otp-version: '29.1.2'
         elixir-version: '1.20.5'
-    - uses: actions/setup-node@v7.1.0
-      with:
-        node-version: '26'
-        cache: npm
-        cache-dependency-path: assets/package-lock.json
     # The compiled build restores only on an exact mix.lock match; see the
     # test job's build cache.
     - name: Cache browser job dependencies
@@ -238,7 +233,6 @@ jobs:
       run: |
         mix deps.get
         mix assets.setup
-        npm ci --prefix assets
     - name: Install Chromium and system dependencies
       env:
         PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/_build/browser/browsers
@@ -247,7 +241,7 @@ jobs:
       # wanted; when that mirror's index is inconsistent the whole step fails.
       run: |
         sudo grep -rl "dl.google.com" /etc/apt/sources.list.d | xargs -r sudo rm -f
-        assets/node_modules/.bin/playwright install --with-deps chromium --only-shell
+        mix playwright.install --with-deps chromium --only-shell
     - name: Run browser scenarios
       timeout-minutes: 2
       run: mix test.browser
@@ -258,7 +252,7 @@ jobs:
         name: browser-failure-diagnostics
         path: |
           _build/browser/screenshots
-          _build/browser/traces
+          _build/browser/test-results
         if-no-files-found: ignore
         retention-days: 7
 

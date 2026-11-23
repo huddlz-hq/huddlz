@@ -4,8 +4,7 @@ defmodule BrowserKeyboardFocusSteps do
   import Huddlz.Generator
   import Huddlz.Test.BrowserHelpers
   import Huddlz.Test.MoxHelpers
-  import PhoenixTest
-  import PhoenixTest.Playwright, only: [press: 3]
+  import Fluffy.PhoenixTest
 
   step "I am signed in and looking at my groups in a browser", context do
     member = generate(user(role: :user))
@@ -18,15 +17,15 @@ defmodule BrowserKeyboardFocusSteps do
   end
 
   step "I press Tab from the top of the page", context do
-    Map.put(context, :conn, press(context.conn, "body", "Tab"))
+    Map.put(context, :conn, unwrap(context.conn, &Playwright.Page.press!(&1, "body", "Tab")))
   end
 
   step "I press Tab", context do
-    Map.put(context, :conn, press(context.conn, ":focus", "Tab"))
+    Map.put(context, :conn, unwrap(context.conn, &Playwright.Page.press!(&1, ":focus", "Tab")))
   end
 
   step "I follow the skip link with Enter", context do
-    Map.put(context, :conn, press(context.conn, ":focus", "Enter"))
+    Map.put(context, :conn, unwrap(context.conn, &Playwright.Page.press!(&1, ":focus", "Enter")))
   end
 
   step "{string} has keyboard focus", %{args: [name]} = context do
@@ -79,7 +78,7 @@ defmodule BrowserKeyboardFocusSteps do
       |> fill_in("Display Name", with: "Keyboard Person")
       |> fill_in("Password", with: "ValidPassword123!")
       |> fill_in("Confirm Password", with: "ValidPassword123!")
-      |> press("#registration-form button[type=submit]", "Enter")
+      |> unwrap(&Playwright.Page.press!(&1, "#registration-form button[type=submit]", "Enter"))
 
     Map.put(context, :conn, conn)
   end
@@ -97,7 +96,7 @@ defmodule BrowserKeyboardFocusSteps do
       context.conn
       |> fill_in("Group name", with: "Keyboard Review Group")
       |> fill_in("Description", with: "A group for reviewing keyboard access")
-      |> press("#group-form button[type=submit]", "Enter")
+      |> unwrap(&Playwright.Page.press!(&1, "#group-form button[type=submit]", "Enter"))
 
     Map.put(context, :conn, conn)
   end
@@ -107,7 +106,7 @@ defmodule BrowserKeyboardFocusSteps do
       context.conn
       |> within("#group-location", &click_button(&1, "Clear"))
       |> assert_has("#group-location-input")
-      |> press("#edit-group-form button[type=submit]", "Enter")
+      |> unwrap(&Playwright.Page.press!(&1, "#edit-group-form button[type=submit]", "Enter"))
 
     Map.put(context, :conn, conn)
   end
@@ -116,7 +115,7 @@ defmodule BrowserKeyboardFocusSteps do
     conn =
       context.conn
       |> fill_in("Opening line", with: String.duplicate("a", 141))
-      |> press("#schedule-form button[type=submit]", "Enter")
+      |> unwrap(&Playwright.Page.press!(&1, "#schedule-form button[type=submit]", "Enter"))
 
     Map.put(context, :conn, conn)
   end
@@ -125,7 +124,7 @@ defmodule BrowserKeyboardFocusSteps do
     conn =
       context.conn
       |> click_button("#turnout-nudge button", "Add turnout")
-      |> press("#turnout-form-nudge button[type=submit]", "Enter")
+      |> unwrap(&Playwright.Page.press!(&1, "#turnout-form-nudge button[type=submit]", "Enter"))
 
     Map.put(context, :conn, conn)
   end
@@ -238,9 +237,9 @@ defmodule BrowserKeyboardFocusSteps do
       context.conn
       |> fill_in("Search for an address", with: "saint")
       |> assert_has("[role='option']")
-      |> press("#modal-address-autocomplete-input", "ArrowDown")
+      |> unwrap(&Playwright.Page.press!(&1, "#modal-address-autocomplete-input", "ArrowDown"))
       |> assert_has("#modal-address-autocomplete[data-has-highlight='true']")
-      |> press("#modal-address-autocomplete-input", "Enter")
+      |> unwrap(&Playwright.Page.press!(&1, "#modal-address-autocomplete-input", "Enter"))
       |> assert_has("#new-location-form button[type=submit]:not([disabled])")
 
     Map.put(context, :conn, conn)
@@ -280,7 +279,7 @@ defmodule BrowserKeyboardFocusSteps do
     conn =
       context.conn
       |> within(context.focus_form, &fill_in(&1, label, with: value))
-      |> press(submit, "Enter")
+      |> unwrap(&Playwright.Page.press!(&1, submit, "Enter"))
 
     Map.put(context, :conn, conn)
   end

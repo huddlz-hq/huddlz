@@ -3,7 +3,7 @@ defmodule BrowserCopyHuddlSteps do
 
   import Huddlz.Generator
   import Huddlz.Test.BrowserHelpers
-  import PhoenixTest
+  import Fluffy.PhoenixTest
 
   step "I opened a copied huddl on my phone", context do
     owner = generate(user(role: :user))
@@ -21,10 +21,12 @@ defmodule BrowserCopyHuddlSteps do
   end
 
   step "I review the copied description", context do
-    PhoenixTest.Playwright.evaluate(
+    unwrap(
       context.conn,
-      "document.querySelector('#form_description').scrollIntoView({block: 'center'})",
-      fn _ -> :ok end
+      &Playwright.Page.evaluate!(
+        &1,
+        "document.querySelector('#form_description').scrollIntoView({block: 'center'})"
+      )
     )
 
     context

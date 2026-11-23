@@ -1,8 +1,6 @@
 defmodule BrowserHooks do
   use Cucumber.Hooks
 
-  alias PhoenixTest.Playwright.Case, as: BrowserCase
-
   before_scenario context do
     # Serial suite: HTTP and LiveView processes share these Mox stubs.
     Mox.set_mox_global()
@@ -14,34 +12,32 @@ defmodule BrowserHooks do
       cond do
         Map.get(context, :clipboard_browser) ->
           Map.put(context, :browser_context_opts,
-            timezone_id: "America/New_York",
             permissions: ["clipboard-read", "clipboard-write"]
           )
 
         Map.get(context, :mobile) ->
-          Map.put(context, :browser_context_opts,
-            timezone_id: "America/New_York",
-            viewport: %{width: 320, height: 720}
-          )
+          Map.put(context, :browser_context_opts, viewport: %{width: 320, height: 720})
 
         # A short desktop window: wide enough for the sidebar, too short for it.
         Map.get(context, :short) ->
-          Map.put(context, :browser_context_opts,
-            timezone_id: "America/New_York",
-            viewport: %{width: 1280, height: 520}
-          )
+          Map.put(context, :browser_context_opts, viewport: %{width: 1280, height: 520})
 
         true ->
           context
       end
 
-    context = Map.merge(context, Map.new(BrowserCase.do_setup_all(context)))
-    # Cucumber's generated module atoms lack the Elixir prefix expected by
-    # the adapter's artifact filenames. Keep the original scenario name.
-    driver_context = Map.put(context, :module, __MODULE__)
-    context = Map.merge(context, Map.new(BrowserCase.do_setup(driver_context)))
-    answer_external_requests_locally(context.conn)
-    context
+    # Cucumber creates the ExUnit modules, so no `use Playwright.Test` can
+    # register the scenario: run its per-test setup here.
+    Playwright.Test.__setup__(context)
+    Huddlz.DataCase.setup_sandbox(context)
+
+    conn =
+      Fluffy.PhoenixTest.start_session(:playwright,
+        browser_context: Map.get(context, :browser_context_opts, [])
+      )
+
+    answer_external_requests_locally(conn)
+    Map.put(context, :conn, conn)
   end
 
   @inter_url "https://fonts.gstatic.com/s/inter/v20/inter-latin.woff2"
@@ -64,17 +60,18 @@ defmodule BrowserHooks do
   # answered locally: Inter from a fixture, so layouts measure as they do in
   # production, and anything else with an empty response.
   defp answer_external_requests_locally(conn) do
-    {:ok, _} =
-      PlaywrightEx.BrowserContext.route(
-        conn.context_id,
+    Fluffy.PhoenixTest.unwrap(conn, fn page ->
+      page
+      |> Playwright.Page.context()
+      |> Playwright.BrowserContext.route!(
         # Playwright resolves a bare "https://**" to "https://**/", which only
         # matches URLs ending in a slash.
         "https://*/**",
         fn route, request ->
-          {:ok, _} = PlaywrightEx.Route.fulfill(route, response(request.url))
-        end,
-        timeout: 5_000
+          Playwright.Route.fulfill!(route, response(Playwright.Request.url(request)))
+        end
       )
+    end)
   end
 
   defp response("https://fonts.googleapis.com/" <> _),

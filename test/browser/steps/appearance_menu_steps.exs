@@ -3,15 +3,14 @@ defmodule BrowserAppearanceMenuSteps do
 
   import ExUnit.Assertions
   import Huddlz.Test.BrowserHelpers
-  import PhoenixTest
-  import PhoenixTest.Playwright, only: [press: 3]
+  import Fluffy.PhoenixTest
 
   @menu_open "document.querySelector('#theme-menu').matches(':popover-open')"
 
   step "I open the appearance menu with the keyboard", context do
     conn =
       context.conn
-      |> press("#theme-menu-trigger", "Enter")
+      |> unwrap(&Playwright.Page.press!(&1, "#theme-menu-trigger", "Enter"))
       |> assert_browser(@menu_open)
 
     Map.put(context, :conn, conn)
@@ -19,7 +18,7 @@ defmodule BrowserAppearanceMenuSteps do
 
   step "I pick {string} with the keyboard", %{args: [label]} = context do
     conn = tab_to_option(context.conn, label)
-    Map.put(context, :conn, press(conn, ":focus", "Enter"))
+    Map.put(context, :conn, unwrap(conn, &Playwright.Page.press!(&1, ":focus", "Enter")))
   end
 
   step "the page uses the dark appearance and the menu is closed", context do
@@ -33,7 +32,7 @@ defmodule BrowserAppearanceMenuSteps do
   end
 
   step "I press Escape", context do
-    Map.put(context, :conn, press(context.conn, ":focus", "Escape"))
+    Map.put(context, :conn, unwrap(context.conn, &Playwright.Page.press!(&1, ":focus", "Escape")))
   end
 
   step "the menu is closed and focus is back on its trigger", context do
@@ -52,12 +51,15 @@ defmodule BrowserAppearanceMenuSteps do
   defp tab_to_option(_conn, label, 0), do: flunk("no appearance option labelled #{label}")
 
   defp tab_to_option(conn, label, tries) do
-    conn = press(conn, ":focus", "Tab")
+    conn = unwrap(conn, &Playwright.Page.press!(&1, ":focus", "Tab"))
 
-    {:ok, focused} =
-      PlaywrightEx.Frame.evaluate(conn.frame_id,
-        expression: "document.activeElement.querySelector('.theme-option-label')?.textContent",
-        timeout: 5_000
+    focused =
+      unwrap_and_return(
+        conn,
+        &Playwright.Page.evaluate!(
+          &1,
+          "document.activeElement.querySelector('.theme-option-label')?.textContent"
+        )
       )
 
     if focused == label, do: conn, else: tab_to_option(conn, label, tries - 1)

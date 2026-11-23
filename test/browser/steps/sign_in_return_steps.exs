@@ -2,7 +2,7 @@ defmodule BrowserSignInReturnSteps do
   use Cucumber.StepDefinition
 
   import Huddlz.Generator
-  import PhoenixTest
+  import Fluffy.PhoenixTest
   import ExUnit.Assertions
   import Swoosh.TestAssertions, only: [set_swoosh_global: 0]
 

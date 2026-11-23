@@ -3,7 +3,7 @@ defmodule BrowserOverviewCardsSteps do
 
   import Huddlz.Generator
   import Huddlz.Test.BrowserHelpers
-  import PhoenixTest
+  import Fluffy.PhoenixTest
 
   alias Huddlz.Communities.HuddlAttendee
 

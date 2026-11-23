@@ -1,10 +1,8 @@
 defmodule BrowserPhotoSteps do
   use Cucumber.StepDefinition
-  import ExUnit.Assertions
   import Huddlz.Generator
   import Huddlz.Test.BrowserHelpers
-  import PhoenixTest
-  import PhoenixTest.Playwright, only: [press: 3]
+  import Fluffy.PhoenixTest
 
   step "I am viewing my completed huddl in the browser", context do
     owner = generate(user(display_name: "Sam Rivera"))
@@ -29,12 +27,13 @@ defmodule BrowserPhotoSteps do
     File.write!(path, :binary.copy(<<0>>, 6_000_000))
     ExUnit.Callbacks.on_exit(fn -> File.rm(path) end)
 
-    assert {:ok, _} =
-             PlaywrightEx.Frame.set_input_files(context.conn.frame_id,
-               selector: "#huddl-photo-upload-form input[type=file]",
-               timeout: 5_000,
-               local_paths: [Path.expand("test/fixtures/test_image.jpg"), path]
-             )
+    unwrap(
+      context.conn,
+      &Playwright.Page.set_input_files!(&1, "#huddl-photo-upload-form input[type=file]", [
+        Path.expand("test/fixtures/test_image.jpg"),
+        path
+      ])
+    )
 
     context
   end
@@ -56,12 +55,12 @@ defmodule BrowserPhotoSteps do
   end
 
   step "I select a corrupt image and submit it", context do
-    assert {:ok, _} =
-             PlaywrightEx.Frame.set_input_files(context.conn.frame_id,
-               selector: "#huddl-photo-upload-form input[type=file]",
-               timeout: 5_000,
-               local_paths: [Path.expand("test/fixtures/corrupt_image.jpg")]
-             )
+    unwrap(
+      context.conn,
+      &Playwright.Page.set_input_files!(&1, "#huddl-photo-upload-form input[type=file]", [
+        Path.expand("test/fixtures/corrupt_image.jpg")
+      ])
+    )
 
     Map.put(context, :conn, click_button(context.conn, "Upload photos"))
   end
@@ -78,19 +77,17 @@ defmodule BrowserPhotoSteps do
   step "I choose two photos using the keyboard upload control", context do
     conn =
       context.conn
-      |> press("#huddl-hero-group", "Tab")
+      |> unwrap(&Playwright.Page.press!(&1, "#huddl-hero-group", "Tab"))
       |> assert_has("#browse-photos:focus")
-      |> press(":focus", "Enter")
+      |> unwrap(&Playwright.Page.press!(&1, ":focus", "Enter"))
 
-    assert {:ok, _} =
-             PlaywrightEx.Frame.set_input_files(conn.frame_id,
-               selector: "#huddl-photo-upload-form input[type=file]",
-               timeout: 5_000,
-               local_paths: [
-                 Path.expand("test/fixtures/test_image.jpg"),
-                 Path.expand("priv/static/icon-512.png")
-               ]
-             )
+    unwrap(
+      conn,
+      &Playwright.Page.set_input_files!(&1, "#huddl-photo-upload-form input[type=file]", [
+        Path.expand("test/fixtures/test_image.jpg"),
+        Path.expand("priv/static/icon-512.png")
+      ])
+    )
 
     Map.put(context, :conn, conn)
   end
@@ -111,7 +108,9 @@ defmodule BrowserPhotoSteps do
       |> assert_has(".photo-tile", count: 2)
       |> refute_has(".photo-upload-entry")
 
-    conn = press(conn, ".photo-tile:first-child .photo-open", "Enter")
+    conn =
+      unwrap(conn, &Playwright.Page.press!(&1, ".photo-tile:first-child .photo-open", "Enter"))
+
     Map.put(context, :conn, conn)
   end
 
@@ -119,15 +118,15 @@ defmodule BrowserPhotoSteps do
     conn =
       context.conn
       |> assert_has("#photo-lightbox button[aria-label='Previous photo']:focus")
-      |> press(":focus", "Tab")
+      |> unwrap(&Playwright.Page.press!(&1, ":focus", "Tab"))
       |> assert_has("#photo-lightbox button[aria-label='Next photo']:focus")
-      |> press(":focus", "Tab")
+      |> unwrap(&Playwright.Page.press!(&1, ":focus", "Tab"))
       |> assert_has("#photo-lightbox .lightbox-actions button:focus", text: "Close")
-      |> press(":focus", "Tab")
+      |> unwrap(&Playwright.Page.press!(&1, ":focus", "Tab"))
       |> assert_has("#photo-lightbox button[aria-label='close']:focus")
-      |> press(":focus", "Tab")
+      |> unwrap(&Playwright.Page.press!(&1, ":focus", "Tab"))
       |> assert_has("#photo-lightbox button[aria-label='Previous photo']:focus")
-      |> press(":focus", "Shift+Tab")
+      |> unwrap(&Playwright.Page.press!(&1, ":focus", "Shift+Tab"))
       |> assert_has("#photo-lightbox button[aria-label='close']:focus")
 
     Map.put(context, :conn, conn)
@@ -136,13 +135,13 @@ defmodule BrowserPhotoSteps do
   step "I can navigate with arrow keys and see the contributor and photo position", context do
     conn =
       context.conn
-      |> assert_has("#photo-lightbox", text: "Sam Rivera")
+      |> assert_has("#photo-lightbox [role='dialog']", text: "Sam Rivera")
       |> assert_has("#photo-position", text: "1 of 2")
-      |> press(":focus", "ArrowRight")
+      |> unwrap(&Playwright.Page.press!(&1, ":focus", "ArrowRight"))
       |> assert_has("#photo-position", text: "2 of 2")
-      |> press(":focus", "ArrowRight")
+      |> unwrap(&Playwright.Page.press!(&1, ":focus", "ArrowRight"))
       |> assert_has("#photo-position", text: "1 of 2")
-      |> press(":focus", "ArrowLeft")
+      |> unwrap(&Playwright.Page.press!(&1, ":focus", "ArrowLeft"))
       |> assert_has("#photo-position", text: "2 of 2")
 
     Map.put(context, :conn, conn)
@@ -151,7 +150,7 @@ defmodule BrowserPhotoSteps do
   step "Escape returns focus to the photo I opened", context do
     conn =
       context.conn
-      |> press(":focus", "Escape")
+      |> unwrap(&Playwright.Page.press!(&1, ":focus", "Escape"))
       |> assert_browser("!document.querySelector('#photo-lightbox')")
       |> assert_has(".photo-tile:first-child .photo-open:focus")
 
@@ -171,22 +170,29 @@ defmodule BrowserPhotoSteps do
   end
 
   step "I consider deleting the first photo", context do
-    Map.put(context, :conn, press(context.conn, ".photo-tile:first-child .photo-delete", "Enter"))
+    Map.put(
+      context,
+      :conn,
+      unwrap(
+        context.conn,
+        &Playwright.Page.press!(&1, ".photo-tile:first-child .photo-delete", "Enter")
+      )
+    )
   end
 
   step "Tab and Shift+Tab stay inside the photo deletion dialog", context do
     conn =
       context.conn
       |> assert_has("#cancel-delete-photo:focus")
-      |> press(":focus", "Tab")
+      |> unwrap(&Playwright.Page.press!(&1, ":focus", "Tab"))
       |> assert_has("#confirm-delete-photo:focus")
-      |> press(":focus", "Tab")
+      |> unwrap(&Playwright.Page.press!(&1, ":focus", "Tab"))
       |> assert_has("#delete-photo-modal button[aria-label='close']:focus")
-      |> press(":focus", "Tab")
+      |> unwrap(&Playwright.Page.press!(&1, ":focus", "Tab"))
       |> assert_has("#cancel-delete-photo:focus")
-      |> press(":focus", "Shift+Tab")
+      |> unwrap(&Playwright.Page.press!(&1, ":focus", "Shift+Tab"))
       |> assert_has("#delete-photo-modal button[aria-label='close']:focus")
-      |> press(":focus", "Tab")
+      |> unwrap(&Playwright.Page.press!(&1, ":focus", "Tab"))
       |> assert_has("#cancel-delete-photo:focus")
 
     Map.put(context, :conn, conn)
@@ -196,9 +202,9 @@ defmodule BrowserPhotoSteps do
     conn =
       context.conn
       |> assert_has("#delete-photo-modal img")
-      |> assert_has("#delete-photo-modal", text: "Sam Rivera")
-      |> press(":focus", "Enter")
-      |> refute_has("#delete-photo-modal")
+      |> assert_has("#delete-photo-modal [role='dialog']", text: "Sam Rivera")
+      |> unwrap(&Playwright.Page.press!(&1, ":focus", "Enter"))
+      |> refute_has("#delete-photo-modal [role='dialog']")
       |> assert_has(".photo-tile", count: 2)
 
     assert_has(conn, ".photo-tile:first-child .photo-delete:focus")

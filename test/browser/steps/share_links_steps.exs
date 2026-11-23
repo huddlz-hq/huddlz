@@ -3,7 +3,7 @@ defmodule BrowserShareLinksSteps do
 
   import ExUnit.Assertions
   import Huddlz.Generator
-  import PhoenixTest
+  import Fluffy.PhoenixTest
 
   step "I am viewing a public {string} to share", %{args: [page]} = context do
     owner = generate(user())
@@ -12,39 +12,31 @@ defmodule BrowserShareLinksSteps do
     conn = context.conn |> visit(path) |> assert_has(".phx-connected")
 
     # Retain real clipboard access for observation even when the app's API is unavailable.
-    assert {:ok, _} =
-             PlaywrightEx.Frame.evaluate(conn.frame_id,
-               expression: """
-               window.readClipboard = navigator.clipboard.readText.bind(navigator.clipboard);
-               navigator.clipboard.writeText('previous clipboard contents');
-               """,
-               timeout: 5_000
-             )
+    unwrap(
+      conn,
+      &Playwright.Page.evaluate!(&1, """
+      window.readClipboard = navigator.clipboard.readText.bind(navigator.clipboard);
+      navigator.clipboard.writeText('previous clipboard contents');
+      """)
+    )
 
     Map.merge(context, %{conn: conn, share_url: HuddlzWeb.Endpoint.url() <> path})
   end
 
   step "direct clipboard access is {string}", %{args: [availability]} = context do
-    assert {:ok, _} =
-             PlaywrightEx.Frame.evaluate(context.conn.frame_id,
-               expression: clipboard_availability(availability),
-               timeout: 5_000
-             )
+    unwrap(context.conn, &Playwright.Page.evaluate!(&1, clipboard_availability(availability)))
 
     context
   end
 
   step "I copy the address from the Share section", context do
     refute_has(context.conn, "[role='dialog']")
-    Map.put(context, :conn, click_button(context.conn, "#share-actions", "Copy link"))
+    Map.put(context, :conn, click_button(context.conn, "#share-actions button", "Copy link"))
   end
 
   step "my clipboard contains the page's address", context do
-    assert {:ok, copied} =
-             PlaywrightEx.Frame.evaluate(context.conn.frame_id,
-               expression: "window.readClipboard()",
-               timeout: 5_000
-             )
+    copied =
+      unwrap_and_return(context.conn, &Playwright.Page.evaluate!(&1, "window.readClipboard()"))
 
     assert copied == context.share_url
 
@@ -63,8 +55,8 @@ defmodule BrowserShareLinksSteps do
   step "I copy the address from the QR code dialog", context do
     conn =
       context.conn
-      |> click_button("#share-actions", "QR code")
-      |> click_button("[role='dialog']", "Copy link")
+      |> click_button("#share-actions button", "QR code")
+      |> click_button("[role='dialog'] button", "Copy link")
 
     Map.put(context, :conn, conn)
   end
@@ -92,7 +84,9 @@ defmodule BrowserShareLinksSteps do
 
   defp clipboard_availability("rejected"),
     do: """
-    navigator.clipboard.writeText = () => Promise.reject(new DOMException('Denied', 'NotAllowedError'));
+    () => {
+      navigator.clipboard.writeText = () => Promise.reject(new DOMException('Denied', 'NotAllowedError'));
+    }
     """
 
   defp clipboard_availability("available"), do: "true"

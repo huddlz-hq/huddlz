@@ -3,8 +3,7 @@ defmodule BrowserDiscoverNavigationSteps do
 
   import Huddlz.Generator
   import Huddlz.Test.BrowserHelpers
-  import PhoenixTest
-  import PhoenixTest.Playwright, only: [evaluate: 3]
+  import Fluffy.PhoenixTest
 
   step "a public huddl titled {string} is upcoming", %{args: [title]} = context do
     host = generate(user(role: :user))
@@ -38,7 +37,7 @@ defmodule BrowserDiscoverNavigationSteps do
   end
 
   step "I follow Discover in the sidebar", context do
-    evaluate(context.conn, "window.__huddlzPage = 'kept'", fn _ -> :ok end)
+    unwrap(context.conn, &Playwright.Page.evaluate!(&1, "window.__huddlzPage = 'kept'"))
 
     conn = click_link(context.conn, ".sb-nav a", "Discover")
 

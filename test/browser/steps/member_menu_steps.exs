@@ -4,8 +4,7 @@ defmodule BrowserMemberMenuSteps do
   import ExUnit.Assertions
   import Huddlz.Generator
   import Huddlz.Test.BrowserHelpers
-  import PhoenixTest
-  import PhoenixTest.Playwright, only: [press: 3]
+  import Fluffy.PhoenixTest
 
   step "I have opened a group's roster in a browser", context do
     owner = generate(user(role: :user, display_name: "Owner Olive"))
@@ -31,7 +30,7 @@ defmodule BrowserMemberMenuSteps do
   step "I open the menu for {string} with the keyboard", %{args: [name]} = context do
     conn =
       context.conn
-      |> press(trigger_for(name), "Enter")
+      |> unwrap(&Playwright.Page.press!(&1, trigger_for(name), "Enter"))
       |> assert_browser(menu_open(name))
 
     Map.merge(context, %{conn: conn, menu_name: name})
@@ -39,7 +38,7 @@ defmodule BrowserMemberMenuSteps do
 
   step "I choose {string} with the keyboard", %{args: [label]} = context do
     conn = tab_to_item(context.conn, label)
-    Map.put(context, :conn, press(conn, ":focus", "Enter"))
+    Map.put(context, :conn, unwrap(conn, &Playwright.Page.press!(&1, ":focus", "Enter")))
   end
 
   step "the member menu is closed and focus is back on its button", context do
@@ -75,12 +74,12 @@ defmodule BrowserMemberMenuSteps do
   defp tab_to_item(_conn, label, 0), do: flunk("no menu item labelled #{label}")
 
   defp tab_to_item(conn, label, tries) do
-    conn = press(conn, ":focus", "Tab")
+    conn = unwrap(conn, &Playwright.Page.press!(&1, ":focus", "Tab"))
 
-    {:ok, focused} =
-      PlaywrightEx.Frame.evaluate(conn.frame_id,
-        expression: "document.activeElement.textContent.trim()",
-        timeout: 5_000
+    focused =
+      unwrap_and_return(
+        conn,
+        &Playwright.Page.evaluate!(&1, "document.activeElement.textContent.trim()")
       )
 
     if focused == label, do: conn, else: tab_to_item(conn, label, tries - 1)

@@ -4,8 +4,7 @@ defmodule BrowserCoverSteps do
   import ExUnit.Assertions
   import Huddlz.Generator
   import Huddlz.Test.BrowserHelpers
-  import PhoenixTest
-  import PhoenixTest.Playwright, only: [evaluate: 3]
+  import Fluffy.PhoenixTest
 
   alias Huddlz.Storage.Local
 
@@ -55,7 +54,7 @@ defmodule BrowserCoverSteps do
       context.conn
       |> visit("/groups/#{context.group.slug}")
       |> assert_has(".phx-connected")
-      |> assert_has("h1", text: context.group.name)
+      |> assert_has("h1", text: to_string(context.group.name))
 
     Map.put(context, :conn, conn)
   end
@@ -117,20 +116,21 @@ defmodule BrowserCoverSteps do
   defp assert_cover(conn, state) do
     conn = assert_has(conn, "#group-detail-hero .cover-image")
 
-    evaluate(
-      conn,
-      """
-      (async () => {
-        const element = document.querySelector('#group-detail-hero .cover-image');
-        const url = getComputedStyle(element).backgroundImage.slice(5, -2);
-        const image = new Image();
-        image.src = url;
-        try { await image.decode(); return image.naturalWidth > 0; }
-        catch { return false; }
-      })()
-      """,
-      fn decoded -> assert decoded == (state == "valid") end
-    )
+    unwrap(conn, fn page ->
+      decoded =
+        Playwright.Page.evaluate!(page, """
+        (async () => {
+          const element = document.querySelector('#group-detail-hero .cover-image');
+          const url = getComputedStyle(element).backgroundImage.slice(5, -2);
+          const image = new Image();
+          image.src = url;
+          try { await image.decode(); return image.naturalWidth > 0; }
+          catch { return false; }
+        })()
+        """)
+
+      assert decoded == (state == "valid")
+    end)
 
     outcome = if state == "valid", do: "loaded", else: "failed"
     conn = assert_has(conn, "#group-detail-hero .cover-image[data-cover-state='#{outcome}']")

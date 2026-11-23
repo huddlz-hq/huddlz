@@ -11,8 +11,7 @@ One-time setup from the repository root:
 ```sh
 MIX_ENV=test mix deps.get
 MIX_ENV=test mix assets.setup
-npm ci --prefix assets
-PLAYWRIGHT_BROWSERS_PATH="$PWD/_build/browser/browsers" assets/node_modules/.bin/playwright install chromium --only-shell
+MIX_ENV=test PLAYWRIGHT_BROWSERS_PATH="$PWD/_build/browser/browsers" mix playwright.install chromium --only-shell
 ```
 
 On Linux, add `--with-deps` to the Playwright install command to install the required system libraries.
@@ -47,16 +46,16 @@ Browser scenarios live in `features/`, their steps in `steps/`, and Cucumber hoo
 
 Keep this suite serial: its SQL sandbox ownership and global Mox stubs are shared with HTTP/LiveView processes. Do not add `@async` or extra workers without changing that fixture strategy. Each scenario gets a fresh browser context. Authentication uses a signed session cookie; apart from password recovery, these are not sign-in UI tests. Places/geocoding are deterministic stubs, with no external service credentials needed. The test endpoint serves the app over HTTP. Each browser context answers HTTPS requests locally so third-party services cannot delay page loads. Google Fonts requests receive the Inter fixture from `test/fixtures/fonts` to preserve layout measurements. Other HTTPS requests, including Maps embeds, receive an empty response. Browser contexts use `America/New_York`; `@mobile` selects a 320×720 viewport.
 
-Browser setup uses the adapter's public `Case.do_setup_all/1` and `Case.do_setup/1` functions because Cucumber creates the ExUnit modules. The hook supplies a compatible module name for diagnostic filenames, preserving the scenario name. SQL sandbox HTTP metadata and the LiveView allowance hook are enabled only in test builds, before authentication queries.
+Browser setup calls `Playwright.Test`'s per-test setup from the hook because Cucumber creates the ExUnit modules, so none of them can `use Playwright.Test`. SQL sandbox HTTP metadata and the LiveView allowance hook are enabled only in test builds, before authentication queries.
 
 ## CI and diagnostics
 
-The **Browser scenarios (Chromium)** job runs separately on every PR, including stacked PRs, and every push to `main`, alongside the fast tests. It installs the pinned Playwright version from `assets/package-lock.json`, Chromium headless shell, and Linux libraries. It uses one worker, a two-minute test-step timeout, and no automatic retries. Dependency compilation is cached; browser binaries and diagnostics are not part of that cache.
+The **Browser scenarios (Chromium)** job runs separately on every PR, including stacked PRs, and every push to `main`, alongside the fast tests. It installs the Playwright driver that Fluffy pins, Chromium headless shell, and Linux libraries. It uses one worker, a two-minute test-step timeout, and no automatic retries. Dependency compilation is cached; browser binaries and diagnostics are not part of that cache.
 
-Screenshots and traces are captured for every attempt under `_build/browser/screenshots` and `_build/browser/traces`. Failed CI runs upload these directories as `browser-failure-diagnostics` for seven days. Inspect the original failure before rerunning:
+Screenshots and traces are captured for every attempt under `_build/browser/test-results`, one directory per scenario; explicit screenshots go to `_build/browser/screenshots`. Failed CI runs upload these directories as `browser-failure-diagnostics` for seven days. Inspect the original failure before rerunning:
 
 ```sh
-assets/node_modules/.bin/playwright show-trace _build/browser/traces/<trace.zip>
+MIX_ENV=test mix playwright.cli show-trace _build/browser/test-results/<scenario>/trace.zip
 ```
 
 Assertions wait for observable browser state instead of sleeping. When an interaction needs LiveView to have connected after navigation, use `assert_has("body .phx-connected")` before sending input. JavaScript used in steps observes layout, image loading, or native form submissions; it does not implement the application behavior. The failed-cover scenario intentionally requests a missing image, so its expected 404 is not a suite-wide console failure.

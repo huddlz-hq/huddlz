@@ -4,12 +4,12 @@ defmodule BrowserCoverCropSteps do
   import ExUnit.Assertions
   import Huddlz.Generator
   import Huddlz.Test.BrowserHelpers
-  import PhoenixTest
+  import Fluffy.PhoenixTest
 
   require Ash.Query
 
-  alias PlaywrightEx.Frame
-  alias PlaywrightEx.Page
+  alias Playwright.Mouse
+  alias Playwright.Page
 
   step "I am creating a group in a browser", context do
     owner = generate(user(role: :user))
@@ -29,12 +29,12 @@ defmodule BrowserCoverCropSteps do
   end
 
   step "I choose a tall picture for the cover", context do
-    assert {:ok, _} =
-             Frame.set_input_files(context.conn.frame_id,
-               selector: "#group-cover-upload input[type=file]",
-               timeout: 5_000,
-               local_paths: [Path.expand("test/fixtures/tall_red_blue.png")]
-             )
+    unwrap(
+      context.conn,
+      &Page.set_input_files!(&1, "#group-cover-upload input[type=file]", [
+        Path.expand("test/fixtures/tall_red_blue.png")
+      ])
+    )
 
     context
   end
@@ -79,28 +79,31 @@ defmodule BrowserCoverCropSteps do
   step "I drag the picture up to keep its bottom and use the photo", context do
     conn = context.conn
 
-    {:ok, %{"x" => x, "top" => top, "bottom" => bottom}} =
-      Frame.evaluate(conn.frame_id,
-        timeout: 5_000,
-        expression: """
+    %{"x" => x, "top" => top, "bottom" => bottom} =
+      unwrap_and_return(
+        conn,
+        &Page.evaluate!(&1, """
         (() => {
           const win = document.querySelector('#group-cover-upload-crop .crop-window').getBoundingClientRect();
           return {x: win.left + win.width / 2, top: win.top + 4, bottom: win.bottom - 4};
         })()
-        """
+        """)
       )
 
     # Three drags from the bottom of the window to its top; the picture
     # stops at its own bottom edge, whatever it was dragged past.
-    for _ <- 1..3 do
-      assert {:ok, _} = Page.mouse_move(conn.page_id, x: x, y: bottom, timeout: 5_000)
-      assert {:ok, _} = Page.mouse_down(conn.page_id, timeout: 5_000)
-      assert {:ok, _} = Page.mouse_move(conn.page_id, x: x, y: top, steps: 6, timeout: 5_000)
-      assert {:ok, _} = Page.mouse_up(conn.page_id, timeout: 5_000)
-    end
-
     conn =
       conn
+      |> unwrap(fn page ->
+        mouse = Page.mouse(page)
+
+        for _ <- 1..3 do
+          Mouse.move!(mouse, x, bottom)
+          Mouse.down!(mouse)
+          Mouse.move!(mouse, x, top, steps: 6)
+          Mouse.up!(mouse)
+        end
+      end)
       |> assert_browser("""
       (() => {
         const sheet = document.querySelector('#group-cover-upload-crop');
@@ -122,11 +125,13 @@ defmodule BrowserCoverCropSteps do
         "#group-cover-upload[data-state=uploaded] .cover-slot img[src*='group_images']"
       )
 
-    {:ok, thumbnail_path} =
-      Frame.evaluate(conn.frame_id,
-        timeout: 5_000,
-        expression:
+    thumbnail_path =
+      unwrap_and_return(
+        conn,
+        &Page.evaluate!(
+          &1,
           "document.querySelector('#group-cover-upload .cover-slot img').getAttribute('src')"
+        )
       )
 
     image =

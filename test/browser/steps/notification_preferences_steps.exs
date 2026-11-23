@@ -3,8 +3,7 @@ defmodule BrowserNotificationPreferencesSteps do
 
   import Huddlz.Generator
   import Huddlz.Test.BrowserHelpers
-  import PhoenixTest
-  import PhoenixTest.Playwright, only: [click: 3]
+  import Fluffy.PhoenixTest
 
   step "I have opened my notification preferences in a browser", context do
     member = generate(user(role: :user))
@@ -27,7 +26,15 @@ defmodule BrowserNotificationPreferencesSteps do
   # A person flips a switch by clicking its row label; the checkbox itself
   # is visually hidden behind the track.
   step "I flip {string} off", %{args: [label]} = context do
-    Map.put(context, :conn, click(context.conn, "label", label))
+    Map.put(
+      context,
+      :conn,
+      unwrap(context.conn, fn page ->
+        page
+        |> Playwright.Page.locator("label", has: Playwright.Page.get_by_text(page, label))
+        |> Playwright.Locator.click!()
+      end)
+    )
   end
 
   step "the row says the change could not be saved", context do

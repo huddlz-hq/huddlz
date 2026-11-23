@@ -4,7 +4,7 @@ defmodule BrowserEmailConfirmationSteps do
   import ExUnit.Assertions
   import Huddlz.Generator
   import Huddlz.Test.BrowserHelpers
-  import PhoenixTest
+  import Fluffy.PhoenixTest
   import Swoosh.TestAssertions
 
   step "I have hidden the reminder for my unconfirmed address in a browser", context do

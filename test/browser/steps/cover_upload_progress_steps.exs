@@ -1,10 +1,9 @@
 defmodule BrowserCoverUploadSteps do
   use Cucumber.StepDefinition
 
-  import ExUnit.Assertions
   import Huddlz.Generator
   import Huddlz.Test.BrowserHelpers
-  import PhoenixTest
+  import Fluffy.PhoenixTest
 
   alias Huddlz.Storage.GroupImages
 
@@ -43,12 +42,12 @@ defmodule BrowserCoverUploadSteps do
   end
 
   step "I choose a picture for the cover", context do
-    assert {:ok, _} =
-             PlaywrightEx.Frame.set_input_files(context.conn.frame_id,
-               selector: "#group-cover-upload input[type=file]",
-               timeout: 5_000,
-               local_paths: [Path.expand("test/fixtures/test_image.jpg")]
-             )
+    unwrap(
+      context.conn,
+      &Playwright.Page.set_input_files!(&1, "#group-cover-upload input[type=file]", [
+        Path.expand("test/fixtures/test_image.jpg")
+      ])
+    )
 
     # The crop sheet opens first; the picture already fits, so use it as is.
     conn =

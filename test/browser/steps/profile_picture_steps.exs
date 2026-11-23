@@ -1,19 +1,17 @@
 defmodule BrowserPictureSteps do
   use Cucumber.StepDefinition
 
-  import ExUnit.Assertions
   import Huddlz.Test.BrowserHelpers
-  import PhoenixTest
-  import PhoenixTest.Playwright, only: [press: 3]
+  import Fluffy.PhoenixTest
 
   step "I upload a profile picture through the file input", context do
     # The app intentionally hides its file input behind a visible upload label.
-    assert {:ok, _} =
-             PlaywrightEx.Frame.set_input_files(context.conn.frame_id,
-               selector: "#avatar-form input[type=file]",
-               timeout: 5_000,
-               local_paths: [Path.expand("test/fixtures/test_image.jpg")]
-             )
+    unwrap(
+      context.conn,
+      &Playwright.Page.set_input_files!(&1, "#avatar-form input[type=file]", [
+        Path.expand("test/fixtures/test_image.jpg")
+      ])
+    )
 
     # The crop sheet opens first; the picture is used as it is.
     conn =
@@ -39,7 +37,7 @@ defmodule BrowserPictureSteps do
   step "I open the remove picture confirmation with the keyboard", context do
     conn =
       context.conn
-      |> press("#open-remove-avatar-dialog", "Enter")
+      |> unwrap(&Playwright.Page.press!(&1, "#open-remove-avatar-dialog", "Enter"))
       |> assert_has("#cancel-remove-avatar:focus")
 
     Map.put(context, :conn, conn)
@@ -77,7 +75,7 @@ defmodule BrowserPictureSteps do
   step "my profile picture is replaced by initials", context do
     conn =
       context.conn
-      |> refute_has("#remove-avatar-dialog")
+      |> refute_has("#remove-avatar-dialog [role='dialog']")
       |> assert_has("[role='alert']", text: "Profile picture removed")
       |> refute_has("img.big-avatar")
       |> assert_has("main .big-avatar", text: "BM")
@@ -88,25 +86,25 @@ defmodule BrowserPictureSteps do
   step "Tab stays inside the confirmation dialog", context do
     conn =
       context.conn
-      |> press(":focus", "Tab")
+      |> unwrap(&Playwright.Page.press!(&1, ":focus", "Tab"))
       |> assert_has("#confirm-remove-avatar:focus")
-      |> press(":focus", "Tab")
+      |> unwrap(&Playwright.Page.press!(&1, ":focus", "Tab"))
       |> assert_has("#remove-avatar-dialog button[aria-label='close']:focus")
-      |> press(":focus", "Tab")
+      |> unwrap(&Playwright.Page.press!(&1, ":focus", "Tab"))
       |> assert_has("#cancel-remove-avatar:focus")
-      |> press(":focus", "Shift+Tab")
+      |> unwrap(&Playwright.Page.press!(&1, ":focus", "Shift+Tab"))
       |> assert_has("#remove-avatar-dialog button[aria-label='close']:focus")
 
     Map.put(context, :conn, conn)
   end
 
   step "I dismiss the confirmation with Escape", context do
-    Map.put(context, :conn, press(context.conn, ":focus", "Escape"))
+    Map.put(context, :conn, unwrap(context.conn, &Playwright.Page.press!(&1, ":focus", "Escape")))
   end
 
   step "focus returns to Remove and my picture remains", context do
     context.conn
-    |> refute_has("#remove-avatar-dialog")
+    |> refute_has("#remove-avatar-dialog [role='dialog']")
     |> assert_has("#open-remove-avatar-dialog:focus")
     |> assert_has("img.big-avatar")
 

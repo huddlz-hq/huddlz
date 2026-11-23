@@ -3,7 +3,7 @@ defmodule BrowserCalendarSteps do
 
   import Huddlz.Generator
   import Huddlz.Test.BrowserHelpers
-  import PhoenixTest
+  import Fluffy.PhoenixTest
 
   step "I attend a Denver huddl late on July 15", context do
     attendee = generate(user(role: :user))

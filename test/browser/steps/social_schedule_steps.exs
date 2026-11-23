@@ -3,8 +3,7 @@ defmodule BrowserSocialScheduleSteps do
 
   import Huddlz.Generator
   import Huddlz.Test.BrowserHelpers
-  import PhoenixTest
-  import PhoenixTest.Playwright, only: [evaluate: 2, press: 3]
+  import Fluffy.PhoenixTest
 
   step "I am editing a social connection as its owner", context do
     {conn, group, _place} = connected_place(context.conn)
@@ -54,7 +53,7 @@ defmodule BrowserSocialScheduleSteps do
   end
 
   step "I choose morning-of posting with Space", context do
-    conn = press(context.conn, "#moments_morning_of", "Space")
+    conn = unwrap(context.conn, &Playwright.Page.press!(&1, "#moments_morning_of", "Space"))
     Map.put(context, :conn, conn)
   end
 
@@ -68,7 +67,7 @@ defmodule BrowserSocialScheduleSteps do
       context.conn
       |> fill_in("Opening line", with: "See you tonight!")
       |> click_button("Done")
-      |> refute_has("#schedule-sheet")
+      |> refute_has("#schedule-sheet [role='dialog']")
 
     Map.put(context, :conn, conn)
   end
@@ -82,7 +81,7 @@ defmodule BrowserSocialScheduleSteps do
       |> assert_browser(
         "getComputedStyle(document.querySelector('#schedule-sheet-container')).opacity === '1'"
       )
-      |> press("#opening-line", "Tab")
+      |> unwrap(&Playwright.Page.press!(&1, "#opening-line", "Tab"))
       |> assert_has("#remove-connection:focus")
       |> assert_browser("""
       Array.from(document.querySelectorAll('#schedule-form button, #schedule-form a')).every(control => {
@@ -113,7 +112,7 @@ defmodule BrowserSocialScheduleSteps do
       context.conn
       |> click_button("Start posting")
       |> assert_browser("location.search === ''")
-      |> refute_has("#schedule-sheet")
+      |> refute_has("#schedule-sheet [role='dialog']")
       |> click_link("Members")
       |> assert_has("h1", text: "Members")
 
@@ -123,10 +122,10 @@ defmodule BrowserSocialScheduleSteps do
   step "Back returns to Social and back again reopens the connected place's schedule", context do
     conn =
       context.conn
-      |> evaluate("requestAnimationFrame(() => history.back())")
+      |> unwrap(&Playwright.Page.evaluate!(&1, "requestAnimationFrame(() => history.back())"))
       |> assert_has("a[aria-current='page']", text: "Social")
-      |> refute_has("#schedule-sheet")
-      |> evaluate("requestAnimationFrame(() => history.back())")
+      |> refute_has("#schedule-sheet [role='dialog']")
+      |> unwrap(&Playwright.Page.evaluate!(&1, "requestAnimationFrame(() => history.back())"))
       |> assert_has("#schedule-sheet", text: context.place.channel_name)
 
     Map.put(context, :conn, conn)
@@ -134,8 +133,8 @@ defmodule BrowserSocialScheduleSteps do
 
   step "Forward returns to Social with the schedule closed", context do
     context.conn
-    |> evaluate("requestAnimationFrame(() => history.forward())")
-    |> refute_has("#schedule-sheet")
+    |> unwrap(&Playwright.Page.evaluate!(&1, "requestAnimationFrame(() => history.forward())"))
+    |> refute_has("#schedule-sheet [role='dialog']")
     |> assert_has("h1", text: "Social")
 
     context

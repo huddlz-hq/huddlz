@@ -3,10 +3,9 @@ defmodule BrowserReportReviewSteps do
 
   import Huddlz.Generator
   import Huddlz.Test.BrowserHelpers
-  import PhoenixTest
+  import Fluffy.PhoenixTest
 
   alias Huddlz.Accounts
-  alias PhoenixTest.Playwright
 
   step "I am reviewing a reported account in a browser", context do
     owner = generate(user(display_name: "Sam Rivera"))
@@ -29,7 +28,7 @@ defmodule BrowserReportReviewSteps do
 
   step "the report review controls stay together", context do
     check_controls(context.conn)
-    Playwright.screenshot(context.conn, "reports-#{size(context)}.png")
+    unwrap(context.conn, &screenshot(&1, "reports-#{size(context)}.png"))
     context
   end
 
@@ -69,9 +68,16 @@ defmodule BrowserReportReviewSteps do
 
   step "the account review controls stay together", context do
     check_controls(context.conn)
-    Playwright.screenshot(context.conn, "users-review-#{size(context)}.png")
+    unwrap(context.conn, &screenshot(&1, "users-review-#{size(context)}.png"))
     context
   end
+
+  defp screenshot(page, name),
+    do:
+      Playwright.Page.screenshot!(page,
+        path: "_build/browser/screenshots/#{name}",
+        full_page: true
+      )
 
   defp size(context), do: if(Map.get(context, :mobile), do: "mobile", else: "desktop")
 
