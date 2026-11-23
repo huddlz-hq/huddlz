@@ -19,7 +19,7 @@ defmodule BrowserSignInReturnSteps do
       generate(huddl(group_id: group.id, creator_id: owner.id, actor: owner, is_private: false))
 
     path = "/groups/#{group.slug}/huddlz/#{huddl.id}"
-    conn = context.conn |> visit(path) |> assert_has(".phx-connected")
+    conn = context.conn |> visit(path)
 
     Map.merge(context, %{
       conn: conn,
@@ -58,7 +58,6 @@ defmodule BrowserSignInReturnSteps do
     conn =
       conn
       |> visit("/reset/#{token}")
-      |> assert_has(".phx-connected")
       |> fill_in("New password", with: "ChangedPassword123!")
       |> fill_in("Confirm new password", with: "ChangedPassword123!")
       |> click_button("Reset password")

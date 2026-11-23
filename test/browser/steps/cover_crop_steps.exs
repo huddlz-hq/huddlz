@@ -22,7 +22,6 @@ defmodule BrowserCoverCropSteps do
       context.conn
       |> sign_in(owner)
       |> visit("/groups/new")
-      |> assert_has(".phx-connected")
       |> assert_has("#group-cover-upload[data-state=idle]")
 
     Map.put(context, :conn, conn)

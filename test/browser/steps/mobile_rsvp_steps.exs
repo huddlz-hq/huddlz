@@ -26,7 +26,6 @@ defmodule BrowserMobileRsvpSteps do
       context.conn
       |> sign_in(member)
       |> visit("/groups/#{group.slug}/huddlz/#{huddl.id}")
-      |> assert_has(".phx-connected")
 
     Map.merge(context, %{conn: conn, huddl: huddl})
   end

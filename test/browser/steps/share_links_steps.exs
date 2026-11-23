@@ -9,7 +9,7 @@ defmodule BrowserShareLinksSteps do
     owner = generate(user())
     group = generate(group(is_public: true, owner_id: owner.id, actor: owner))
     path = page_path(page, group, owner)
-    conn = context.conn |> visit(path) |> assert_has(".phx-connected")
+    conn = context.conn |> visit(path)
 
     # Retain real clipboard access for observation even when the app's API is unavailable.
     unwrap(

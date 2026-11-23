@@ -60,17 +60,10 @@ defmodule BrowserHooks do
   # answered locally: Inter from a fixture, so layouts measure as they do in
   # production, and anything else with an empty response.
   defp answer_external_requests_locally(conn) do
-    Fluffy.PhoenixTest.unwrap(conn, fn page ->
-      page
-      |> Playwright.Page.context()
-      |> Playwright.BrowserContext.route!(
-        # Playwright resolves a bare "https://**" to "https://**/", which only
-        # matches URLs ending in a slash.
-        "https://*/**",
-        fn route, request ->
-          Playwright.Route.fulfill!(route, response(Playwright.Request.url(request)))
-        end
-      )
+    # Playwright resolves a bare "https://**" to "https://**/", which only
+    # matches URLs ending in a slash.
+    Fluffy.Playwright.route(conn.session, "https://*/**", fn route, request ->
+      Playwright.Route.fulfill!(route, response(Playwright.Request.url(request)))
     end)
   end
 

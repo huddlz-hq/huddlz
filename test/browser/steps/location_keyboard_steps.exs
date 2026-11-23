@@ -17,7 +17,6 @@ defmodule BrowserLocationKeyboardSteps do
       context.conn
       |> sign_in(member)
       |> visit("/profile")
-      |> assert_has(".phx-connected")
       |> assert_has("h1", text: "Profile")
       |> unwrap(fn page ->
         assert Playwright.Page.evaluate!(page, """

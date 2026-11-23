@@ -14,7 +14,6 @@ defmodule BrowserCopyHuddlSteps do
       context.conn
       |> sign_in(owner)
       |> visit("/groups/#{group.slug}/huddlz/new?copy=#{huddl.id}")
-      |> assert_has(".phx-connected")
       |> assert_has("h2", text: "Copied from")
 
     Map.put(context, :conn, conn)

@@ -12,7 +12,6 @@ defmodule BrowserNotificationPreferencesSteps do
       context.conn
       |> sign_in(member)
       |> visit("/profile/notifications")
-      |> assert_has(".phx-connected")
       |> assert_has("h1", text: "Notifications")
 
     Map.merge(context, %{conn: conn, member: member})

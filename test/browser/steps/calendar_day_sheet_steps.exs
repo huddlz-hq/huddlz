@@ -36,7 +36,6 @@ defmodule BrowserCalendarDaySheetSteps do
     conn =
       context.conn
       |> visit("/calendar/month?month=#{month}")
-      |> assert_has(".phx-connected")
       |> assert_browser("innerWidth === 320 && !document.querySelector('#calendar-day-panel')")
 
     Map.put(context, :conn, conn)

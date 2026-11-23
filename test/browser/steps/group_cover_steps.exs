@@ -53,7 +53,6 @@ defmodule BrowserCoverSteps do
     conn =
       context.conn
       |> visit("/groups/#{context.group.slug}")
-      |> assert_has(".phx-connected")
       |> assert_has("h1", text: to_string(context.group.name))
 
     Map.put(context, :conn, conn)

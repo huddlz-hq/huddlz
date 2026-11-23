@@ -45,7 +45,6 @@ defmodule BrowserCalendarSteps do
     conn =
       context.conn
       |> visit("/calendar/month?month=2030-07")
-      |> assert_has(".phx-connected")
       |> assert_browser("Intl.DateTimeFormat().resolvedOptions().timeZone === 'America/New_York'")
 
     Map.put(context, :conn, conn)

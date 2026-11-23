@@ -36,7 +36,6 @@ defmodule BrowserOverviewCardsSteps do
       context.conn
       |> sign_in(owner)
       |> visit("/organize/#{group.slug}")
-      |> assert_has(".phx-connected")
       |> assert_has("#turnout-nudge", text: "Elixir office hours")
 
     Map.merge(context, %{conn: conn, group: group})

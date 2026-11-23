@@ -21,7 +21,6 @@ defmodule BrowserSidebarScrollSteps do
       context.conn
       |> sign_in(member)
       |> visit("/agenda")
-      |> assert_has(".phx-connected")
       |> assert_has(".sb-org-row", text: "Overflow group 14")
 
     Map.merge(context, %{conn: conn, member: member})

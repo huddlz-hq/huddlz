@@ -13,7 +13,6 @@ defmodule BrowserOrganizerSteps do
       context.conn
       |> sign_in(owner)
       |> visit("/groups/#{group.slug}/huddlz/new")
-      |> assert_has(".phx-connected")
 
     Map.put(context, :conn, conn)
   end

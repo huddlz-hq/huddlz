@@ -8,7 +8,7 @@ defmodule BrowserKeyboardFocusSteps do
 
   step "I am signed in and looking at my groups in a browser", context do
     member = generate(user(role: :user))
-    conn = context.conn |> sign_in(member) |> visit("/groups") |> assert_has(".phx-connected")
+    conn = context.conn |> sign_in(member) |> visit("/groups")
     Map.put(context, :conn, conn)
   end
 
@@ -165,7 +165,7 @@ defmodule BrowserKeyboardFocusSteps do
   defp open_page(context, "discover"), do: visit_signed_out(context, "/discover")
 
   defp visit_signed_out(context, path) do
-    Map.put(context, :conn, context.conn |> visit(path) |> assert_has(".phx-connected"))
+    Map.put(context, :conn, context.conn |> visit(path))
   end
 
   defp open_form(context, "sign in"),
@@ -267,7 +267,7 @@ defmodule BrowserKeyboardFocusSteps do
   end
 
   defp signed_in_form(context, member, path, form, submit \\ nil) do
-    conn = context.conn |> sign_in(member) |> visit(path) |> assert_has(".phx-connected")
+    conn = context.conn |> sign_in(member) |> visit(path)
     Map.merge(context, %{conn: conn, focus_form: form, focus_submit: submit})
   end
 

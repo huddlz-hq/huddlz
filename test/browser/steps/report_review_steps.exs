@@ -21,7 +21,7 @@ defmodule BrowserReportReviewSteps do
     Accounts.suspend_user!(owner, "Repeated advertisements", actor: admin)
 
     conn =
-      context.conn |> sign_in(admin) |> visit("/admin/reports") |> assert_has(".phx-connected")
+      context.conn |> sign_in(admin) |> visit("/admin/reports")
 
     Map.merge(context, %{conn: conn, reported: owner})
   end
@@ -59,7 +59,6 @@ defmodule BrowserReportReviewSteps do
     conn =
       context.conn
       |> visit("/admin/users?scope=suspended")
-      |> assert_has(".phx-connected")
       |> click_button("Review")
       |> assert_has(".review-card a", text: "1 open report")
 

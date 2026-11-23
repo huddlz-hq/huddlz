@@ -25,7 +25,6 @@ defmodule BrowserCoverUploadSteps do
       context.conn
       |> sign_in(owner)
       |> visit("/groups/new")
-      |> assert_has(".phx-connected")
       |> assert_has("#group-cover-upload[data-state=idle]")
 
     # Remember where the slot and the name field sit before anything happens.

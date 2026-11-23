@@ -58,4 +58,4 @@ Screenshots and traces are captured for every attempt under `_build/browser/test
 MIX_ENV=test mix playwright.cli show-trace _build/browser/test-results/<scenario>/trace.zip
 ```
 
-Assertions wait for observable browser state instead of sleeping. When an interaction needs LiveView to have connected after navigation, use `assert_has("body .phx-connected")` before sending input. JavaScript used in steps observes layout, image loading, or native form submissions; it does not implement the application behavior. The failed-cover scenario intentionally requests a missing image, so its expected 404 is not a suite-wide console failure.
+Assertions wait for observable browser state instead of sleeping. `visit` waits for the LiveView to connect, so steps don't assert `.phx-connected` after it. JavaScript used in steps observes layout, image loading, or native form submissions; it does not implement the application behavior. The failed-cover scenario intentionally requests a missing image, so its expected 404 is not a suite-wide console failure.

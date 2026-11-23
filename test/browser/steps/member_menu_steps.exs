@@ -21,7 +21,6 @@ defmodule BrowserMemberMenuSteps do
       context.conn
       |> sign_in(owner)
       |> visit("/organize/#{group.slug}/members")
-      |> assert_has("body .phx-connected")
       |> assert_has("h1", text: "Members")
 
     Map.merge(context, %{conn: conn, owner: owner, member: member, group: group})
