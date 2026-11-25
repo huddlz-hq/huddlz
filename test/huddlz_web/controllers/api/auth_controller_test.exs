@@ -181,7 +181,7 @@ defmodule HuddlzWeb.Api.AuthControllerTest do
     } do
       target =
         generate(
-          user(
+          user_with_password(
             email: "avatar-me@example.com",
             display_name: "Avatar Me",
             password: "correct horse battery staple"

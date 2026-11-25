@@ -80,8 +80,11 @@ defmodule HuddlzWeb.Api.Json.GroupArtworkTest do
     properties =
       get_in(schema, ["components", "schemas", "group", "properties", "attributes", "properties"])
 
-    assert %{"type" => "string", "nullable" => true} in properties["image_url"]["anyOf"]
-    assert %{"type" => "null"} in properties["image_url"]["anyOf"]
+    image_schema = Map.fetch!(properties, "image_url")
+
+    assert (image_schema["type"] == "string" and image_schema["nullable"] == true) or
+             %{"type" => "string", "nullable" => true} in List.wrap(image_schema["anyOf"])
+
     refute Map.has_key?(properties, "current_image_url")
   end
 
@@ -101,7 +104,7 @@ defmodule HuddlzWeb.Api.Json.GroupArtworkTest do
   end
 
   defp find_group(data, id) when is_list(data), do: Enum.find(data, &(&1["id"] == id))
-  defp find_group(data, id) when is_map(data) and data["id"] == id, do: data
+  defp find_group(%{"id" => id} = data, id), do: data
   defp find_group(_, _), do: nil
 
   defp create_group_image(group_id, owner) do
