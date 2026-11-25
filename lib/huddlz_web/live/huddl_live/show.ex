@@ -1459,19 +1459,11 @@ defmodule HuddlzWeb.HuddlLive.Show do
     {attendance, waitlist_position} = attendance_info(huddl, user)
     meta = huddl_meta(huddl)
 
-    can_view_photos = can_view_photos?(huddl, user, attendance)
-
-    can_change_photos =
-      can_view_photos && Group.active?(huddl.group) &&
-        Communities.can_create_huddl_photo?(user, %{huddl_id: huddl.id})
-
     socket
     |> assign(:page_title, huddl.title)
     |> assign(:meta, meta)
     |> assign(:canonical_url, if(huddl.is_publicly_visible, do: meta.url))
     |> assign(:huddl, huddl)
-    |> assign(:can_view_photos, can_view_photos)
-    |> assign(:can_change_photos, can_change_photos)
     |> assign(:attendance, attendance)
     |> assign(:waitlist_position, waitlist_position)
     |> assign(:going_visible, @going_visible)
@@ -1499,7 +1491,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
       Group.active?(huddl.group) && Communities.can_destroy_huddl?(user, huddl)
     )
     |> assign_turnout(huddl, user)
-    |> load_photos(huddl, user, can_view_photos)
+    |> assign_gallery(huddl, user, attendance)
   end
 
   # The Hosted by card knows whether the viewer belongs to the group: a member
@@ -1667,6 +1659,19 @@ defmodule HuddlzWeb.HuddlLive.Show do
 
   defp hero_eyebrow(huddl) do
     "#{event_type_label(huddl.event_type)} · #{HuddlStatus.label(huddl.status)}"
+  end
+
+  defp assign_gallery(socket, huddl, user, attendance) do
+    can_view_photos = can_view_photos?(huddl, user, attendance)
+
+    can_change_photos =
+      can_view_photos && Group.active?(huddl.group) &&
+        Communities.can_create_huddl_photo?(user, %{huddl_id: huddl.id})
+
+    socket
+    |> assign(:can_view_photos, can_view_photos)
+    |> assign(:can_change_photos, can_change_photos)
+    |> load_photos(huddl, user, can_view_photos)
   end
 
   defp can_view_photos?(%{status: :completed} = huddl, %{id: user_id}, attendance) do
