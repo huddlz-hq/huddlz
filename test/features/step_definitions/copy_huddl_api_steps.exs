@@ -34,7 +34,7 @@ defmodule CopyHuddlApiSteps do
           time_zone: location.time_zone,
           virtual_link: @virtual_link,
           max_attendees: 30,
-          is_private: false,
+          is_private: true,
           starts_at: starts_at,
           ends_at: DateTime.add(starts_at, 120, :minute),
           lifecycle_state: :completed,
@@ -206,9 +206,15 @@ defmodule CopyHuddlApiSteps do
     copy(context, api, %{"date" => Date.to_iso8601(future_date())})
   end
 
-  step "I copy it through {string} on a future date titled {string}",
+  step "I copy it through {string} on a future date titled {string} and open it to nonmembers",
        %{args: [api, title]} = context do
-    copy(context, api, %{"date" => Date.to_iso8601(future_date()), "title" => title})
+    assert context.source.is_private
+
+    copy(context, api, %{
+      "date" => Date.to_iso8601(future_date()),
+      "title" => title,
+      "is_private" => false
+    })
   end
 
   step "I copy it through {string} on a future date without its cover",
@@ -329,6 +335,11 @@ defmodule CopyHuddlApiSteps do
 
   step "the copy has the original's description", context do
     assert copied(context).copy.description == @description
+    context
+  end
+
+  step "the copy is open to nonmembers", context do
+    assert copied(context).copy.is_private == false
     context
   end
 

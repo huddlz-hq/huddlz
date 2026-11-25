@@ -15,18 +15,8 @@ defmodule Huddlz.Communities.Huddl.Changes.CopyFromHuddl do
   use Ash.Resource.Change
 
   alias Huddlz.Communities.Huddl
+  alias Huddlz.Communities.Huddl.CopyDefaults
   alias Huddlz.Communities.Huddl.CoverCopy
-
-  @copied_attributes [
-    :title,
-    :description,
-    :event_type,
-    :group_location_id,
-    :virtual_link,
-    :is_private,
-    :thumbnail_url,
-    :max_attendees
-  ]
 
   @impl true
   def change(changeset, _opts, context) do
@@ -79,11 +69,11 @@ defmodule Huddlz.Communities.Huddl.Changes.CopyFromHuddl do
   end
 
   defp put_copied_attributes(changeset, source) do
-    Enum.reduce(@copied_attributes, changeset, fn attribute, changeset ->
+    Enum.reduce(CopyDefaults.attributes(source), changeset, fn {attribute, value}, changeset ->
       if supplied?(changeset, attribute) do
         changeset
       else
-        Ash.Changeset.change_attribute(changeset, attribute, Map.get(source, attribute))
+        Ash.Changeset.change_attribute(changeset, attribute, value)
       end
     end)
   end
@@ -134,8 +124,8 @@ defmodule Huddlz.Communities.Huddl.Changes.CopyFromHuddl do
     else
       changeset
       |> require_date()
-      |> default_argument(:start_time, fn -> local_start_time(source) end)
-      |> default_argument(:duration_minutes, fn -> duration_minutes(source) end)
+      |> default_argument(:start_time, fn -> CopyDefaults.local_start_time(source) end)
+      |> default_argument(:duration_minutes, fn -> CopyDefaults.duration_minutes(source) end)
     end
   end
 
@@ -144,7 +134,7 @@ defmodule Huddlz.Communities.Huddl.Changes.CopyFromHuddl do
       changeset
     else
       starts_at = Ash.Changeset.get_attribute(changeset, :starts_at)
-      ends_at = DateTime.add(starts_at, duration_minutes(source), :minute)
+      ends_at = DateTime.add(starts_at, CopyDefaults.duration_minutes(source), :minute)
       Ash.Changeset.change_attribute(changeset, :ends_at, ends_at)
     end
   end
@@ -166,14 +156,6 @@ defmodule Huddlz.Communities.Huddl.Changes.CopyFromHuddl do
     else
       changeset
     end
-  end
-
-  defp duration_minutes(source), do: DateTime.diff(source.ends_at, source.starts_at, :minute)
-
-  defp local_start_time(source) do
-    source.starts_at
-    |> DateTime.shift_zone!(source.time_zone)
-    |> DateTime.to_time()
   end
 
   defp copy_cover(changeset, source) do

@@ -17,8 +17,9 @@ Feature: Copy a huddl through the API
 
   Scenario: What I supply replaces the copied value
     Given I organize a group with a past huddl "Hands-on with Ash Framework"
-    When I copy it through "JSON:API" on a future date titled "Ash, round two"
+    When I copy it through "JSON:API" on a future date titled "Ash, round two" and open it to nonmembers
     Then the copy is titled "Ash, round two"
+    And the copy is open to nonmembers
     And the copy has the original's description
 
   Scenario: Only the organizer who copied is going

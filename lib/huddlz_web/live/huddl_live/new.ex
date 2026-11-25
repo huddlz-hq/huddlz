@@ -11,6 +11,7 @@ defmodule HuddlzWeb.HuddlLive.New do
 
   alias Huddlz.Communities
   alias Huddlz.Communities.Huddl
+  alias Huddlz.Communities.Huddl.CopyDefaults
   alias Huddlz.Communities.Huddl.CopySuggestion
   alias Huddlz.Storage.HuddlCoverImages
   alias HuddlzWeb.FormFocus
@@ -117,28 +118,25 @@ defmodule HuddlzWeb.HuddlLive.New do
   end
 
   defp assign_copy(socket, source) do
-    local_starts_at = DateTime.shift_zone!(source.starts_at, source.time_zone)
     date = CopySuggestion.date(source)
-    start_time = DateTime.to_time(local_starts_at)
-    duration = DateTime.diff(source.ends_at, source.starts_at, :minute)
+    start_time = CopyDefaults.local_start_time(source)
+    duration = CopyDefaults.duration_minutes(source)
 
     location =
       Enum.find(socket.assigns.group_locations, &(&1.id == source.group_location_id))
 
-    params = %{
-      "copied_from_id" => source.id,
-      "group_id" => source.group_id,
-      "title" => source.title,
-      "description" => source.description || "",
-      "event_type" => to_string(source.event_type),
-      "virtual_link" => source.virtual_link || "",
-      "max_attendees" => if(source.max_attendees, do: to_string(source.max_attendees), else: ""),
-      "is_private" => to_string(source.is_private),
-      "date" => Date.to_iso8601(date),
-      "start_time" => Calendar.strftime(start_time, "%H:%M"),
-      "duration_minutes" => to_string(duration),
-      "group_location_id" => location && location.id
-    }
+    params =
+      source
+      |> CopyDefaults.attributes()
+      |> Map.new(fn {field, value} -> {Atom.to_string(field), to_string(value)} end)
+      |> Map.merge(%{
+        "copied_from_id" => source.id,
+        "group_id" => source.group_id,
+        "group_location_id" => location && location.id,
+        "date" => Date.to_iso8601(date),
+        "start_time" => Calendar.strftime(start_time, "%H:%M"),
+        "duration_minutes" => to_string(duration)
+      })
 
     # Validating right away shows a removed location's error as the form opens.
     form = AshPhoenix.Form.validate(socket.assigns.form.source, params)
