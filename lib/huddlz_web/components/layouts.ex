@@ -35,7 +35,7 @@ defmodule HuddlzWeb.Layouts do
 
   attr :active_organize_section, :atom,
     default: nil,
-    values: [nil, :overview, :huddlz, :members, :settings],
+    values: [nil, :overview, :huddlz, :members, :social, :settings],
     doc: "active sub-tab inside an organize-group section"
 
   attr :active_admin_section, :atom,

@@ -4,16 +4,13 @@ defmodule BrowserSocialScheduleSteps do
   import Huddlz.Generator
   import Huddlz.Test.BrowserHelpers
   import PhoenixTest
-  import PhoenixTest.Playwright, only: [press: 3]
+  import PhoenixTest.Playwright, only: [evaluate: 2, press: 3]
 
   step "I am editing a social connection as its owner", context do
-    owner = generate(user(role: :user))
-    group = generate(group(owner_id: owner.id, is_public: true, actor: owner))
-    generate(social_connection(group_id: group.id, actor: owner))
+    {conn, group, _place} = connected_place(context.conn)
 
     conn =
-      context.conn
-      |> sign_in(owner)
+      conn
       |> visit("/organize/#{group.slug}/social")
       |> assert_has("body .phx-connected")
       |> click_button("Edit")
@@ -66,5 +63,59 @@ defmodule BrowserSocialScheduleSteps do
       """)
 
     Map.put(context, :conn, conn)
+  end
+
+  step "I have returned to Social after connecting a place", context do
+    {conn, group, place} = connected_place(context.conn)
+
+    conn =
+      conn
+      |> visit("/organize/#{group.slug}/social?connected=#{place.id}")
+      |> assert_has("#schedule-sheet", text: place.channel_name)
+      |> reload_page()
+      |> assert_has("body .phx-connected")
+      |> assert_has("#schedule-sheet", text: place.channel_name)
+
+    Map.merge(context, %{conn: conn, place: place})
+  end
+
+  step "I finish its schedule and open Members", context do
+    conn =
+      context.conn
+      |> click_button("Start posting")
+      |> assert_browser("location.search === ''")
+      |> refute_has("#schedule-sheet")
+      |> click_link("Members")
+      |> assert_has("h1", text: "Members")
+
+    Map.put(context, :conn, conn)
+  end
+
+  step "Back returns to Social and back again reopens the connected place's schedule", context do
+    conn =
+      context.conn
+      |> evaluate("requestAnimationFrame(() => history.back())")
+      |> assert_has("a[aria-current='page']", text: "Social")
+      |> refute_has("#schedule-sheet")
+      |> evaluate("requestAnimationFrame(() => history.back())")
+      |> assert_has("#schedule-sheet", text: context.place.channel_name)
+
+    Map.put(context, :conn, conn)
+  end
+
+  step "Forward returns to Social with the schedule closed", context do
+    context.conn
+    |> evaluate("requestAnimationFrame(() => history.forward())")
+    |> refute_has("#schedule-sheet")
+    |> assert_has("h1", text: "Social")
+
+    context
+  end
+
+  defp connected_place(conn) do
+    owner = generate(user(role: :user))
+    group = generate(group(owner_id: owner.id, is_public: true, actor: owner))
+    place = generate(social_connection(group_id: group.id, actor: owner))
+    {sign_in(conn, owner), group, place}
   end
 end

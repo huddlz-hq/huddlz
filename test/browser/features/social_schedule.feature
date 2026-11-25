@@ -13,3 +13,9 @@ Feature: Editing a social schedule in the browser
     When I choose morning-of posting with Space
     And I enter an opening line and finish immediately
     Then reopening the social schedule shows both changes
+
+  Scenario: Browser history restores the schedule after returning from a provider
+    Given I have returned to Social after connecting a place
+    When I finish its schedule and open Members
+    Then Back returns to Social and back again reopens the connected place's schedule
+    And Forward returns to Social with the schedule closed

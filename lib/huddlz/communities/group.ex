@@ -12,6 +12,7 @@ defmodule Huddlz.Communities.Group do
     domain: Huddlz.Communities,
     data_layer: AshPostgres.DataLayer,
     authorizers: [Ash.Policy.Authorizer],
+    notifiers: [Ash.Notifier.PubSub],
     extensions: [
       AshPaperTrail.Resource,
       AshJsonApi.Resource,
@@ -79,20 +80,6 @@ defmodule Huddlz.Communities.Group do
     end
   end
 
-  paper_trail do
-    change_tracking_mode :snapshot
-    store_action_name? true
-    reference_source? false
-    sensitive_attributes :ignore
-    ignore_attributes [:inserted_at, :updated_at]
-    belongs_to_actor :actor, Huddlz.Accounts.User, domain: Huddlz.Accounts, on_delete: :nilify
-    metadata :impersonation_id, :uuid
-    metadata :impersonator_id, :uuid
-    metadata :automatic?, :boolean
-    version_extensions authorizers: [Ash.Policy.Authorizer]
-    mixin {Huddlz.Audit.Version, :mixin, []}
-  end
-
   postgres do
     table "groups"
     repo Huddlz.Repo
@@ -105,6 +92,20 @@ defmodule Huddlz.Communities.Group do
         using: "GIST",
         where: "latitude IS NOT NULL AND longitude IS NOT NULL"
     end
+  end
+
+  paper_trail do
+    change_tracking_mode :snapshot
+    store_action_name? true
+    reference_source? false
+    sensitive_attributes :ignore
+    ignore_attributes [:inserted_at, :updated_at]
+    belongs_to_actor :actor, Huddlz.Accounts.User, domain: Huddlz.Accounts, on_delete: :nilify
+    metadata :impersonation_id, :uuid
+    metadata :impersonator_id, :uuid
+    metadata :automatic?, :boolean
+    version_extensions authorizers: [Ash.Policy.Authorizer]
+    mixin {Huddlz.Audit.Version, :mixin, []}
   end
 
   archive do
@@ -441,6 +442,18 @@ defmodule Huddlz.Communities.Group do
       authorize_if expr(is_public == true and is_nil(archived_at))
       authorize_if relates_to_actor_via(:members)
     end
+  end
+
+  pub_sub do
+    module Phoenix.PubSub
+    name Huddlz.PubSub
+    prefix "group"
+    transform fn notification -> {:group_changed, notification.data.id} end
+
+    publish :archive, [:id]
+    publish :unarchive, [:id]
+    publish :update_details, [:id]
+    publish :destroy, [:id]
   end
 
   validations do
