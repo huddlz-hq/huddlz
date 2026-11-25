@@ -6,6 +6,8 @@ defmodule HuddlzWeb.BrowserCase do
 
   use ExUnit.CaseTemplate
 
+  require Playwright.Test
+
   using opts do
     quote do
       use Playwright.Test, unquote(opts)
@@ -18,4 +20,10 @@ defmodule HuddlzWeb.BrowserCase do
     Huddlz.DataCase.setup_sandbox(tags)
     :ok
   end
+
+  @doc """
+  Cucumber's step wrapper (`test/browser/test_helper.exs`): each Gherkin step
+  is a step in the trace, with its actions inside.
+  """
+  def wrap(step, _context, run), do: Playwright.Test.step("#{step.keyword} #{step.text}", run)
 end
