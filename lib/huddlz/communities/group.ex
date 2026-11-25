@@ -47,6 +47,20 @@ defmodule Huddlz.Communities.Group do
   json_api do
     type "group"
 
+    default_fields [
+      :id,
+      :name,
+      :slug,
+      :description,
+      :location,
+      :time_zone,
+      :is_public,
+      :latitude,
+      :longitude,
+      :archived_at,
+      :image_url
+    ]
+
     routes do
       base "/groups"
 
@@ -551,6 +565,12 @@ defmodule Huddlz.Communities.Group do
       public? true
       description "Whether the current caller owns this group"
       calculation expr(not is_nil(^actor(:id)) and owner_id == ^actor(:id))
+    end
+
+    calculate :image_url, :string do
+      public? true
+      description "Absolute URL for the group's current image; null without one"
+      calculation Huddlz.Communities.Group.Calculations.ImageUrl
     end
 
     calculate :search_relevance, :float do
