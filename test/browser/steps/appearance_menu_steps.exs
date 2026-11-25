@@ -2,7 +2,7 @@ defmodule BrowserAppearanceMenuSteps do
   use Cucumber.StepDefinition
   use Fluffy.Assert
 
-  import Fluffy, except: [step: 2, step: 3]
+  import Fluffy, except: [step: 3]
   import Fluffy.Locator
 
   alias Fluffy.Playwright.Keyboard

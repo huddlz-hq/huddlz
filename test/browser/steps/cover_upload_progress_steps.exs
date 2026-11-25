@@ -2,7 +2,7 @@ defmodule BrowserCoverUploadSteps do
   use Cucumber.StepDefinition
   use Fluffy.Assert
 
-  import Fluffy, except: [step: 2, step: 3]
+  import Fluffy, except: [step: 3]
   import Fluffy.Locator
   import Huddlz.Generator
   import Huddlz.Test.BrowserHelpers
