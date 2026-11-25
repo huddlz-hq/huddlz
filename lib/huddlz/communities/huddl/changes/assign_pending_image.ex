@@ -8,6 +8,7 @@ defmodule Huddlz.Communities.Huddl.Changes.AssignPendingImage do
 
   use Ash.Resource.Change
 
+  alias Ash.Error.Changes.InvalidArgument
   alias Huddlz.Communities
   alias Huddlz.Communities.HuddlCoverImage
 
@@ -32,11 +33,15 @@ defmodule Huddlz.Communities.Huddl.Changes.AssignPendingImage do
                ) do
           {:ok, huddl}
         else
-          {:ok, nil} ->
-            {:error, ArgumentError.exception("pending huddl image not found")}
-
-          {:error, error} ->
+          {:error, %{class: class} = error} when class in [:framework, :unknown] ->
             {:error, error}
+
+          _unavailable ->
+            {:error,
+             InvalidArgument.exception(
+               field: :pending_image_id,
+               message: "The cover could not be saved. Choose the image again."
+             )}
         end
     end
   end

@@ -57,6 +57,27 @@ Feature: Huddl Image Management
     Then I should see "Huddl created successfully"
     And the huddl "Workshop" should have its own image
 
+  Scenario: An expired cover can be reselected while creating a huddl
+    Given a public group "Cover Image Tech Meetup" exists with owner "owner+huddl-cover-image@example.com"
+    And I am signed in as "owner+huddl-cover-image@example.com"
+    When I visit the new huddl page for group "Cover Image Tech Meetup"
+    And I upload "test/fixtures/test_image.jpg" to "Cover image"
+    And I fill in the huddl form with:
+      | Field             | Value                    |
+      | Title             | Cover Retry              |
+      | Huddl Type        | Virtual                  |
+      | Virtual Link      | https://meet.example.com |
+      | Start Date & Time | tomorrow at 2:00 PM      |
+      | End Date & Time   | tomorrow at 4:00 PM      |
+    And my pending huddl cover expires
+    And I submit the form
+    Then I should see "The cover could not be saved. Choose the image again."
+    When I click the "Remove" button
+    And I upload "test/fixtures/test_image.jpg" to "Cover image"
+    And I submit the form
+    Then I should see "Huddl created successfully"
+    And the huddl "Cover Retry" should have its own image
+
   # ===== Huddl Editing with Image =====
 
   Scenario: Owner can see image upload area when editing a huddl
