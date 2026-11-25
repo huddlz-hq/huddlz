@@ -17,6 +17,11 @@ defmodule HuddlzWeb.OrganizeLive.Social do
   on_mount {HuddlzWeb.LiveUserAuth, :confirmed_user_required}
 
   @impl true
+  # This patch only updates the address of the workspace we just reauthorized.
+  def handle_params(%{"group_slug" => slug}, _uri, %{assigns: %{renamed_to: slug}} = socket) do
+    {:noreply, assign(socket, :renamed_to, nil)}
+  end
+
   def handle_params(%{"group_slug" => slug} = params, _uri, socket) do
     previous_group = socket.assigns[:group]
 
@@ -54,10 +59,13 @@ defmodule HuddlzWeb.OrganizeLive.Social do
   @impl true
   def handle_info({change, id}, %{assigns: %{group: %{id: id}}} = socket)
       when change in [:group_membership_changed, :group_changed] do
+    previous_slug = socket.assigns.group.slug
+
     case Workspace.refresh(socket) do
       {:ok, socket} ->
         socket = socket |> assign_access() |> load_connections()
-        {:noreply, if(socket.assigns.access == :manage, do: socket, else: reset_dialogs(socket))}
+        socket = if socket.assigns.access == :manage, do: socket, else: reset_dialogs(socket)
+        {:noreply, update_address(socket, previous_slug)}
 
       {:error, socket} ->
         {:noreply, socket}
@@ -67,6 +75,18 @@ defmodule HuddlzWeb.OrganizeLive.Social do
   def handle_info({change, _id}, socket)
       when change in [:group_membership_changed, :group_changed],
       do: {:noreply, socket}
+
+  defp update_address(%{assigns: %{group: %{slug: slug}}} = socket, slug), do: socket
+
+  defp update_address(socket, _old_slug) do
+    %{group: group, connected_id: connected_id} = socket.assigns
+    query = if connected_id, do: [connected: connected_id], else: []
+
+    socket
+    |> HuddlzWeb.LiveUserAuth.refresh_sidebar_groups()
+    |> assign(:renamed_to, group.slug)
+    |> push_patch(to: ~p"/organize/#{group.slug}/social?#{query}", replace: true)
+  end
 
   defp assign_access(socket) do
     assign(socket, :access, access(socket.assigns.group, socket.assigns.current_user))
@@ -79,7 +99,7 @@ defmodule HuddlzWeb.OrganizeLive.Social do
 
   defp reset_dialogs(socket, editor \\ nil) do
     socket
-    |> assign(connect_dialog?: false, removing_connection?: false)
+    |> assign(:dialog, if(editor, do: :schedule))
     |> assign_schedule(editor)
   end
 
@@ -108,45 +128,37 @@ defmodule HuddlzWeb.OrganizeLive.Social do
     do: {:noreply, socket}
 
   def handle_event("open_connect_dialog", _params, socket) do
-    {:noreply, assign(socket, :connect_dialog?, true)}
+    {:noreply, reset_dialogs(socket) |> assign(:dialog, :connect)}
   end
 
-  def handle_event("close_connect_dialog", _params, socket) do
-    {:noreply, assign(socket, :connect_dialog?, false)}
+  def handle_event("close_connect_dialog", _params, %{assigns: %{dialog: :connect}} = socket) do
+    {:noreply, assign(socket, :dialog, nil)}
   end
 
   def handle_event("edit_connection", %{"id" => id}, socket) do
     editor = Enum.find(socket.assigns.connections, &(&1.id == id))
-    {:noreply, assign_schedule(socket, editor)}
+    {:noreply, reset_dialogs(socket, editor)}
   end
 
-  def handle_event("close_schedule", _params, socket) do
+  def handle_event("close_schedule", _params, %{assigns: %{dialog: :schedule}} = socket) do
     {:noreply, close_schedule(socket)}
   end
 
-  # Dismiss queued form and dialog actions after the editor has closed.
-  def handle_event(_event, _params, %{assigns: %{schedule_editor: nil}} = socket),
-    do: {:noreply, socket}
-
-  def handle_event("ask_remove_connection", _params, socket) do
-    {:noreply, assign(socket, :removing_connection?, true)}
+  def handle_event("ask_remove_connection", _params, %{assigns: %{dialog: :schedule}} = socket) do
+    {:noreply, assign(socket, :dialog, :remove)}
   end
 
-  def handle_event("cancel_remove_connection", _params, socket) do
-    {:noreply, assign(socket, :removing_connection?, false)}
+  def handle_event("cancel_remove_connection", _params, %{assigns: %{dialog: :remove}} = socket) do
+    {:noreply, assign(socket, :dialog, :schedule)}
   end
 
-  def handle_event(
-        "remove_connection",
-        _params,
-        %{assigns: %{removing_connection?: false}} = socket
-      ),
-      do: {:noreply, socket}
-
-  def handle_event("remove_connection", _params, socket) do
+  def handle_event("remove_connection", _params, %{assigns: %{dialog: :remove}} = socket) do
     %{schedule_editor: connection, current_user: user} = socket.assigns
 
-    case Communities.remove_social_connection(connection, actor: user) do
+    case Communities.remove_social_connection(connection,
+           actor: user,
+           context: %{social_workspace?: true}
+         ) do
       :ok ->
         {:noreply,
          socket
@@ -159,7 +171,7 @@ defmodule HuddlzWeb.OrganizeLive.Social do
     end
   end
 
-  def handle_event("send_test_post", _params, socket) do
+  def handle_event("send_test_post", _params, %{assigns: %{dialog: :schedule}} = socket) do
     %{schedule_editor: connection, current_user: user} = socket.assigns
 
     case Communities.send_social_test_post(connection.id, actor: user) do
@@ -175,14 +187,16 @@ defmodule HuddlzWeb.OrganizeLive.Social do
     end
   end
 
-  def handle_event("save_schedule", params, socket) do
+  def handle_event("save_schedule", params, %{assigns: %{dialog: :schedule}} = socket) do
     {:noreply, save_schedule(socket, params)}
   end
 
-  def handle_event("finish_schedule", params, socket) do
+  def handle_event("finish_schedule", params, %{assigns: %{dialog: :schedule}} = socket) do
     socket = save_schedule(socket, params)
     {:noreply, finish_schedule(socket, socket.assigns.schedule_form.source.valid?)}
   end
+
+  def handle_event(_event, _params, socket), do: {:noreply, socket}
 
   defp save_schedule(socket, params) do
     attrs = Map.put(params["schedule"] || %{}, "moments", chosen_moments(params["moments"]))
@@ -250,7 +264,7 @@ defmodule HuddlzWeb.OrganizeLive.Social do
     %{current_user: user} = socket.assigns
     connection = Enum.find(socket.assigns.connections, &(&1.id == id))
 
-    case connection && change.(connection, actor: user) do
+    case connection && change.(connection, actor: user, context: %{social_workspace?: true}) do
       {:ok, _connection} ->
         {:noreply,
          socket
@@ -465,16 +479,26 @@ defmodule HuddlzWeb.OrganizeLive.Social do
         </div>
       </section>
 
-      <.connect_place_dialog :if={@connect_dialog?} group={@group} />
-      <.schedule_sheet
+      <.connect_place_dialog :if={@dialog == :connect} group={@group} />
+      <.modal
         :if={@schedule_editor}
-        connection={@schedule_editor}
-        form={@schedule_form}
-        moments_form={@moments_form}
-        group={@group}
-        fresh?={@connected_id == @schedule_editor.id}
-      />
-      <.remove_connection_dialog :if={@removing_connection?} connection={@schedule_editor} />
+        id="schedule-sheet"
+        show
+        on_cancel={
+          JS.push(if @dialog == :remove, do: "cancel_remove_connection", else: "close_schedule")
+        }
+        dismiss_on_cancel={@dialog != :remove}
+      >
+        <.remove_connection_confirmation :if={@dialog == :remove} connection={@schedule_editor} />
+        <.schedule_sheet
+          :if={@dialog == :schedule}
+          connection={@schedule_editor}
+          form={@schedule_form}
+          moments_form={@moments_form}
+          group={@group}
+          fresh?={@connected_id == @schedule_editor.id}
+        />
+      </.modal>
     </Layouts.app>
     """
   end
@@ -566,11 +590,11 @@ defmodule HuddlzWeb.OrganizeLive.Social do
 
   attr :connection, :map, required: true
 
-  defp remove_connection_dialog(assigns) do
+  defp remove_connection_confirmation(assigns) do
     ~H"""
-    <.modal id="remove-connection-dialog" show on_cancel={JS.push("cancel_remove_connection")}>
+    <div id="remove-connection-dialog" phx-mounted={JS.focus(to: "#remove-connection-cancel")}>
       <div class="pr-8">
-        <h2 id="remove-connection-dialog-title" class="text-xl font-bold">
+        <h2 id="schedule-sheet-title" class="text-xl font-bold">
           Remove {SocialConnection.place(@connection)}?
         </h2>
         <p class="mt-3 muted">
@@ -590,7 +614,7 @@ defmodule HuddlzWeb.OrganizeLive.Social do
           Remove connection
         </.button>
       </div>
-    </.modal>
+    </div>
     """
   end
 
@@ -608,7 +632,7 @@ defmodule HuddlzWeb.OrganizeLive.Social do
       |> assign(:preview, preview_text(assigns.group, assigns.form[:opening_line].value))
 
     ~H"""
-    <.modal id="schedule-sheet" show on_cancel={JS.push("close_schedule")}>
+    <div id="schedule-editor">
       <div class="pr-8">
         <h2 id="schedule-sheet-title" class="text-xl font-bold">Choose when it posts</h2>
         <p class="mt-2 muted">
@@ -700,7 +724,7 @@ defmodule HuddlzWeb.OrganizeLive.Social do
           </.button>
         </div>
       </.form>
-    </.modal>
+    </div>
     """
   end
 end

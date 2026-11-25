@@ -24,6 +24,35 @@ defmodule BrowserSocialScheduleSteps do
     Map.put(context, :conn, conn)
   end
 
+  step "I ask to remove the place and cancel", context do
+    conn = context.conn |> click_button("Remove") |> click_button("Cancel")
+    Map.put(context, :conn, conn)
+  end
+
+  step "I can continue editing its schedule", context do
+    conn =
+      context.conn
+      |> assert_has("#schedule-form")
+      |> fill_in("Opening line", with: "Still connected!")
+      |> assert_has("#social-post-preview", text: "Still connected!")
+
+    Map.put(context, :conn, conn)
+  end
+
+  step "I ask to remove the place again and confirm", context do
+    conn = context.conn |> click_button("Remove") |> click_button("Remove connection")
+    Map.put(context, :conn, conn)
+  end
+
+  step "Social lists no connected places", context do
+    context.conn
+    |> assert_has("#social-connections", text: "Nothing connected yet")
+    |> reload_page()
+    |> assert_has("#social-connections", text: "Nothing connected yet")
+
+    context
+  end
+
   step "I choose morning-of posting with Space", context do
     conn = press(context.conn, "#moments_morning_of", "Space")
     Map.put(context, :conn, conn)

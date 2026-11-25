@@ -19,3 +19,11 @@ Feature: Editing a social schedule in the browser
     When I finish its schedule and open Members
     Then Back returns to Social and back again reopens the connected place's schedule
     And Forward returns to Social with the schedule closed
+
+  @social_removal_browser
+  Scenario: The owner can reconsider removing a place before disconnecting it
+    Given I am editing a social connection as its owner
+    When I ask to remove the place and cancel
+    Then I can continue editing its schedule
+    When I ask to remove the place again and confirm
+    Then Social lists no connected places

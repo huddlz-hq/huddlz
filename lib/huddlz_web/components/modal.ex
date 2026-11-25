@@ -16,6 +16,7 @@ defmodule HuddlzWeb.Components.Modal do
   attr :id, :string, required: true
   attr :show, :boolean, default: false
   attr :on_cancel, JS, default: %JS{}
+  attr :dismiss_on_cancel, :boolean, default: true
   attr :class, :string, default: "w-full max-w-xl"
   attr :return_focus, :string, default: nil
   slot :inner_block, required: true
@@ -29,7 +30,7 @@ defmodule HuddlzWeb.Components.Modal do
       phx-remove={
         if @return_focus, do: hide_modal(@id) |> JS.focus(to: @return_focus), else: hide_modal(@id)
       }
-      data-cancel={JS.exec(@on_cancel, "phx-remove")}
+      data-cancel={if @dismiss_on_cancel, do: JS.exec(@on_cancel, "phx-remove"), else: @on_cancel}
       class="relative z-50 hidden"
     >
       <div

@@ -328,19 +328,10 @@ defmodule Huddlz.Communities.Group do
 
     read :get_for_organize do
       description """
-      Get a group by slug, but only when the actor can manage it as an
-      organizer — they own the group or are an `:organizer` GroupMember.
-      Being an administrator does not count. Drives `OrganizeLive`'s
-      per-slug auth check; nil result means "not organizable by this actor."
+      Read a group the actor owns or helps organize, including archived
+      groups. Both opening a workspace by slug and refreshing it by id
+      use this action's organizer policies.
       """
-
-      get? true
-
-      argument :slug, :string do
-        allow_nil? false
-      end
-
-      filter expr(slug == ^arg(:slug))
     end
 
     update :update_details do
