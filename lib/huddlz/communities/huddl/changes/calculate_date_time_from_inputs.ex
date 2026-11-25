@@ -14,32 +14,26 @@ defmodule Huddlz.Communities.Huddl.Changes.CalculateDateTimeFromInputs do
     duration_minutes = Ash.Changeset.get_argument(changeset, :duration_minutes)
     time_zone = Ash.Changeset.get_attribute(changeset, :time_zone)
 
-    # Only calculate if all three virtual arguments are provided
-    if date && start_time && duration_minutes && time_zone do
-      case TimeZone.resolve_local(date, start_time, time_zone) do
-        {:ok, starts_at} ->
-          ends_at = DateTime.add(starts_at, duration_minutes, :minute)
+    case TimeZone.resolve_interval(date, start_time, duration_minutes, time_zone) do
+      {:ok, starts_at, ends_at} ->
+        changeset
+        |> Ash.Changeset.change_attribute(:starts_at, starts_at)
+        |> Ash.Changeset.change_attribute(:ends_at, ends_at)
 
-          changeset
-          |> Ash.Changeset.change_attribute(:starts_at, starts_at)
-          |> Ash.Changeset.change_attribute(:ends_at, ends_at)
+      :incomplete ->
+        changeset
 
-        {:error, :daylight_saving_gap} ->
-          Ash.Changeset.add_error(changeset,
-            field: :start_time,
-            message: "does not exist in #{time_zone} because of daylight saving time"
-          )
+      {:error, :daylight_saving_gap} ->
+        Ash.Changeset.add_error(changeset,
+          field: :start_time,
+          message: "does not exist in #{time_zone} because of daylight saving time"
+        )
 
-        {:error, reason} ->
-          Ash.Changeset.add_error(changeset,
-            field: :start_time,
-            message: "could not be scheduled: #{inspect(reason)}"
-          )
-      end
-    else
-      # If virtual arguments aren't provided, pass through unchanged
-      # This allows direct setting of starts_at/ends_at to still work
-      changeset
+      {:error, reason} ->
+        Ash.Changeset.add_error(changeset,
+          field: :start_time,
+          message: "could not be scheduled: #{inspect(reason)}"
+        )
     end
   end
 end

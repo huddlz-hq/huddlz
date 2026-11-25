@@ -48,10 +48,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
     current_params = socket.assigns.form.source.params || %{}
     updated_params = Map.put(current_params, "edit_type", type)
 
-    socket =
-      socket
-      |> update_event_type_visibility(updated_params)
-      |> update_calculated_end_time(updated_params)
+    socket = update_event_type_visibility(socket, updated_params)
 
     form = AshPhoenix.Form.validate(socket.assigns.form, updated_params)
     assign(socket, :form, to_form(form))
@@ -133,7 +130,6 @@ defmodule HuddlzWeb.HuddlLive.Edit do
     |> assign(:huddl, huddl)
     |> assign(:show_physical_location, huddl.event_type in [:in_person, :hybrid])
     |> assign(:show_virtual_link, huddl.event_type in [:virtual, :hybrid])
-    |> assign(:calculated_end_time, calculate_end_time(date, start_time, duration_minutes))
     |> assign(:form, to_form(form))
   end
 
@@ -199,14 +195,6 @@ defmodule HuddlzWeb.HuddlLive.Edit do
 
   @impl true
   def render(assigns) do
-    time_zone =
-      schedule_time_zone(assigns.form, assigns.selected_location, assigns.huddl.group)
-
-    assigns =
-      assigns
-      |> assign(:schedule_time_zone, time_zone)
-      |> assign(:ambiguous_time_label, ambiguous_time_label(assigns.form, time_zone))
-
     ~H"""
     <Layouts.app
       flash={@flash}
@@ -296,9 +284,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
 
         <.when_panel
           form={@form}
-          calculated_end_time={@calculated_end_time}
-          schedule_time_zone={@schedule_time_zone}
-          ambiguous_time_label={@ambiguous_time_label}
+          selected_location={@selected_location}
         >
           <:recurring_controls>
             <%= if @huddl.huddl_template_id && edit_type_value(@form) == "all" do %>
@@ -435,10 +421,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
         socket.assigns.form
       )
 
-    socket =
-      socket
-      |> update_event_type_visibility(params)
-      |> update_calculated_end_time(params)
+    socket = update_event_type_visibility(socket, params)
 
     form = AshPhoenix.Form.validate(socket.assigns.form, params)
 

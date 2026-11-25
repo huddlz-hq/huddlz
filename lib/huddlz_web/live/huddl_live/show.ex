@@ -406,7 +406,9 @@ defmodule HuddlzWeb.HuddlLive.Show do
               </svg>
               <div>
                 <div class="label">When</div>
-                <div id="huddl-schedule-fact" class="value">{format_fact_when(@huddl)}</div>
+                <div id="huddl-schedule-fact" class="value">
+                  {HuddlzWeb.HuddlSchedule.format_range(@huddl)}
+                </div>
               </div>
             </li>
 
@@ -1803,25 +1805,6 @@ defmodule HuddlzWeb.HuddlLive.Show do
   defp hero_location_segment(_), do: nil
 
   defp first_line(text), do: text |> String.split("\n", parts: 2) |> hd()
-
-  defp format_fact_when(huddl) do
-    starts_at = DateTime.shift_zone!(huddl.starts_at, huddl.time_zone)
-    ends_at = huddl.ends_at && DateTime.shift_zone!(huddl.ends_at, huddl.time_zone)
-
-    cond do
-      ends_at && same_day?(starts_at, ends_at) ->
-        "#{format_short_date(starts_at)} · #{format_time_only(starts_at)} – #{format_time_only(ends_at)} #{starts_at.zone_abbr}"
-
-      ends_at ->
-        "#{format_short_date(starts_at)} #{format_time_only(starts_at)} → #{format_short_date(ends_at)} #{format_time_only(ends_at)} #{starts_at.zone_abbr}"
-
-      true ->
-        "#{format_short_date(starts_at)} · #{format_time_only(starts_at)} #{starts_at.zone_abbr}"
-    end
-  end
-
-  defp same_day?(%DateTime{} = a, %DateTime{} = b),
-    do: DateTime.to_date(a) == DateTime.to_date(b)
 
   defp capacity_fact_label(%{status: :completed}), do: "RSVPs"
   defp capacity_fact_label(_), do: "Capacity"

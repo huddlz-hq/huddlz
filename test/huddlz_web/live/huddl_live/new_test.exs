@@ -792,7 +792,7 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
       select_physical_location(session.view, group, owner, "123 Main St")
 
       # Check that end time is displayed on the form
-      assert session.conn.resp_body =~ "Ends at:"
+      assert_has(session, "*", text: "Ends at: 04:30 PM")
 
       session = click_button(session, "Schedule huddl")
 

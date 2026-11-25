@@ -88,7 +88,6 @@ defmodule HuddlzWeb.HuddlLive.New do
     |> assign(:form, to_form(form))
     |> assign(:show_virtual_link, false)
     |> assign(:show_physical_location, true)
-    |> assign(:calculated_end_time, calculate_end_time(tomorrow, default_time, 60))
   end
 
   # `?copy=<huddl id>` fills the form from another huddl of this group. Nothing
@@ -149,7 +148,6 @@ defmodule HuddlzWeb.HuddlLive.New do
     |> assign(:selected_location, location)
     |> assign(:form, to_form(form))
     |> update_event_type_visibility(params)
-    |> assign(:calculated_end_time, calculate_end_time(date, start_time, duration))
   end
 
   defp handle_upload_progress(:huddl_cover_image, entry, socket) do
@@ -203,13 +201,6 @@ defmodule HuddlzWeb.HuddlLive.New do
 
   @impl true
   def render(assigns) do
-    time_zone = schedule_time_zone(assigns.form, assigns.selected_location, assigns.group)
-
-    assigns =
-      assigns
-      |> assign(:schedule_time_zone, time_zone)
-      |> assign(:ambiguous_time_label, ambiguous_time_label(assigns.form, time_zone))
-
     ~H"""
     <Layouts.app
       flash={@flash}
@@ -254,10 +245,8 @@ defmodule HuddlzWeb.HuddlLive.New do
 
         <.when_panel
           form={@form}
-          calculated_end_time={@calculated_end_time}
           duration_prompt="Select duration…"
-          schedule_time_zone={@schedule_time_zone}
-          ambiguous_time_label={@ambiguous_time_label}
+          selected_location={@selected_location}
           date_help={suggested_date_help(@copy_source, @form)}
         >
           <:recurring_controls>
@@ -355,16 +344,11 @@ defmodule HuddlzWeb.HuddlLive.New do
   @impl true
   def handle_event("validate", %{"form" => params}, socket) do
     params =
-      inject_saved_location_params(
-        params,
-        socket.assigns[:selected_location],
-        socket.assigns.form
-      )
+      params
+      |> Map.put("group_id", socket.assigns.group.id)
+      |> inject_saved_location_params(socket.assigns.selected_location, socket.assigns.form)
 
-    socket =
-      socket
-      |> update_event_type_visibility(params)
-      |> update_calculated_end_time(params)
+    socket = update_event_type_visibility(socket, params)
 
     form = AshPhoenix.Form.validate(socket.assigns.form, params)
 

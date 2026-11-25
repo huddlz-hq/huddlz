@@ -14,7 +14,7 @@ defmodule HuddlzWeb.OgImage do
   @height 630
   @title_chars_per_line 28
   @secondary_chars 72
-  @version 2
+  @version 3
   @mark_box 512
   @mark_radius 121.9048
   @mark_glyph "M221.0227 260.8751V368.7619H171.0435V120.4286H220.1228V228.9452H216.0361Q223.3661 205.6317 238.3061 192.8635Q253.2462 180.0952 276.8427 180.0952Q296.216 180.0952 310.646 188.5202Q325.076 196.9452 333.0377 212.6635Q340.9994 228.3818 340.9994 250.2486V368.7619H290.9435V258.9583Q290.9435 241.5982 281.9884 231.7264Q273.0333 221.8546 257.2232 221.8546Q246.6797 221.8546 238.488 226.473Q230.2962 231.0914 225.6595 239.7832Q221.0227 248.4749 221.0227 260.8751Z"
@@ -116,7 +116,7 @@ defmodule HuddlzWeb.OgImage do
       eyebrow: eyebrow(huddl, group_name),
       eyebrow_colour: eyebrow_colour(huddl),
       title: huddl.title,
-      detail: when_line(huddl),
+      detail: HuddlzWeb.HuddlSchedule.format_range(huddl),
       secondary: place_line(huddl)
     })
   end
@@ -212,25 +212,6 @@ defmodule HuddlzWeb.OgImage do
   end
 
   defp description_line(_group), do: nil
-
-  defp when_line(huddl) do
-    starts_at = DateTime.shift_zone!(huddl.starts_at, huddl.time_zone)
-    ends_at = huddl.ends_at && DateTime.shift_zone!(huddl.ends_at, huddl.time_zone)
-
-    cond do
-      ends_at && DateTime.to_date(ends_at) == DateTime.to_date(starts_at) ->
-        "#{date(starts_at)} · #{time(starts_at)} – #{time(ends_at)} #{starts_at.zone_abbr}"
-
-      ends_at ->
-        "#{date(starts_at)} #{time(starts_at)} → #{date(ends_at)} #{time(ends_at)} #{starts_at.zone_abbr}"
-
-      true ->
-        "#{date(starts_at)} · #{time(starts_at)} #{starts_at.zone_abbr}"
-    end
-  end
-
-  defp date(datetime), do: Calendar.strftime(datetime, "%a, %b %-d")
-  defp time(datetime), do: Calendar.strftime(datetime, "%-I:%M %p")
 
   defp place_line(%{event_type: :hybrid, physical_location: place}) when is_binary(place),
     do: "#{place} · & online"
