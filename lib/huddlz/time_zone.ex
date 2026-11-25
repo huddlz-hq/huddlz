@@ -30,5 +30,15 @@ defmodule Huddlz.TimeZone do
     end
   end
 
+  @doc "Resolves a wall-clock start and adds the elapsed duration in that zone."
+  def resolve_interval(%Date{} = date, %Time{} = time, minutes, time_zone)
+      when is_integer(minutes) and is_binary(time_zone) do
+    with {:ok, starts_at} <- resolve_local(date, time, time_zone) do
+      {:ok, starts_at, DateTime.add(starts_at, minutes, :minute)}
+    end
+  end
+
+  def resolve_interval(_date, _time, _minutes, _time_zone), do: :incomplete
+
   def eastern, do: @eastern
 end

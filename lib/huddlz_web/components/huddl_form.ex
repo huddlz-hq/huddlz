@@ -7,7 +7,7 @@ defmodule HuddlzWeb.Components.HuddlForm do
   ```
   <.basics_panel form={@form} />
   <.format_panel form={@form} />
-  <.when_panel form={@form} calculated_end_time={@calculated_end_time}>
+  <.when_panel form={@form} selected_location={@selected_location}>
     <:recurring_controls>...</:recurring_controls>
   </.when_panel>
   <.where_panel form={@form} show_physical_location={@show_physical_location}
@@ -209,14 +209,27 @@ defmodule HuddlzWeb.Components.HuddlForm do
   end
 
   attr :form, :map, required: true
-  attr :calculated_end_time, :string, default: nil
+  attr :selected_location, :map, required: true
   attr :duration_prompt, :string, default: nil
-  attr :schedule_time_zone, :string, default: nil
-  attr :ambiguous_time_label, :string, default: nil
   attr :date_help, :string, default: nil
   slot :recurring_controls
 
   def when_panel(assigns) do
+    form = assigns.form
+
+    time_zone =
+      if form[:event_type].value == :virtual or not is_nil(assigns.selected_location),
+        do: form[:time_zone].value
+
+    assigns =
+      assigns
+      |> assign(:schedule_time_zone, time_zone)
+      |> assign(
+        :ambiguous_time_label,
+        ambiguous_time_label(form[:date].value, form[:start_time].value, time_zone)
+      )
+      |> assign(:calculated_end_time, end_time_label(form, time_zone))
+
     ~H"""
     <div class="panel">
       <div class="panel-head">
@@ -256,6 +269,42 @@ defmodule HuddlzWeb.Components.HuddlForm do
     </div>
     """
   end
+
+  defp end_time_label(form, time_zone) do
+    case Huddlz.TimeZone.resolve_interval(
+           form[:date].value,
+           form[:start_time].value,
+           form[:duration_minutes].value,
+           time_zone
+         ) do
+      {:ok, starts_at, ends_at} -> format_end_time(starts_at, ends_at)
+      _ -> nil
+    end
+  end
+
+  defp format_end_time(starts_at, ends_at) do
+    format = if starts_at.zone_abbr == ends_at.zone_abbr, do: "%I:%M %p", else: "%I:%M %p %Z"
+
+    case Date.diff(DateTime.to_date(ends_at), DateTime.to_date(starts_at)) do
+      0 -> Calendar.strftime(ends_at, format)
+      1 -> Calendar.strftime(ends_at, format <> " (next day)")
+      _ -> Calendar.strftime(ends_at, format <> " (%a, %b %-d)")
+    end
+  end
+
+  defp ambiguous_time_label(%Date{} = date, %Time{} = time, time_zone)
+       when is_binary(time_zone) do
+    case DateTime.new(date, time, time_zone) do
+      {:ambiguous, earlier, _later} ->
+        {hours, minutes} = String.split_at(Calendar.strftime(earlier, "%z"), 3)
+        "#{earlier.zone_abbr} (UTC#{hours}:#{minutes})"
+
+      _ ->
+        nil
+    end
+  end
+
+  defp ambiguous_time_label(_date, _time, _time_zone), do: nil
 
   attr :form, :map, required: true
   attr :show_physical_location, :boolean, required: true

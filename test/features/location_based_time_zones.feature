@@ -79,6 +79,8 @@ Feature: Location-based time zones
     When I move the group to "America/Denver"
     Then the existing virtual huddl remains at 9:00 AM in "America/New_York"
     And a new virtual huddl uses "America/Denver"
+    When I visit the edit page for huddl "Existing Virtual Huddl"
+    Then the edit form should show "09:00" in "America/New_York"
 
   Scenario: Moving a physical huddl preserves the venue-local time
     Given a physical huddl is at 9:00 AM in "America/New_York"
@@ -114,11 +116,31 @@ Feature: Location-based time zones
     And I enter November 3, 2030 at 1:30 AM
     Then I should see "America/New_York"
     And I should see "EDT (UTC-04:00)"
+    And I should see "Ends at: 01:30 AM EST"
+
+  @schedule_preview
+  Scenario: An hour-long huddl spans the spring clock change
+    Given my group "Saint Augustine Neighbors" is based in "America/New_York"
+    When I visit the new huddl page for "Saint Augustine Neighbors"
+    And I choose "Virtual"
+    And I fill in "Title" with "Early morning check-in"
+    And I fill in "Online link" with "https://example.com/check-in"
+    And I fill in "Date" with "2030-03-10"
+    And I fill in "Start time" with "01:30"
+    Then I should see "Ends at: 03:30 AM"
+    When I click "Schedule huddl"
+    And I visit the huddl page for "Early morning check-in"
+    Then I should see "1:30 AM EST – 3:30 AM EDT"
+    When I visit the edit page for huddl "Early morning check-in"
+    Then I should see "Ends at: 03:30 AM"
+    When I fill in "Start time" with ""
+    Then I should not see "Ends at:"
 
   Scenario: A nonexistent spring-forward time is rejected
     Given my group "Saint Augustine Neighbors" is based in "America/New_York"
     When I try to schedule a virtual huddl on March 10, 2030 at 2:30 AM
     Then I should see "does not exist in America/New_York because of daylight saving time"
+    And I should not see "Ends at:"
     And the huddl "Spring Forward Huddl" should not exist
 
   Scenario: A huddl that already started today is refused in its own time zone
