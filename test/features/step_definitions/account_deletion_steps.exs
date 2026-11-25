@@ -303,12 +303,11 @@ defmodule AccountDeletionSteps do
        %{args: [email, expected, forbidden]} = context do
     recipient = find_user(email)
 
-    page =
+    notifications =
       Notification
       |> Ash.Query.for_read(:for_user, %{}, actor: recipient)
       |> Ash.read!(actor: recipient)
 
-    notifications = page.results
     assert notifications != []
 
     assert Enum.any?(notifications, &(&1.payload["rsvper_display_name"] == expected))
