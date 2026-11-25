@@ -130,6 +130,39 @@ Feature: Huddlz are posted on each connection's social schedule
     When the morning of "Hack night" arrives
     Then "#general" receives a post saying "Hack night" is today at 6:00 PM
 
+  Scenario: Two open edits announce the schedule immediately before each move
+    Given "Elixir Nashville" posts to the Slack channel "#general" a week before and the morning of
+    And "Elixir Nashville" has a public huddl "Hack night" in ten days at 6:00 PM
+    And I am signed in as "owner@example.com"
+    And the week-before post of "Hack night" went out to "#general"
+    And the group has a saved venue "Denver Library" in "America/Denver"
+    And I open two edit tabs for "Hack night"
+    When I switch the saved location to "Denver Library"
+    And I fill in "Date" with "2030-07-21"
+    And I click the "Save changes" button
+    Then "#general" receives a post about "Hack night"
+    When I return to the other edit tab
+    And I switch the saved location to "Denver Library"
+    And I fill in "Date" with "2030-07-22"
+    And I click the "Save changes" button
+    Then I should see "Previously scheduled for Sun, Jul 21, 2030 · 6:00 PM MDT"
+    And the next post to "#general" says "Hack night is now Mon, Jul 22 at 6:00 PM (was Sun, Jul 21 at 6:00 PM)"
+
+  Scenario: Saving the same new start from two open edits announces one move
+    Given "Elixir Nashville" posts to the Slack channel "#general" a week before and the morning of
+    And "Elixir Nashville" has a public huddl "Hack night" in ten days at 6:00 PM
+    And I am signed in as "owner@example.com"
+    And the week-before post of "Hack night" went out to "#general"
+    And I open two edit tabs for "Hack night"
+    When I fill in "Date" with "2030-07-21"
+    And I click the "Save changes" button
+    Then "#general" receives a post about "Hack night"
+    When I return to the other edit tab
+    And I fill in "Date" with "2030-07-21"
+    And I click the "Save changes" button
+    Then I should see "Huddl updated successfully"
+    And "#general" receives nothing
+
   Scenario: A moved huddl still gets a follow-up after its new start
     Given "Elixir Nashville" posts to the Slack channel "#general" a week before and the morning of
     And "Elixir Nashville" has a public huddl "Hack night" in ten days at 6:00 PM

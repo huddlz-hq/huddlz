@@ -186,6 +186,25 @@ defmodule SocialScheduleSteps do
     Map.put(context, :moved_from, huddl)
   end
 
+  step "I open two edit tabs for {string}", %{args: [title]} = context do
+    huddl = lookup_huddl(title)
+    path = "/groups/#{huddl.group.slug}/huddlz/#{huddl.id}/edit"
+    first = visit(context.session, path)
+    second = visit(context.session, path)
+    Map.merge(context, %{session: first, conn: first, other_edit_tab: second})
+  end
+
+  step "I return to the other edit tab", context do
+    Map.merge(context, %{session: context.other_edit_tab, conn: context.other_edit_tab})
+  end
+
+  step "the next post to {string} says {string}", %{args: [_channel, expected]} = context do
+    run_scheduler()
+    assert next_post!() =~ expected
+    refute_other_posts()
+    context
+  end
+
   step "{string} receives a post saying {string} is cancelled",
        %{args: [_channel, title]} = context do
     run_scheduler()

@@ -21,7 +21,7 @@ defmodule Huddlz.Communities.Huddl.Changes.PlanSocialPosts do
     Ash.Changeset.after_action(changeset, fn changeset, huddl ->
       :ok = Schedule.plan_huddl(huddl)
       :ok = announce(changeset, huddl)
-      :ok = follow_up(changeset, huddl)
+      :ok = follow_up(changeset.context, huddl)
       {:ok, huddl}
     end)
   end
@@ -42,22 +42,13 @@ defmodule Huddlz.Communities.Huddl.Changes.PlanSocialPosts do
     end
   end
 
-  defp follow_up(changeset, huddl) do
-    before = changeset.data
+  defp follow_up(%{lifecycle_transition: :cancelled}, huddl),
+    do: Schedule.follow_up(huddl, :cancelled)
 
-    cond do
-      changeset.context[:lifecycle_transition] == :cancelled ->
-        Schedule.follow_up(huddl, :cancelled)
+  defp follow_up(%{rescheduled_from: previous}, huddl),
+    do: Schedule.follow_up(huddl, :moved, previous)
 
-      changeset.action_type == :update and before.lifecycle_state == :published and
-        huddl.lifecycle_state == :published and
-          DateTime.compare(before.starts_at, huddl.starts_at) != :eq ->
-        Schedule.follow_up(huddl, :moved, {before.starts_at, before.time_zone})
-
-      true ->
-        :ok
-    end
-  end
+  defp follow_up(_context, _huddl), do: :ok
 
   # A series goes public when it is created published, or when a drafted
   # date of it is published; its generated dates never announce themselves.
