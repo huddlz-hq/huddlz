@@ -26,10 +26,13 @@ defmodule BrowserHooks do
           context
       end
 
+    # ExUnit runs `on_exit` callbacks in reverse: the sandbox owner, registered
+    # first, stops last, after the scenario's browser contexts have closed.
+    Huddlz.DataCase.setup_sandbox(context)
+
     # Cucumber creates the ExUnit modules, so no `use Playwright.Test` can
     # register the scenario: run its per-test setup here.
     Playwright.Test.__setup__(context)
-    Huddlz.DataCase.setup_sandbox(context)
 
     conn =
       Fluffy.PhoenixTest.start_session(:playwright,
