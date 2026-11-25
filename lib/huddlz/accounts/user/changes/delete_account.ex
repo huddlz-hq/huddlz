@@ -155,7 +155,7 @@ defmodule Huddlz.Accounts.User.Changes.DeleteAccount do
     |> Ash.read!()
     |> Enum.each(fn huddl ->
       huddl
-      |> Ash.Changeset.for_destroy(:destroy, %{}, opts)
+      |> Ash.Changeset.for_destroy(:destroy_for_account_deletion, %{}, opts)
       |> Ash.destroy!(authorize?: false)
     end)
   end

@@ -89,6 +89,14 @@ defmodule HuddlzWeb.Api.AuthController do
     end
   end
 
+  defp destroy_account(conn, _user, password) when not is_binary(password) or password == "" do
+    conn
+    |> put_status(:unprocessable_entity)
+    |> json(%{
+      errors: [%{field: "password", message: "Enter your password to delete your account."}]
+    })
+  end
+
   defp destroy_account(conn, user, password) do
     case Accounts.delete_account(user, password, actor: user) do
       {:ok, _user} ->
@@ -105,24 +113,26 @@ defmodule HuddlzWeb.Api.AuthController do
         too_many_requests(conn, limit_exceeded)
 
       nil ->
-        case error do
-          %Ash.Error.Forbidden{} ->
-            if authentication_failed?(error) do
-              conn
-              |> put_status(:unprocessable_entity)
-              |> json(%{errors: [%{field: "password", message: "That password isn't right."}]})
-            else
-              conn
-              |> put_status(:forbidden)
-              |> json(%{error: "You can't delete this account"})
-            end
-
-          _ ->
-            conn
-            |> put_status(:unprocessable_entity)
-            |> json(%{errors: format_errors(error)})
-        end
+        respond_delete_account_error(conn, error)
     end
+  end
+
+  defp respond_delete_account_error(conn, %Ash.Error.Forbidden{} = error) do
+    if authentication_failed?(error) do
+      conn
+      |> put_status(:unprocessable_entity)
+      |> json(%{errors: [%{field: "password", message: "That password isn't right."}]})
+    else
+      conn
+      |> put_status(:forbidden)
+      |> json(%{error: "You can't delete this account"})
+    end
+  end
+
+  defp respond_delete_account_error(conn, error) do
+    conn
+    |> put_status(:unprocessable_entity)
+    |> json(%{errors: format_errors(error)})
   end
 
   defp authentication_failed?(%{errors: errors}),

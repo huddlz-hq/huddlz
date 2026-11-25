@@ -223,6 +223,11 @@ defmodule Huddlz.Communities.Huddl do
       require_atomic? false
     end
 
+    destroy :destroy_for_account_deletion do
+      description "System-only: remove unpublished drafts when a group owner deletes their account, including in already-archived groups."
+      require_atomic? false
+    end
+
     read :read do
       primary? true
       prepare Huddlz.Communities.Huddl.Preparations.FilterByVisibility
@@ -917,6 +922,10 @@ defmodule Huddlz.Communities.Huddl do
       authorize_if expr(
                      exists(group.group_members, user_id == ^actor(:id) and role == :organizer)
                    )
+    end
+
+    policy action(:destroy_for_account_deletion) do
+      forbid_if always()
     end
 
     policy action(:destroy) do

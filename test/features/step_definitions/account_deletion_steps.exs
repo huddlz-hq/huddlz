@@ -72,27 +72,11 @@ defmodule AccountDeletionSteps do
         title: title,
         starts_at: starts_at,
         ends_at: ends_at,
-        time_zone: "UTC",
         event_type: :virtual,
         lifecycle_state: :draft,
         group_id: group.id
       },
       actor: host
-    )
-    |> Ash.create!()
-
-    context
-  end
-
-  step "a private group {string} exists with owner {string}",
-       %{args: [name, email]} = context do
-    owner = find_user(email)
-
-    Group
-    |> Ash.Changeset.for_create(
-      :create,
-      %{name: name, visibility: :private},
-      actor: owner
     )
     |> Ash.create!()
 
