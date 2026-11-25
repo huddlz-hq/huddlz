@@ -36,6 +36,7 @@ Feature: People delete their own account
     And the deleted account is no longer a member of "Deletion Book Club"
     And the deleted account is no longer attending "Next Chapter"
     And "member801@example.com" is confirmed for "Next Chapter"
+    And "member801@example.com" has one notification about getting a spot at "Next Chapter"
 
   Scenario: Shared history keeps a neutral name
     Given the past huddl "Last Chapter" exists in group "Deletion Book Club" hosted by "owner801@example.com"

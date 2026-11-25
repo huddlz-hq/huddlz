@@ -4,74 +4,29 @@ defmodule Huddlz.Communities.Huddl.Changes.PromoteFromWaitlist do
   to an active attendee. Triggered by `:cancel_rsvp` when a real seat
   was freed.
 
-  Promotion clears `waitlisted_at` on the waitlist row rather than
-  creating a new attendee row, which keeps the unique (huddl_id,
-  user_id) constraint coherent across promotion.
-
-  Sets `:promoted_user_id` in the changeset context so that
-  `NotifyWaitlistPromoted` can deliver the heads-up email after the
-  outer transaction commits.
+  The after-action notifier uses the promoted user IDs recorded here.
   """
 
   use Ash.Resource.Change
 
   alias Huddlz.Communities.Huddl
   alias Huddlz.Communities.Huddl.Changes.LockedHuddl
-  alias Huddlz.Communities.HuddlAttendee
-
-  require Ash.Query
+  alias Huddlz.Communities.WaitlistPromotion
 
   def change(changeset, _opts, _context) do
     Ash.Changeset.before_action(changeset, &maybe_promote/1)
   end
 
-  defp maybe_promote(cs) do
-    if cs.context[:rsvp_cancelled] == true do
-      do_promote(cs)
-    else
-      cs
-    end
-  end
-
-  defp do_promote(cs) do
-    # Re-affirm the FOR UPDATE lock CancelRsvp already holds and read the
-    # current count so we never promote past capacity (defensive — the cancel
-    # that triggered this freed exactly one seat).
+  defp maybe_promote(%{context: %{rsvp_cancelled: true}} = cs) do
     case LockedHuddl.fetch(cs.data.id, :at_capacity) do
-      {:ok, %Huddl{} = huddl} -> maybe_promote_oldest(cs, huddl)
-      error -> LockedHuddl.add_read_error(cs, error)
+      {:ok, %Huddl{} = huddl} ->
+        user_ids = WaitlistPromotion.fill_released_seat(huddl, Huddlz.Audit.nested_opts(cs))
+        Ash.Changeset.put_context(cs, :promoted_user_ids, user_ids)
+
+      error ->
+        LockedHuddl.add_read_error(cs, error)
     end
   end
 
-  defp maybe_promote_oldest(cs, huddl) do
-    if huddl.at_capacity do
-      cs
-    else
-      case fetch_oldest_waitlist_entry(cs.data.id) do
-        nil ->
-          cs
-
-        attendee ->
-          attendee
-          |> Ash.Changeset.for_update(
-            :promote_from_waitlist,
-            %{},
-            Huddlz.Audit.nested_opts(cs, %{automatic?: true})
-          )
-          |> Ash.update!(authorize?: false)
-
-          Ash.Changeset.put_context(cs, :promoted_user_id, attendee.user_id)
-      end
-    end
-  end
-
-  defp fetch_oldest_waitlist_entry(huddl_id) do
-    HuddlAttendee
-    |> Ash.Query.filter(
-      huddl_id == ^huddl_id and not is_nil(waitlisted_at) and is_nil(user.suspended_at)
-    )
-    |> Ash.Query.sort(waitlisted_at: :asc)
-    |> Ash.Query.limit(1)
-    |> Ash.read_one!(authorize?: false)
-  end
+  defp maybe_promote(cs), do: cs
 end

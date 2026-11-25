@@ -50,6 +50,29 @@ defmodule Huddlz.AuditNestedActionsTest do
              {ctx.owner.id, ctx.admin.id, ctx.impersonation_id, true}
   end
 
+  test "account deletion attributes both the released seat and the automatic promotion", ctx do
+    huddl = generate(huddl(group_id: ctx.group.id, actor: ctx.owner, max_attendees: 2))
+    leaving = generate(user(hashed_password: Bcrypt.hash_pwd_salt("Password123!")))
+    waiting = generate(user())
+    Communities.rsvp_huddl!(huddl, actor: leaving)
+    Communities.join_waitlist_huddl!(huddl, actor: waiting)
+    [seat] = Communities.check_user_rsvp!(huddl.id, actor: leaving)
+    [entry] = Communities.check_user_rsvp!(huddl.id, actor: waiting)
+
+    Accounts.delete_account!(leaving, "Password123!", Keyword.put(ctx.opts, :actor, leaving))
+
+    released = version(HuddlAttendee.Version, seat, :cancel_rsvp)
+    promoted = version(HuddlAttendee.Version, entry, :promote_from_waitlist)
+
+    for row <- [released, promoted] do
+      assert {row.actor_id, row.impersonator_id, row.impersonation_id} ==
+               {leaving.id, ctx.admin.id, ctx.impersonation_id}
+    end
+
+    refute released.automatic?
+    assert promoted.automatic?
+  end
+
   test "generic membership removal preserves supplied impersonation metadata", ctx do
     member = generate(user())
     membership = Communities.add_member!(ctx.group.id, member.id, :member, actor: ctx.owner)

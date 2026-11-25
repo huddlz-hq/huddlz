@@ -6,6 +6,7 @@ defmodule Huddlz.Communities.HuddlWaitlistTest do
   alias Huddlz.Communities.GroupMember
   alias Huddlz.Communities.Huddl
   alias Huddlz.Communities.HuddlAttendee
+  alias Huddlz.Notifications
 
   describe "archived waitlist history" do
     setup :setup_group_and_capped_huddl
@@ -306,6 +307,8 @@ defmodule Huddlz.Communities.HuddlWaitlistTest do
 
       assert rsvp_count(huddl) == 3
       assert waitlist_count(huddl) == 0
+      assert [_] = promotion_notices(waitlister)
+      assert [_] = promotion_notices(second_waitlister)
     end
 
     test "lifting cap (nil) promotes everyone on the waitlist", %{
@@ -358,9 +361,14 @@ defmodule Huddlz.Communities.HuddlWaitlistTest do
 
       Huddlz.Communities.get_huddl!(huddl.id, actor: owner)
       |> Huddlz.Communities.update_huddl!(%{max_attendees: 2}, actor: owner)
+      |> Huddlz.Communities.update_huddl!(%{max_attendees: 2}, actor: owner)
 
       assert rsvp_count(huddl) == 2
       assert waitlist_count(huddl) == 1
+      assert [%{payload: payload}] = promotion_notices(waitlister)
+      assert payload["huddl_id"] == huddl.id
+      assert [] = promotion_notices(second_waitlister)
+      assert [] = promotion_notices(member)
     end
   end
 
@@ -400,6 +408,11 @@ defmodule Huddlz.Communities.HuddlWaitlistTest do
 
       assert load_at_capacity(huddl) == false
     end
+  end
+
+  defp promotion_notices(person) do
+    Notifications.list_for_user!(actor: person, page: false)
+    |> Enum.filter(&(&1.trigger == "waitlist_promoted"))
   end
 
   defp capped_huddl(owner, group, max_attendees) do

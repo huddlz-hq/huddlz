@@ -118,6 +118,7 @@ Feature: Administrators suspend abusive accounts and restore mistaken suspension
     And "member587@example.com" is on the waitlist for "Full House"
     When "admin587@example.com" suspends "spam587@example.com" for "Spam"
     Then "member587@example.com" is confirmed for "Full House"
+    And "member587@example.com" has one notification about getting a spot at "Full House"
     And "spam587@example.com" is no longer attending "Full House"
     And the RSVP by "spam587@example.com" to "Full House" is still on record
 
