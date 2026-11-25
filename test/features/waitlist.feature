@@ -46,6 +46,8 @@ Feature: Waitlist
     Given I am logged in as "hopeful@example.com"
     And I have joined the waitlist for "Capped Code Review"
     When "member+waitlist@example.com" cancels their RSVP to "Capped Code Review"
+    And "member+waitlist@example.com" cancels their RSVP to "Capped Code Review"
     And I visit the "Capped Code Review" huddl page
     Then I should see "You're attending"
     And I should not see "On waitlist"
+    And "hopeful@example.com" has one notification about getting a spot at "Capped Code Review"

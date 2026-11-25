@@ -1,9 +1,11 @@
 defmodule WaitlistSteps do
   use Cucumber.StepDefinition
+  import ExUnit.Assertions
   import Huddlz.Generator
 
   alias Huddlz.Accounts.User
   alias Huddlz.Communities.{Group, Huddl}
+  alias Huddlz.Notifications
 
   require Ash.Query
 
@@ -72,6 +74,17 @@ defmodule WaitlistSteps do
     huddl
     |> Ash.Changeset.for_update(:cancel_rsvp, %{}, actor: user)
     |> Ash.update!()
+
+    context
+  end
+
+  step "{string} has one notification about getting a spot at {string}",
+       %{args: [email, title]} = context do
+    user = Huddlz.Accounts.get_by_email!(email, authorize?: false)
+    inbox = Notifications.list_for_user!(actor: user, page: false)
+
+    assert [%{payload: %{"huddl_title" => ^title}}] =
+             Enum.filter(inbox, &(&1.trigger == "waitlist_promoted"))
 
     context
   end
