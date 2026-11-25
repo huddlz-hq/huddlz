@@ -34,7 +34,7 @@ defmodule CopyHuddlApiSteps do
           time_zone: location.time_zone,
           virtual_link: @virtual_link,
           max_attendees: 30,
-          is_private: true,
+          is_private: false,
           starts_at: starts_at,
           ends_at: DateTime.add(starts_at, 120, :minute),
           lifecycle_state: :completed,
@@ -58,6 +58,17 @@ defmodule CopyHuddlApiSteps do
           event_type: :virtual,
           virtual_link: @virtual_link
         )
+      )
+
+    organizer_context(context, owner, group, source)
+  end
+
+  step "I organize a members-only huddl in a public group", context do
+    {owner, group} = organized_group()
+
+    source =
+      generate(
+        huddl(group_id: group.id, actor: owner, is_private: true, description: @description)
       )
 
     organizer_context(context, owner, group, source)
@@ -208,8 +219,6 @@ defmodule CopyHuddlApiSteps do
 
   step "I copy it through {string} on a future date titled {string} and open it to nonmembers",
        %{args: [api, title]} = context do
-    assert context.source.is_private
-
     copy(context, api, %{
       "date" => Date.to_iso8601(future_date()),
       "title" => title,
