@@ -63,6 +63,17 @@ defmodule CopyHuddlApiSteps do
     organizer_context(context, owner, group, source)
   end
 
+  step "I organize a members-only huddl in a public group", context do
+    {owner, group} = organized_group()
+
+    source =
+      generate(
+        huddl(group_id: group.id, actor: owner, is_private: true, description: @description)
+      )
+
+    organizer_context(context, owner, group, source)
+  end
+
   step "I organize a group with a weekly series {string}", %{args: [title]} = context do
     {owner, group} = organized_group()
     today = eastern_today()
@@ -206,9 +217,13 @@ defmodule CopyHuddlApiSteps do
     copy(context, api, %{"date" => Date.to_iso8601(future_date())})
   end
 
-  step "I copy it through {string} on a future date titled {string}",
+  step "I copy it through {string} on a future date titled {string} and open it to nonmembers",
        %{args: [api, title]} = context do
-    copy(context, api, %{"date" => Date.to_iso8601(future_date()), "title" => title})
+    copy(context, api, %{
+      "date" => Date.to_iso8601(future_date()),
+      "title" => title,
+      "is_private" => false
+    })
   end
 
   step "I copy it through {string} on a future date without its cover",
@@ -329,6 +344,11 @@ defmodule CopyHuddlApiSteps do
 
   step "the copy has the original's description", context do
     assert copied(context).copy.description == @description
+    context
+  end
+
+  step "the copy is open to nonmembers", context do
+    assert copied(context).copy.is_private == false
     context
   end
 

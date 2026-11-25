@@ -114,6 +114,22 @@ defmodule CopyHuddlSteps do
     Map.update!(context, :session, &click_button(&1, "Schedule huddl"))
   end
 
+  step "I clear the description and capacity limit", context do
+    session =
+      context.session
+      |> fill_in("Description", with: "")
+      |> fill_in("Max attendees", with: "")
+
+    Map.put(context, :session, session)
+  end
+
+  step "the new huddl has no description or capacity limit", context do
+    [copy] = copies(context)
+    assert is_nil(copy.description)
+    assert is_nil(copy.max_attendees)
+    context
+  end
+
   # West of UTC, the start read as UTC lands hours before now, which is how
   # a huddl later today used to be refused.
   step "I set it to start an hour from now", context do

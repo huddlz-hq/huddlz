@@ -13,6 +13,13 @@ Feature: Copy a huddl
     Then the group has a new upcoming "Hands-on with Ash Framework"
     And the past huddl is unchanged
 
+  Scenario: Scheduling a copy without the original's description or capacity limit
+    Given I organize a group with a past huddl "Hands-on with Ash Framework"
+    When I visit that huddl and choose to copy it
+    And I clear the description and capacity limit
+    And I schedule the huddl
+    Then the new huddl has no description or capacity limit
+
   Scenario: Copying onto a time later than now in the huddl's time zone
     Given I organize a group with a past huddl "Hands-on with Ash Framework"
     When I visit that huddl and choose to copy it
