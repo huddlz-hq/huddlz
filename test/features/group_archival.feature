@@ -321,6 +321,25 @@ Feature: Group archival
       | member+group-archival@example.com | JSON:API | visible    |
       | other@example.com                 | JSON:API | hidden     |
 
+  @archived_overview
+  Scenario: An organizer retains the overview of a private group after archival
+    Given the following users exist:
+      | email                          | role  | display_name |
+      | owner+overview@example.com     | user  | Owner        |
+      | organizer+overview@example.com | user  | Organizer    |
+      | admin+overview@example.com     | admin | Admin        |
+    And a private group "Overview Archive" exists with owner "owner+overview@example.com"
+    And "organizer+overview@example.com" is an organizer of "Overview Archive"
+    And I am signed in as "owner+overview@example.com"
+    When I visit the edit page for "Overview Archive"
+    And I click "Archive group"
+    And I click "Yes, archive group"
+    Then I should see "This group is archived"
+    When "organizer+overview@example.com" reads the overview of "Overview Archive" for "30d" through GraphQL
+    Then the API overview shows 2 members and 2 joined this month
+    When "admin+overview@example.com" reads the overview of "Overview Archive" for "30d" through GraphQL
+    Then the API refuses the overview
+
   @archived_attendance
   Scenario Outline: Attendance history keeps its access rules after archival
     Given the following users exist:

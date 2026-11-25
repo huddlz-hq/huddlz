@@ -27,14 +27,15 @@ defmodule Huddlz.Communities.HuddlCoverImageTest do
       assert huddl_cover_image.huddl_id == huddl.id
     end
 
-    test "organizer can create huddl image" do
+    test "an organizer can add a cover and loses access to that cover after demotion" do
       owner = generate(user(role: :user))
       organizer = generate(user(role: :user))
       group = generate(group(owner_id: owner.id, actor: owner))
 
-      generate(
-        group_member(group_id: group.id, user_id: organizer.id, role: "organizer", actor: owner)
-      )
+      membership =
+        generate(
+          group_member(group_id: group.id, user_id: organizer.id, role: "organizer", actor: owner)
+        )
 
       huddl =
         generate(
@@ -59,6 +60,32 @@ defmodule Huddlz.Communities.HuddlCoverImageTest do
                Communities.create_huddl_cover_image(attrs, actor: organizer)
 
       assert huddl_cover_image.huddl_id == huddl.id
+
+      Communities.change_member_role!(membership, :member, actor: owner)
+
+      assert {:error, %Ash.Error.Forbidden{}} =
+               Communities.soft_delete_huddl_cover_image(huddl_cover_image, actor: organizer)
+    end
+
+    test "the owner can read a private group's archived huddl but cannot add a cover" do
+      owner = generate(user())
+      group = generate(group(owner_id: owner.id, is_public: false, actor: owner))
+      huddl = generate(past_huddl(group_id: group.id, creator_id: owner.id))
+
+      Communities.archive_group!(group, actor: owner)
+      assert {:ok, %{id: id}} = Communities.get_huddl(huddl.id, actor: owner)
+      assert id == huddl.id
+
+      attrs = %{
+        filename: "cover.jpg",
+        content_type: "image/jpeg",
+        size_bytes: 1000,
+        storage_path: "/uploads/huddl_cover_images/#{huddl.id}/cover.jpg",
+        huddl_id: huddl.id
+      }
+
+      assert {:error, %Ash.Error.Forbidden{}} =
+               Communities.create_huddl_cover_image(attrs, actor: owner)
     end
 
     test "regular member cannot create huddl image" do

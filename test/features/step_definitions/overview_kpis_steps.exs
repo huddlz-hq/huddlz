@@ -105,7 +105,7 @@ defmodule OverviewKpisSteps do
   step "{string} reads the overview of {string} for {string} through GraphQL",
        %{args: [email, group_name, period]} = context do
     user = User |> Ash.Query.filter(email == ^email) |> Ash.read_one!(authorize?: false)
-    group = find_group(group_name)
+    group = Enum.find(context.groups, &(to_string(&1.name) == group_name))
 
     response =
       build_conn()
