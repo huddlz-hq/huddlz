@@ -92,9 +92,10 @@ defmodule Huddlz.Communities.Huddl.Changes.TransitionLifecycle do
   end
 
   defp cancel_before_end(changeset, huddl, actor_id) do
-    case DateTime.compare(huddl.ends_at, DateTime.utc_now()) do
-      :gt -> apply_cancellation(changeset, actor_id)
-      _comparison -> Ash.Changeset.add_error(changeset, "A completed huddl cannot be cancelled.")
+    if Huddl.cancellable?(huddl) do
+      apply_cancellation(changeset, actor_id)
+    else
+      Ash.Changeset.add_error(changeset, "A completed huddl cannot be cancelled.")
     end
   end
 

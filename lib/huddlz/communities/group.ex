@@ -462,6 +462,9 @@ defmodule Huddlz.Communities.Group do
     end
   end
 
+  def active?(%{archived_at: nil}), do: true
+  def active?(_group), do: false
+
   @doc false
   def valid_name_length?(name) do
     String.length(to_string(name)) in @name_length

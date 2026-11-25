@@ -95,26 +95,8 @@ defmodule Huddlz.Communities.HuddlPhoto do
       authorize_if Huddlz.Accounts.Checks.ConfirmedActor
     end
 
-    policy action(:create) do
-      description "Only the huddl's creator or a confirmed attendee can upload photos, after the huddl has ended"
-
-      forbid_unless expr(
-                      huddl.lifecycle_state == :completed or
-                        (huddl.lifecycle_state == :published and huddl.ends_at < now())
-                    )
-
-      authorize_if expr(huddl.creator_id == ^actor(:id))
-
-      authorize_if expr(
-                     exists(
-                       huddl.attendees,
-                       user_id == ^actor(:id) and is_nil(waitlisted_at)
-                     )
-                   )
-    end
-
-    policy action_type(:read) do
-      description "Only the huddl's creator or a confirmed attendee can view photos, after the huddl has ended"
+    policy action_type([:create, :read]) do
+      description "Only the huddl's creator or a confirmed attendee can share and view photos, after the huddl has ended"
 
       forbid_unless expr(
                       huddl.lifecycle_state == :completed or
