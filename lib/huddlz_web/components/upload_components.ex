@@ -46,6 +46,7 @@ defmodule HuddlzWeb.Components.UploadComponents do
   attr :image_url, :string, default: nil, doc: "the cover to show, pending or current"
   attr :caption, :string, default: nil, doc: "one line under an uploaded cover"
   attr :processing?, :boolean, default: false, doc: "the server is preparing the cover"
+  attr :saved_image_url, :string, default: nil
   attr :image_error, :string, default: nil, doc: "why the server refused the file"
   attr :optional, :boolean, default: false
 
@@ -106,7 +107,13 @@ defmodule HuddlzWeb.Components.UploadComponents do
               </div>
             </div>
           <% :error -> %>
-            <span class="cover-slot-icon is-error" aria-hidden="true">
+            <img
+              :if={@saved_image_url}
+              src={@saved_image_url}
+              alt="Current cover"
+              class="h-12 w-auto rounded"
+            />
+            <span :if={!@saved_image_url} class="cover-slot-icon is-error" aria-hidden="true">
               <.icon name="hero-x-circle" class="size-5" />
             </span>
             <p :for={message <- @errors} class="cover-slot-error">{message}</p>
@@ -214,6 +221,7 @@ defmodule HuddlzWeb.Components.UploadComponents do
   attr :image_url, :string, default: nil
   attr :caption, :string, default: nil
   attr :processing?, :boolean, default: false
+  attr :saved_image_url, :string, default: nil
   attr :image_error, :string, default: nil
   attr :optional, :boolean, default: false
   slot :actions
@@ -231,6 +239,7 @@ defmodule HuddlzWeb.Components.UploadComponents do
         caption={@caption}
         processing?={@processing?}
         image_error={@image_error}
+        saved_image_url={@saved_image_url}
         optional={@optional}
       >
         <:actions>{render_slot(@actions)}</:actions>

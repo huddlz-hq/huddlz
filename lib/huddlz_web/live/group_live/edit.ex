@@ -77,7 +77,7 @@ defmodule HuddlzWeb.GroupLive.Edit do
 
   defp handle_upload_progress(:group_image, entry, socket) do
     if entry.done? do
-      {:noreply, ImageUploadPipeline.start_eager_upload(socket, upload_config())}
+      {:noreply, ImageUploadPipeline.start_eager_upload(socket, upload_config(socket))}
     else
       {:noreply, socket}
     end
@@ -85,24 +85,27 @@ defmodule HuddlzWeb.GroupLive.Edit do
 
   @impl true
   def handle_async(:prepare_cover, result, socket) do
-    {:noreply, ImageUploadPipeline.finish_eager_upload(socket, result, upload_config())}
+    {:noreply, ImageUploadPipeline.finish_eager_upload(socket, result, upload_config(socket))}
   end
 
   defp cleanup_pending_image(socket),
-    do: ImageUploadPipeline.cleanup_pending_image(socket, upload_config())
+    do: ImageUploadPipeline.cleanup_pending_image(socket, upload_config(socket))
 
-  defp upload_config do
+  defp upload_config(socket) do
+    group_id = socket.assigns.group.id
+
     %{
       upload_name: :group_image,
       storage: GroupImages,
-      create_pending: &create_pending_group_image/3,
+      create_pending: &create_pending_group_image(group_id, &1, &2, &3),
       cleanup: &soft_delete_pending_group_image/2
     }
   end
 
-  defp create_pending_group_image(actor, entry, metadata) do
+  defp create_pending_group_image(group_id, actor, entry, metadata) do
     Communities.create_pending_group_image(
       %{
+        group_id: group_id,
         filename: entry.client_name,
         content_type: entry.client_type,
         size_bytes: metadata.size_bytes,
@@ -168,7 +171,10 @@ defmodule HuddlzWeb.GroupLive.Edit do
                 image_url={@pending_preview_url}
                 caption="New image uploaded. Save to apply."
                 processing?={@upload_processing}
-                image_error={@image_error}
+                image_error={
+                  ImageUploadPipeline.edit_cover_error(@image_error, @form, @pending_image_id)
+                }
+                saved_image_url={GroupImages.url(@group.current_image_url)}
               >
                 <:actions>
                   <.button
@@ -190,6 +196,7 @@ defmodule HuddlzWeb.GroupLive.Edit do
                 caption="Current image. Upload a new one to replace it."
                 processing?={@upload_processing}
                 image_error={@image_error}
+                saved_image_url={GroupImages.url(@group.current_image_url)}
               >
                 <:actions>
                   <.cover_slot_button
@@ -208,6 +215,9 @@ defmodule HuddlzWeb.GroupLive.Edit do
                 image_error={@image_error}
               />
           <% end %>
+          <.button :if={@image_error} variant={:muted} type="button" phx-click="cancel_pending_image">
+            Discard replacement
+          </.button>
         </div>
 
         <div class="panel">
@@ -490,7 +500,7 @@ defmodule HuddlzWeb.GroupLive.Edit do
      socket
      |> assign(:form, form)
      |> assign(:slug_changed, slug_changed)
-     |> ImageUploadPipeline.drop_invalid_entries(upload_config())}
+     |> ImageUploadPipeline.drop_invalid_entries(upload_config(socket))}
   end
 
   @impl true
@@ -500,7 +510,7 @@ defmodule HuddlzWeb.GroupLive.Edit do
 
   @impl true
   def handle_event("cancel_pending_image", _params, socket) do
-    {:noreply, cleanup_pending_image(socket)}
+    {:noreply, socket |> cleanup_pending_image() |> assign(:image_error, nil)}
   end
 
   @impl true
@@ -551,13 +561,8 @@ defmodule HuddlzWeb.GroupLive.Edit do
   def handle_event("update_group", %{"form" => params}, socket) do
     params = inject_group_location_param(params, socket.assigns.selected_location_data)
 
-    case AshPhoenix.Form.submit(socket.assigns.form.source,
-           params: params,
-           actor: socket.assigns.current_user
-         ) do
+    case ImageUploadPipeline.submit_edit(socket, params) do
       {:ok, updated_group} ->
-        assign_pending_image_to_group(socket, updated_group)
-
         {:noreply,
          socket
          |> put_flash(
@@ -566,12 +571,20 @@ defmodule HuddlzWeb.GroupLive.Edit do
          )
          |> redirect(to: ~p"/groups/#{updated_group.slug}")}
 
+      {:upload_error, message} ->
+        {:noreply,
+         socket
+         |> ImageUploadPipeline.refresh_saved_cover(:group, :current_image_url)
+         |> put_flash(:error, message)}
+
       {:error, form} ->
-        message = form |> AshPhoenix.Form.errors(format: :plaintext) |> Enum.join(". ")
+        {cover_error, message} = ImageUploadPipeline.save_errors(form)
 
         {:noreply,
          socket
+         |> ImageUploadPipeline.refresh_saved_cover(:group, :current_image_url)
          |> assign(:form, to_form(form))
+         |> assign(:image_error, cover_error)
          |> put_flash(:error, message)
          |> FormFocus.first_error("edit-group-form")}
     end
@@ -598,22 +611,6 @@ defmodule HuddlzWeb.GroupLive.Edit do
      socket
      |> assign(:selected_location_data, nil)
      |> apply_group_location_to_form(nil)}
-  end
-
-  defp assign_pending_image_to_group(socket, group) do
-    case socket.assigns[:pending_image_id] do
-      nil ->
-        :ok
-
-      image_id ->
-        soft_delete_all_group_images(group, socket.assigns.current_user)
-
-        with {:ok, image} <- Ash.get(GroupImage, image_id) do
-          Communities.assign_group_image_to_group(image, group.id,
-            actor: socket.assigns.current_user
-          )
-        end
-    end
   end
 
   defp soft_delete_all_group_images(group, user) do

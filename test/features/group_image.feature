@@ -1,4 +1,4 @@
-@async @database @conn
+@async @database @conn @cover_images
 Feature: Group Image Management
   As a group owner
   I want to upload and manage group images
@@ -44,6 +44,23 @@ Feature: Group Image Management
     Then I should see "Group created successfully"
     And I should see "Image Test Group"
     And the group "Image Test Group" should have an image
+
+  @new_group_cover_recovery
+  Scenario: An owner can recover from an unverifiable upload while creating a group
+    Given I am signed in as "group-image-owner@example.com"
+    When I visit "/groups/new"
+    And I fill in "Group name" with "Recovered Cover Group"
+    And I fill in "Description" with "A group with a replacement cover"
+    And I select "Saint Augustine, FL, USA" as the group city in "America/New_York"
+    And I upload "test/fixtures/test_image.jpg" to "Cover image"
+    And the pending group image predates upload ownership tracking
+    And I click "Create group"
+    Then I should see "The cover could not be saved. Choose the image again."
+    And I should not see "Group created successfully"
+    When I upload "test/fixtures/test_image.jpg" to "Cover image"
+    And I click "Create group"
+    Then I should see "Group created successfully"
+    And the group "Recovered Cover Group" should have an image
 
   Scenario: A file that is not an image is refused inside the cover slot and the form stays usable
     Given I am signed in as "group-image-owner@example.com"
@@ -107,10 +124,70 @@ Feature: Group Image Management
     When I visit the edit page for group "Replace Image Group"
     Then I should see "Current image"
     When I upload "test/fixtures/test_image.jpg" to "Cover image"
-    Then I should see "New image uploaded. Save to apply."
+    Then I preview the replacement cover
     When I click "Save Changes"
     Then I should see "Group updated successfully"
-    And the group "Replace Image Group" should have an image
+    And I should see the cover I previewed
+
+  Scenario: An owner can discard an unreadable replacement and save with the original cover
+    Given a public group "Unreadable Cover Group" exists with owner "group-image-owner@example.com"
+    And the group "Unreadable Cover Group" has an image
+    And I am signed in as "group-image-owner@example.com"
+    When I visit the edit page for group "Unreadable Cover Group"
+    And I upload "test/fixtures/corrupt_image.jpg" to "Cover image"
+    And I click "Save Changes"
+    Then I should see "That file could not be read as an image."
+    And I should not see "Group updated successfully"
+    When I click "Discard replacement"
+    And I click "Save Changes"
+    Then I should see "Group updated successfully"
+    And I should see the original group cover
+
+  Scenario: A replacement that expired before saving leaves the original group cover visible
+    Given a public group "Original Cover Group" exists with owner "group-image-owner@example.com"
+    And the group "Original Cover Group" has an image
+    And I am signed in as "group-image-owner@example.com"
+    When I visit the edit page for group "Original Cover Group"
+    And I upload "test/fixtures/test_image.jpg" to "Cover image"
+    And my pending group image expires
+    And I fill in "Description" with "Changes submitted with the replacement"
+    And I click "Save Changes"
+    Then I should see "The cover could not be saved. Choose the image again."
+    And the edit form should show my saved group cover
+    And I should not see "Group updated successfully"
+    When I visit the group page for "Original Cover Group"
+    Then I should see the original group cover
+    And I should not see "Changes submitted with the replacement"
+
+  @correct_cover_edit
+  Scenario: Correcting a failed group edit keeps the chosen replacement ready to save
+    Given a public group "Corrected Cover Group" exists with owner "group-image-owner@example.com"
+    And the group "Corrected Cover Group" has an image
+    And I am signed in as "group-image-owner@example.com"
+    When I visit the edit page for group "Corrected Cover Group"
+    And I upload "test/fixtures/test_image.jpg" to "Cover image"
+    Then I preview the replacement cover
+    When I fill in "Group Name" with "X"
+    And I click "Save Changes"
+    Then the edit form should show my saved group cover
+    And I should not see "Group updated successfully"
+    When I fill in "Group Name" with "Corrected Cover Group"
+    And I click "Save Changes"
+    Then I should see "Group updated successfully"
+    And I should see the cover I previewed
+
+  @concurrent_saved_cover
+  Scenario: A failed edit shows the group cover saved since the form was opened
+    Given a public group "Concurrent Cover Group" exists with owner "group-image-owner@example.com"
+    And the group "Concurrent Cover Group" has an image
+    And I am signed in as "group-image-owner@example.com"
+    When I visit the edit page for group "Concurrent Cover Group"
+    And I upload "test/fixtures/test_image.jpg" to "Cover image"
+    And my pending group image expires
+    And the owner saves a different cover in another edit
+    And I click "Save Changes"
+    Then I should see "The cover could not be saved. Choose the image again."
+    And the edit form should show the cover from the other edit
 
   Scenario: Owner can remove existing group image
     Given a public group "Remove Image Group" exists with owner "group-image-owner@example.com"
