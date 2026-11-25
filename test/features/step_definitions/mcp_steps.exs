@@ -379,7 +379,8 @@ defmodule McpSteps do
 
   step "I connect an agent to my account with a key that has expired", context do
     member = context[:mcp_member] || generate(user())
-    agent = HuddlzWeb.McpCase.connect(member, expires_at: DateTime.add(DateTime.utc_now(), -60))
+    record = expired_api_key(member, "Test agent")
+    agent = %{key: record.__metadata__.plaintext_api_key, record: record}
     Map.merge(context, %{mcp_member: member, agent: agent})
   end
 

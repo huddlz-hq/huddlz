@@ -53,10 +53,11 @@ defmodule HuddlzWeb.ApiAuthTest do
 
     test "expired API key results in unauthenticated access", %{conn: conn} do
       target = generate(user())
+      expired = expired_api_key(target, "Old laptop")
 
       conn =
         conn
-        |> api_key_conn(target, expires_at: DateTime.utc_now() |> DateTime.add(-3600, :second))
+        |> put_req_header("authorization", "Bearer " <> expired.__metadata__.plaintext_api_key)
         |> get("/api/auth/me")
 
       assert json_response(conn, 401) == %{"error" => "Authentication required"}

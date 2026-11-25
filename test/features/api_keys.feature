@@ -18,13 +18,27 @@ Feature: API keys
     And I should see "No keys yet"
     When I click "Create key"
     And I fill in "Name" with "Claude Code on my laptop"
-    And I choose "90 days"
     And I click the "Create key" button
     Then I see my new key once
     And my new key works with the API
     When I click "Done"
     Then "Claude Code on my laptop" is listed as expiring in 90 days
     And the page no longer shows my new key
+
+  Scenario Outline: Choosing how long a key works
+    Given I am signed in as "keys637@example.com"
+    When I visit "/profile/api-keys"
+    And I click "Create key"
+    And I fill in "Name" with "Calendar sync"
+    And I choose "<expiry>"
+    And I click the "Create key" button
+    And I click "Done"
+    Then "Calendar sync" is listed as expiring in <days> days
+
+    Examples:
+      | expiry  | days |
+      | 30 days | 30   |
+      | 1 year  | 365  |
 
   Scenario: A key needs a name
     Given I am signed in as "keys637@example.com"
