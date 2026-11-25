@@ -34,13 +34,12 @@ defmodule BrowserHooks do
     # register the scenario: run its per-test setup here.
     Playwright.Test.__setup__(context)
 
-    conn =
-      Fluffy.PhoenixTest.start_session(:playwright,
-        browser_context: Map.get(context, :browser_context_opts, [])
-      )
+    session =
+      :playwright
+      |> Fluffy.start_session(browser_context: Map.get(context, :browser_context_opts, []))
+      |> answer_external_requests_locally()
 
-    answer_external_requests_locally(conn)
-    Map.put(context, :conn, conn)
+    Map.put(context, :session, session)
   end
 
   @inter_url "https://fonts.gstatic.com/s/inter/v20/inter-latin.woff2"
@@ -62,10 +61,10 @@ defmodule BrowserHooks do
   # holds the load event that visit waits for, so every external request is
   # answered locally: Inter from a fixture, so layouts measure as they do in
   # production, and anything else with an empty response.
-  defp answer_external_requests_locally(conn) do
+  defp answer_external_requests_locally(session) do
     # Playwright resolves a bare "https://**" to "https://**/", which only
     # matches URLs ending in a slash.
-    Fluffy.Playwright.route(conn.session, "https://*/**", fn route, request ->
+    Fluffy.Playwright.route(session, "https://*/**", fn route, request ->
       Playwright.Route.fulfill!(route, response(Playwright.Request.url(request)))
     end)
   end

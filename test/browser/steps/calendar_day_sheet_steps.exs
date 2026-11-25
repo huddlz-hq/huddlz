@@ -1,9 +1,11 @@
 defmodule BrowserCalendarDaySheetSteps do
   use Cucumber.StepDefinition
+  use Fluffy.Assert
 
+  import Fluffy, except: [step: 2, step: 3]
+  import Fluffy.Locator
   import Huddlz.Generator
   import Huddlz.Test.BrowserHelpers
-  import Fluffy.PhoenixTest
 
   step "I am going to {string} on the 17th of next month", %{args: [title]} = context do
     attendee = generate(user(role: :user))
@@ -25,88 +27,88 @@ defmodule BrowserCalendarDaySheetSteps do
       )
 
     Huddlz.Communities.rsvp_huddl!(huddl, actor: attendee)
+    sign_in(context.session, attendee)
 
-    Map.merge(context, %{conn: sign_in(context.conn, attendee), huddl: huddl, day: date})
+    %{huddl: huddl, day: date}
   end
 
-  step "I have opened next month's calendar in a narrow browser", context do
+  step "I have opened next month's calendar in a narrow browser", %{session: session} = context do
     %Date{year: y, month: m} = context.day
     month = "#{y}-#{String.pad_leading(to_string(m), 2, "0")}"
 
-    conn =
-      context.conn
-      |> visit("/calendar/month?month=#{month}")
-      |> assert_browser("innerWidth === 320 && !document.querySelector('#calendar-day-panel')")
+    session
+    |> visit("/calendar/month?month=#{month}")
+    |> assert(count(day_panel(), 0))
 
-    Map.put(context, :conn, conn)
+    assert %{width: 320} = Fluffy.Playwright.viewport_size(session)
+    :ok
   end
 
-  step "I tap the 17th", context do
+  step "I tap the 17th", %{session: session} = context do
     link = day_link(context.day)
 
     # Bring the day into the middle of the screen first, so there is a scroll
     # position to come back to.
-    conn =
-      assert_browser(context.conn, """
-      (() => {
-        const link = document.querySelector('#{link}');
-        if (!link) return false;
-        link.scrollIntoView({ block: 'center' });
-        sessionStorage.setItem('calendar-scroll', String(Math.round(scrollY)));
-        return scrollY > 0;
-      })()
-      """)
+    session
+    |> assert_browser("""
+    (() => {
+      const link = document.querySelector('#{link}');
+      if (!link) return false;
+      link.scrollIntoView({ block: 'center' });
+      sessionStorage.setItem('calendar-scroll', String(Math.round(scrollY)));
+      return scrollY > 0;
+    })()
+    """)
+    |> click(by_css(link))
 
-    Map.put(context, :conn, click_link(conn, link, "17"))
+    :ok
   end
 
   step "the day sheet is docked to the bottom edge and lists {string}",
-       %{args: [title]} = context do
-    conn =
-      context.conn
-      |> assert_has("#calendar-day-panel .cal-agenda-title", text: title)
-      |> assert_browser("""
-      (() => {
-        const sheet = document.querySelector('#calendar-day-panel');
-        if (!sheet) return false;
-        const rect = sheet.getBoundingClientRect();
-        return Math.abs(rect.bottom - innerHeight) < 1 &&
-          rect.left === 0 && Math.abs(rect.right - innerWidth) < 1 &&
-          rect.top > 0 &&
-          document.documentElement.scrollWidth <= innerWidth;
-      })()
-      """)
+       %{args: [title], session: session} do
+    session
+    |> assert(visible(entry(title)))
+    |> assert_browser("""
+    (() => {
+      const sheet = document.querySelector('#calendar-day-panel');
+      if (!sheet) return false;
+      const rect = sheet.getBoundingClientRect();
+      return Math.abs(rect.bottom - innerHeight) < 1 &&
+        rect.left === 0 && Math.abs(rect.right - innerWidth) < 1 &&
+        rect.top > 0 &&
+        document.documentElement.scrollWidth <= innerWidth;
+    })()
+    """)
 
-    Map.put(context, :conn, conn)
+    :ok
   end
 
-  step "I open {string} from the sheet and go back", %{args: [title]} = context do
-    conn =
-      context.conn
-      |> click_link("#calendar-day-panel .cal-agenda-entry", title)
-      |> assert_has("h1", text: title)
-      |> assert_browser("(() => { history.back(); return true; })()")
+  step "I open {string} from the sheet and go back", %{args: [title], session: session} do
+    session
+    |> click(entry(title))
+    |> assert(visible(by_role(:heading, level: 1, name: title)))
+    |> Fluffy.Playwright.go_back()
 
-    Map.put(context, :conn, conn)
+    :ok
   end
 
-  step "the calendar returns with the sheet open on the 17th where I left it", context do
-    conn =
-      context.conn
-      |> assert_has("#calendar-day-panel .cal-agenda-day-title",
-        text: Calendar.strftime(context.day, "%B %-d")
-      )
-      |> assert_browser("""
-      (() => {
-        const expected = Number(sessionStorage.getItem('calendar-scroll'));
-        return location.search.includes('day=#{Date.to_iso8601(context.day)}') &&
-          document.querySelector('#month-calendar') &&
-          Math.abs(scrollY - expected) < 2;
-      })()
-      """)
+  step "the calendar returns with the sheet open on the 17th where I left it",
+       %{session: session} = context do
+    day = Date.to_iso8601(context.day)
 
-    Map.put(context, :conn, conn)
+    session
+    |> assert(
+      text(by_role(day_panel(), :heading, level: 2), Calendar.strftime(context.day, "%B %-d"))
+    )
+    |> assert(page_url(&(URI.decode_query(&1.query || "")["day"] == day)))
+    |> assert(visible(by_css("#month-calendar")))
+    |> assert_browser("Math.abs(scrollY - Number(sessionStorage.getItem('calendar-scroll'))) < 2")
+
+    :ok
   end
+
+  defp day_panel, do: by_css("#calendar-day-panel")
+  defp entry(title), do: by_role(day_panel(), :link, name: title)
 
   defp day_of_next_month(day) do
     today = eastern_today()

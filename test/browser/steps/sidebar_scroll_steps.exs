@@ -1,14 +1,19 @@
 defmodule BrowserSidebarScrollSteps do
   use Cucumber.StepDefinition
+  use Fluffy.Assert
 
+  import Fluffy, except: [step: 2, step: 3]
+  import Fluffy.Locator
   import Huddlz.Generator
   import Huddlz.Test.BrowserHelpers
-  import Fluffy.PhoenixTest
+
+  alias Fluffy.Playwright.Keyboard
+  alias Fluffy.Playwright.Mouse
 
   @sidebar "document.querySelector('#mobile-navigation-drawer')"
 
   step "I have opened my agenda in a browser with enough groups to overflow the sidebar",
-       context do
+       %{session: session} do
     member = generate(user(role: :user))
 
     for n <- 1..14 do
@@ -17,132 +22,120 @@ defmodule BrowserSidebarScrollSteps do
       )
     end
 
-    conn =
-      context.conn
-      |> sign_in(member)
-      |> visit("/agenda")
-      |> assert_has(".sb-org-row", text: "Overflow group 14")
+    session
+    |> sign_in(member)
+    |> visit("/agenda")
+    |> assert(visible(by_css(".sb-org-row") |> filter(has_text: "Overflow group 14")))
 
-    Map.merge(context, %{conn: conn, member: member})
+    %{member: member}
   end
 
-  step "the sidebar is one scroll region", context do
-    conn =
-      assert_browser(context.conn, """
-      (() => {
-        const sidebar = #{@sidebar};
-        const nav = sidebar.querySelector('.sb-nav');
-        const scrolls = (el) => ['auto', 'scroll'].includes(getComputedStyle(el).overflowY);
-        return sidebar.scrollHeight > sidebar.clientHeight + 40 && scrolls(sidebar) && !scrolls(nav);
-      })()
-      """)
+  step "the sidebar is one scroll region", %{session: session} do
+    assert_browser(session, """
+    (() => {
+      const sidebar = #{@sidebar};
+      const nav = sidebar.querySelector('.sb-nav');
+      const scrolls = (el) => ['auto', 'scroll'].includes(getComputedStyle(el).overflowY);
+      return sidebar.scrollHeight > sidebar.clientHeight + 40 && scrolls(sidebar) && !scrolls(nav);
+    })()
+    """)
 
-    Map.put(context, :conn, conn)
+    :ok
   end
 
-  step "the brand and account rows keep their height", context do
-    conn =
-      assert_browser(context.conn, """
-      (() => {
-        const brand = document.querySelector('#mobile-navigation-drawer .sidebar-brand').getBoundingClientRect().height;
-        const user = document.querySelector('#sidebar-user').getBoundingClientRect().height;
-        return Math.round(brand) === 64 && user >= 60;
-      })()
-      """)
+  step "the brand and account rows keep their height", %{session: session} do
+    assert_browser(session, """
+    (() => {
+      const brand = document.querySelector('#mobile-navigation-drawer .sidebar-brand').getBoundingClientRect().height;
+      const user = document.querySelector('#sidebar-user').getBoundingClientRect().height;
+      return Math.round(brand) === 64 && user >= 60;
+    })()
+    """)
 
-    Map.put(context, :conn, conn)
+    :ok
   end
 
-  step "I tab through to Sign out", context do
+  step "I tab through to Sign out", %{session: session} do
     # Nothing is focused on a fresh page, so the first Tab starts from the body.
-    conn =
-      Enum.reduce_while(
-        1..60,
-        unwrap(context.conn, &Playwright.Page.press!(&1, "body", "Tab")),
-        fn _n, conn ->
-          conn = unwrap(conn, &Playwright.Page.press!(&1, ":focus", "Tab"))
+    press(session, by_css("body"), "Tab")
 
-          if evaluate(conn, "document.activeElement.id === 'sign-out-link'"),
-            do: {:halt, conn},
-            else: {:cont, conn}
-        end
-      )
+    Enum.find(1..60, fn _n ->
+      session
+      |> Keyboard.press("Tab")
+      |> Fluffy.Playwright.evaluate("document.activeElement.id === 'sign-out-link'")
+    end)
 
-    Map.put(context, :conn, assert_has(conn, "#sign-out-link:focus"))
+    assert(session, focused(by_css("#sign-out-link")))
+    :ok
   end
 
-  step "Sign out is scrolled into view", context do
-    conn =
-      assert_browser(context.conn, """
-      (() => {
-        const sidebar = #{@sidebar};
-        const box = sidebar.getBoundingClientRect();
-        const link = document.querySelector('#sign-out-link').getBoundingClientRect();
-        return sidebar.scrollTop > 0 && link.top >= box.top && link.bottom <= box.bottom;
-      })()
-      """)
+  step "Sign out is scrolled into view", %{session: session} do
+    assert_browser(session, """
+    (() => {
+      const sidebar = #{@sidebar};
+      const box = sidebar.getBoundingClientRect();
+      const link = document.querySelector('#sign-out-link').getBoundingClientRect();
+      return sidebar.scrollTop > 0 && link.top >= box.top && link.bottom <= box.bottom;
+    })()
+    """)
 
-    Map.put(context, :conn, conn)
+    :ok
   end
 
   # Real wheel events, so an intercepted wheel or a second scroll container
   # would fail here where setting scrollTop from a script would not.
-  step "I scroll up with the wheel over the account area", context do
-    Map.put(context, :conn, wheel_over(context.conn, "#sidebar-user", -2000))
+  step "I scroll up with the wheel over the account area", %{session: session} do
+    wheel_over(session, by_css("#sidebar-user"), -2000)
+    :ok
   end
 
-  step "I scroll down with the wheel over the top navigation", context do
-    Map.put(context, :conn, wheel_over(context.conn, "#mobile-navigation-drawer .sb-item", 2000))
+  step "I scroll down with the wheel over the top navigation", %{session: session} do
+    wheel_over(session, by_css("#mobile-navigation-drawer .sb-item") |> first(), 2000)
+    :ok
   end
 
-  step "the top navigation is in view and the account area has scrolled away", context do
-    conn =
-      assert_browser(context.conn, """
-      (() => {
-        const sidebar = #{@sidebar};
-        const box = sidebar.getBoundingClientRect();
-        const discover = sidebar.querySelector('.sb-item').getBoundingClientRect();
-        const user = document.querySelector('#sidebar-user').getBoundingClientRect();
-        return discover.top >= box.top && discover.bottom <= box.bottom && user.top > box.bottom;
-      })()
-      """)
+  step "the top navigation is in view and the account area has scrolled away",
+       %{session: session} do
+    assert_browser(session, """
+    (() => {
+      const sidebar = #{@sidebar};
+      const box = sidebar.getBoundingClientRect();
+      const discover = sidebar.querySelector('.sb-item').getBoundingClientRect();
+      const user = document.querySelector('#sidebar-user').getBoundingClientRect();
+      return discover.top >= box.top && discover.bottom <= box.bottom && user.top > box.bottom;
+    })()
+    """)
 
-    Map.put(context, :conn, conn)
+    :ok
   end
 
-  step "the page behind the sidebar has not moved and is still usable", context do
-    conn =
-      context.conn
-      |> assert_has("main h1", text: "Agenda")
-      |> assert_browser("""
-      window.scrollY === 0 && !document.querySelector('main').inert &&
-        document.querySelector('main').getBoundingClientRect().left > 0
-      """)
+  step "the page behind the sidebar has not moved and is still usable", %{session: session} do
+    session
+    |> assert(visible(by_role(by_css("main"), :heading, level: 1, name: "Agenda")))
+    |> assert_browser("""
+    window.scrollY === 0 && !document.querySelector('main').inert &&
+      document.querySelector('main').getBoundingClientRect().left > 0
+    """)
 
-    Map.put(context, :conn, conn)
+    :ok
   end
 
   # The pointer goes to the middle of the element's on-screen part: an element
   # partly below the fold has its centre off the page, where a wheel reaches
   # nothing.
-  defp wheel_over(conn, selector, delta_y) do
+  defp wheel_over(session, locator, delta_y) do
     %{"x" => x, "y" => y} =
-      evaluate(conn, """
-      (() => {
-        const r = document.querySelector(#{inspect(selector)}).getBoundingClientRect();
+      Fluffy.Playwright.evaluate(session, locator, """
+      element => {
+        const r = element.getBoundingClientRect();
         const top = Math.max(r.top, 0);
         const bottom = Math.min(r.bottom, window.innerHeight);
         return {x: r.left + r.width / 2, y: (top + bottom) / 2};
-      })()
+      }
       """)
 
-    unwrap(conn, fn page ->
-      mouse = Playwright.Page.mouse(page)
-      Playwright.Mouse.move!(mouse, x, y)
-      Playwright.Mouse.wheel!(mouse, 0, delta_y)
-    end)
+    session
+    |> Mouse.move(x, y)
+    |> Mouse.wheel(0, delta_y)
   end
-
-  defp evaluate(conn, expression),
-    do: unwrap_and_return(conn, &Playwright.Page.evaluate!(&1, expression))
 end

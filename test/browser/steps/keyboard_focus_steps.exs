@@ -1,62 +1,67 @@
 defmodule BrowserKeyboardFocusSteps do
   use Cucumber.StepDefinition
+  use Fluffy.Assert
 
+  import Fluffy, except: [step: 2, step: 3]
+  import Fluffy.Locator
   import Huddlz.Generator
   import Huddlz.Test.BrowserHelpers
   import Huddlz.Test.MoxHelpers
-  import Fluffy.PhoenixTest
 
-  step "I am signed in and looking at my groups in a browser", context do
+  alias Fluffy.Playwright.Keyboard
+
+  step "I am signed in and looking at my groups in a browser", %{session: session} do
     member = generate(user(role: :user))
-    conn = context.conn |> sign_in(member) |> visit("/groups")
-    Map.put(context, :conn, conn)
+    session |> sign_in(member) |> visit("/groups")
+    :ok
   end
 
   step "I open {string} in a browser", %{args: [page]} = context do
     open_page(context, page)
   end
 
-  step "I press Tab from the top of the page", context do
-    Map.put(context, :conn, unwrap(context.conn, &Playwright.Page.press!(&1, "body", "Tab")))
+  step "I press Tab from the top of the page", %{session: session} do
+    press(session, by_css("body"), "Tab")
+    :ok
   end
 
-  step "I press Tab", context do
-    Map.put(context, :conn, unwrap(context.conn, &Playwright.Page.press!(&1, ":focus", "Tab")))
+  step "I press Tab", %{session: session} do
+    Keyboard.press(session, "Tab")
+    :ok
   end
 
-  step "I follow the skip link with Enter", context do
-    Map.put(context, :conn, unwrap(context.conn, &Playwright.Page.press!(&1, ":focus", "Enter")))
+  step "I follow the skip link with Enter", %{session: session} do
+    Keyboard.press(session, "Enter")
+    :ok
   end
 
-  step "{string} has keyboard focus", %{args: [name]} = context do
-    assert_focused(context.conn, name)
-    context
+  step "{string} has keyboard focus", %{args: [name], session: session} do
+    assert_focused(session, name)
+    :ok
   end
 
-  step "{string} still has keyboard focus", %{args: [name]} = context do
+  step "{string} still has keyboard focus", %{args: [name], session: session} = context do
     # Let the save's reply land before looking.
-    context.conn |> assert_has(context.focus_form <> ":not(.phx-submit-loading)")
-    assert_focused(context.conn, name)
-    context
+    session
+    |> assert(visible(by_css(context.focus_form <> ":not(.phx-submit-loading)")))
+    |> assert_focused(name)
+
+    :ok
   end
 
-  step "keyboard focus is in the page content", context do
-    assert_browser(context.conn, "document.activeElement.id === 'main-content'")
-    context
+  step "keyboard focus is in the page content", %{session: session} do
+    assert(session, focused(by_css("#main-content")))
+    :ok
   end
 
-  step "the main content landmark has keyboard focus", context do
-    assert_browser(context.conn, "document.activeElement.matches('main, [role=main]')")
-    context
+  step "the main content landmark has keyboard focus", %{session: session} do
+    assert(session, focused(by_role(:main)))
+    :ok
   end
 
-  step "keyboard focus is still in the page content", context do
-    assert_browser(context.conn, """
-    document.activeElement !== document.getElementById('main-content') &&
-      document.getElementById('main-content').contains(document.activeElement)
-    """)
-
-    context
+  step "keyboard focus is still in the page content", %{session: session} do
+    assert(session, attached(by_css("#main-content :focus")))
+    :ok
   end
 
   step "I open the {string} form in a browser", %{args: [form]} = context do
@@ -71,93 +76,85 @@ defmodule BrowserKeyboardFocusSteps do
     save_with(context, label, value)
   end
 
-  step "I register without accepting the terms", context do
-    conn =
-      context.conn
-      |> fill_in("Email", with: "focus-#{System.unique_integer([:positive])}@example.com")
-      |> fill_in("Display Name", with: "Keyboard Person")
-      |> fill_in("Password", with: "ValidPassword123!")
-      |> fill_in("Confirm Password", with: "ValidPassword123!")
-      |> unwrap(&Playwright.Page.press!(&1, "#registration-form button[type=submit]", "Enter"))
+  step "I register without accepting the terms", %{session: session} do
+    session
+    |> fill(
+      by_label("Email", exact: true),
+      "focus-#{System.unique_integer([:positive])}@example.com"
+    )
+    |> fill(by_label("Display Name", exact: true), "Keyboard Person")
+    |> fill(by_label("Password", exact: true), "ValidPassword123!")
+    |> fill(by_label("Confirm Password", exact: true), "ValidPassword123!")
+    |> press(by_css("#registration-form button[type=submit]"), "Enter")
 
-    Map.put(context, :conn, conn)
+    :ok
   end
 
   step "I send an invitation twice to someone who already has an account", context do
     invitee = generate(user(role: :user))
     email = to_string(invitee.email)
-    context = save_with(context, "Email", email)
-    assert_has(context.conn, "#flash-info", text: "Invitation sent to #{email}.")
+    save_with(context, "Email", email)
+    assert(context.session, visible(flash_info("Invitation sent to #{email}.")))
     save_with(context, "Email", email)
   end
 
-  step "I save the new group without a location", context do
-    conn =
-      context.conn
-      |> fill_in("Group name", with: "Keyboard Review Group")
-      |> fill_in("Description", with: "A group for reviewing keyboard access")
-      |> unwrap(&Playwright.Page.press!(&1, "#group-form button[type=submit]", "Enter"))
+  step "I save the new group without a location", %{session: session} do
+    session
+    |> fill(by_label("Group name", exact: true), "Keyboard Review Group")
+    |> fill(by_label("Description", exact: true), "A group for reviewing keyboard access")
+    |> press(by_css("#group-form button[type=submit]"), "Enter")
 
-    Map.put(context, :conn, conn)
+    :ok
   end
 
-  step "I clear the group location and save", context do
-    conn =
-      context.conn
-      |> within("#group-location", &click_button(&1, "Clear"))
-      |> assert_has("#group-location-input")
-      |> unwrap(&Playwright.Page.press!(&1, "#edit-group-form button[type=submit]", "Enter"))
+  step "I clear the group location and save", %{session: session} do
+    session
+    |> click(by_role(by_css("#group-location"), :button, name: "Clear"))
+    |> assert(visible(by_css("#group-location-input")))
+    |> press(by_css("#edit-group-form button[type=submit]"), "Enter")
 
-    Map.put(context, :conn, conn)
+    :ok
   end
 
-  step "I finish with an opening line longer than 140 characters", context do
-    conn =
-      context.conn
-      |> fill_in("Opening line", with: String.duplicate("a", 141))
-      |> unwrap(&Playwright.Page.press!(&1, "#schedule-form button[type=submit]", "Enter"))
+  step "I finish with an opening line longer than 140 characters", %{session: session} do
+    session
+    |> fill(by_label("Opening line", exact: true), String.duplicate("a", 141))
+    |> press(by_css("#schedule-form button[type=submit]"), "Enter")
 
-    Map.put(context, :conn, conn)
+    :ok
   end
 
-  step "I try to record turnout without a count", context do
-    conn =
-      context.conn
-      |> click_button("#turnout-nudge button", "Add turnout")
-      |> unwrap(&Playwright.Page.press!(&1, "#turnout-form-nudge button[type=submit]", "Enter"))
+  step "I try to record turnout without a count", %{session: session} do
+    session
+    |> click(by_role(by_css("#turnout-nudge"), :button, name: "Add turnout"))
+    |> press(by_css("#turnout-form-nudge button[type=submit]"), "Enter")
 
-    Map.put(context, :conn, conn)
+    :ok
   end
 
-  step "the agreement has keyboard focus and describes what is wrong", context do
-    assert_focused(context.conn, Huddlz.Legal.acceptance_text())
-
-    assert_browser(context.conn, """
-    (() => {
-      const field = document.activeElement;
-      return field.getAttribute('aria-invalid') === 'true' &&
-        (field.getAttribute('aria-describedby') || '').split(/\\s+/).some(id =>
-          document.getElementById(id)?.textContent.includes('accept'));
-    })()
+  step "the agreement has keyboard focus and describes what is wrong", %{session: session} do
+    session
+    |> assert_focused(Huddlz.Legal.acceptance_text())
+    |> assert(attribute(focused_field(), "aria-invalid", "true"))
+    |> assert_browser("""
+    (document.activeElement.getAttribute('aria-describedby') || '').split(/\\s+/).some(id =>
+      document.getElementById(id)?.textContent.includes('accept'))
     """)
 
-    context
+    :ok
   end
 
-  step "{string} describes what is wrong with it", %{args: [name]} = context do
-    assert_browser(context.conn, """
-    (() => {
-      const field = document.activeElement;
-      const described = (field.getAttribute('aria-describedby') || '').split(/\\s+/)
-        .map(id => document.getElementById(id))
-        .filter(element => element?.getAttribute('role') === 'alert');
-      return #{label_matches("field")} === #{Jason.encode!(name)} &&
-        field.getAttribute('aria-invalid') === 'true' &&
-        described.some(element => element.textContent.trim() !== '');
-    })()
+  step "{string} describes what is wrong with it", %{args: [name], session: session} do
+    session
+    |> assert_focused(name)
+    |> assert(attribute(focused_field(), "aria-invalid", "true"))
+    |> assert_browser("""
+    (document.activeElement.getAttribute('aria-describedby') || '').split(/\\s+/)
+      .map(id => document.getElementById(id))
+      .some(element => element?.getAttribute('role') === 'alert' && element.textContent.trim() !== '')
     """)
 
-    context
+    :ok
   end
 
   defp open_page(context, "the home page"), do: visit_signed_out(context, "/")
@@ -165,7 +162,8 @@ defmodule BrowserKeyboardFocusSteps do
   defp open_page(context, "discover"), do: visit_signed_out(context, "/discover")
 
   defp visit_signed_out(context, path) do
-    Map.put(context, :conn, context.conn |> visit(path))
+    visit(context.session, path)
+    :ok
   end
 
   defp open_form(context, "sign in"),
@@ -220,9 +218,9 @@ defmodule BrowserKeyboardFocusSteps do
     {owner, group} = owned_group()
     generate(group_location(group_id: group.id, actor: owner))
 
-    context = signed_in_form(context, owner, "/groups/#{group.slug}/locations", nil)
-    conn = click_button(context.conn, "Edit")
-    Map.merge(context, %{conn: conn, focus_form: "#location-rename-form"})
+    signed_in_form(context, owner, "/groups/#{group.slug}/locations", nil)
+    click(context.session, by_role(:button, name: "Edit", exact: true))
+    %{focus_form: "#location-rename-form"}
   end
 
   defp open_form(context, "new address") do
@@ -230,19 +228,20 @@ defmodule BrowserKeyboardFocusSteps do
     stub_places_autocomplete(%{"saint" => [:saint_augustine]})
     stub_place_details(:defaults)
 
-    context =
+    form =
       signed_in_form(context, owner, "/groups/#{group.slug}/locations/new", "#new-location-form")
 
-    conn =
-      context.conn
-      |> fill_in("Search for an address", with: "saint")
-      |> assert_has("[role='option']")
-      |> unwrap(&Playwright.Page.press!(&1, "#modal-address-autocomplete-input", "ArrowDown"))
-      |> assert_has("#modal-address-autocomplete[data-has-highlight='true']")
-      |> unwrap(&Playwright.Page.press!(&1, "#modal-address-autocomplete-input", "Enter"))
-      |> assert_has("#new-location-form button[type=submit]:not([disabled])")
+    search = by_label("Search for an address", exact: true)
 
-    Map.put(context, :conn, conn)
+    context.session
+    |> fill(search, "saint")
+    |> assert(visible(by_role(:option) |> first()))
+    |> press(search, "ArrowDown")
+    |> assert(attribute(by_css("#modal-address-autocomplete"), "data-has-highlight", "true"))
+    |> press(search, "Enter")
+    |> assert(enabled(by_css("#new-location-form button[type=submit]")))
+
+    form
   end
 
   defp open_form(context, "invitation") do
@@ -263,12 +262,13 @@ defmodule BrowserKeyboardFocusSteps do
   end
 
   defp signed_out_form(context, path, form) do
-    context |> visit_signed_out(path) |> Map.put(:focus_form, form)
+    visit(context.session, path)
+    %{focus_form: form}
   end
 
   defp signed_in_form(context, member, path, form, submit \\ nil) do
-    conn = context.conn |> sign_in(member) |> visit(path)
-    Map.merge(context, %{conn: conn, focus_form: form, focus_submit: submit})
+    context.session |> sign_in(member) |> visit(path)
+    %{focus_form: form, focus_submit: submit}
   end
 
   # Clear or set the field, then press Enter on the form's submit button,
@@ -276,29 +276,17 @@ defmodule BrowserKeyboardFocusSteps do
   defp save_with(context, label, value) do
     submit = context[:focus_submit] || context.focus_form <> " button[type=submit]"
 
-    conn =
-      context.conn
-      |> within(context.focus_form, &fill_in(&1, label, with: value))
-      |> unwrap(&Playwright.Page.press!(&1, submit, "Enter"))
+    context.session
+    |> fill(by_label(by_css(context.focus_form), label, exact: true), value)
+    |> press(by_css(submit), "Enter")
 
-    Map.put(context, :conn, conn)
+    :ok
   end
 
-  defp assert_focused(conn, name) do
-    assert_browser(conn, """
-    (() => {
-      const field = document.activeElement;
-      return #{label_matches("field")} === #{Jason.encode!(name)};
-    })()
-    """)
-  end
+  defp flash_info(text), do: by_css("#flash-info") |> filter(has_text: text)
 
-  # The accessible name the step reads: a control's label, else its
-  # aria-label, else its own text.
-  defp label_matches(var) do
-    """
-    ((#{var}.labels && #{var}.labels[0]?.textContent) ||
-      #{var}.getAttribute('aria-label') || #{var}.textContent || '').replace(/\\s+/g, ' ').trim()
-    """
-  end
+  defp focused_field, do: by_css(":focus")
+
+  # A control's accessible name: its label, else its aria-label, else its own text.
+  defp assert_focused(session, name), do: assert(session, accessible_name(focused_field(), name))
 end

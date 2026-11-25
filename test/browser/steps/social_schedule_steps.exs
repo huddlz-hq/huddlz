@@ -1,148 +1,161 @@
 defmodule BrowserSocialScheduleSteps do
   use Cucumber.StepDefinition
+  use Fluffy.Assert
 
+  import Fluffy, except: [step: 2, step: 3]
+  import Fluffy.Locator
   import Huddlz.Generator
   import Huddlz.Test.BrowserHelpers
-  import Fluffy.PhoenixTest
 
-  step "I am editing a social connection as its owner", context do
-    {conn, group, _place} = connected_place(context.conn)
+  alias Fluffy.Playwright
 
-    conn =
-      conn
-      |> visit("/organize/#{group.slug}/social")
-      |> click_button("Edit")
-      |> assert_has("#social-post-preview", text: "Morning-of post preview")
-      # The sheet moves focus to its first control again two animation
-      # frames after mounting; wait for it to finish opening before typing.
-      |> assert_browser(
-        "getComputedStyle(document.querySelector('#schedule-sheet-container')).opacity === '1'"
-      )
+  step "I am editing a social connection as its owner", %{session: session} do
+    {session, group, _place} = connected_place(session)
 
-    Map.put(context, :conn, conn)
+    session
+    |> visit("/organize/#{group.slug}/social")
+    |> click(edit())
+    |> assert(visible(preview() |> filter(has_text: "Morning-of post preview")))
+    # The sheet moves focus to its first control again two animation
+    # frames after mounting; wait for it to finish opening before typing.
+    |> assert(css(sheet(), "opacity", "1"))
+
+    :ok
   end
 
-  step "I ask to remove the place and cancel", context do
-    conn = context.conn |> click_button("Remove") |> click_button("Cancel")
-    Map.put(context, :conn, conn)
+  step "I ask to remove the place and cancel", %{session: session} do
+    session
+    |> click(by_role(:button, name: "Remove", exact: true))
+    |> click(by_role(:button, name: "Cancel", exact: true))
+
+    :ok
   end
 
-  step "I can continue editing its schedule", context do
-    conn =
-      context.conn
-      |> assert_has("#schedule-form")
-      |> fill_in("Opening line", with: "Still connected!")
-      |> assert_has("#social-post-preview", text: "Still connected!")
+  step "I can continue editing its schedule", %{session: session} do
+    session
+    |> assert(visible(by_css("#schedule-form")))
+    |> fill(opening_line(), "Still connected!")
+    |> assert(visible(preview() |> filter(has_text: "Still connected!")))
 
-    Map.put(context, :conn, conn)
+    :ok
   end
 
-  step "I ask to remove the place again and confirm", context do
-    conn = context.conn |> click_button("Remove") |> click_button("Remove connection")
-    Map.put(context, :conn, conn)
+  step "I ask to remove the place again and confirm", %{session: session} do
+    session
+    |> click(by_role(:button, name: "Remove", exact: true))
+    |> click(by_role(:button, name: "Remove connection", exact: true))
+
+    :ok
   end
 
-  step "Social lists no connected places", context do
-    context.conn
-    |> assert_has("#social-connections", text: "Nothing connected yet")
-    |> reload_page()
-    |> assert_has("#social-connections", text: "Nothing connected yet")
+  step "Social lists no connected places", %{session: session} do
+    empty_list = by_css("#social-connections") |> filter(has_text: "Nothing connected yet")
 
-    context
+    session
+    |> assert(visible(empty_list))
+    |> reload()
+    |> assert(visible(empty_list))
+
+    :ok
   end
 
-  step "I choose morning-of posting with Space", context do
-    conn = unwrap(context.conn, &Playwright.Page.press!(&1, "#moments_morning_of", "Space"))
-    Map.put(context, :conn, conn)
+  step "I choose morning-of posting with Space", %{session: session} do
+    press(session, morning_of(), "Space")
+    :ok
   end
 
-  step "the social schedule choice stays focused and checked", context do
-    assert_has(context.conn, "#moments_morning_of:checked:focus[aria-checked='true']")
-    context
+  step "the social schedule choice stays focused and checked", %{session: session} do
+    session
+    |> assert(checked(morning_of()))
+    |> assert(focused(morning_of()))
+    |> assert(attribute(morning_of(), "aria-checked", "true"))
+
+    :ok
   end
 
-  step "I enter an opening line and finish immediately", context do
-    conn =
-      context.conn
-      |> fill_in("Opening line", with: "See you tonight!")
-      |> click_button("Done")
-      |> refute_has("#schedule-sheet [role='dialog']")
+  step "I enter an opening line and finish immediately", %{session: session} do
+    session
+    |> fill(opening_line(), "See you tonight!")
+    |> click(by_role(:button, name: "Done", exact: true))
+    |> assert(count(by_role(by_css("#schedule-sheet"), :dialog), 0))
 
-    Map.put(context, :conn, conn)
+    :ok
   end
 
-  step "reopening the social schedule shows both changes", context do
-    conn =
-      context.conn
-      |> click_button("Edit")
-      |> assert_has("#moments_morning_of:checked")
-      |> assert_has("#social-post-preview", text: "See you tonight!")
-      |> assert_browser(
-        "getComputedStyle(document.querySelector('#schedule-sheet-container')).opacity === '1'"
-      )
-      |> unwrap(&Playwright.Page.press!(&1, "#opening-line", "Tab"))
-      |> assert_has("#remove-connection:focus")
-      |> assert_browser("""
-      Array.from(document.querySelectorAll('#schedule-form button, #schedule-form a')).every(control => {
-        const bounds = control.getBoundingClientRect();
-        return bounds.left >= 0 && bounds.right <= window.innerWidth;
-      })
-      """)
+  step "reopening the social schedule shows both changes", %{session: session} do
+    session
+    |> click(edit())
+    |> assert(checked(morning_of()))
+    |> assert(visible(preview() |> filter(has_text: "See you tonight!")))
+    |> assert(css(sheet(), "opacity", "1"))
+    |> press(opening_line(), "Tab")
+    |> assert(focused(by_role(:button, name: "Remove", exact: true)))
+    |> assert_browser("""
+    Array.from(document.querySelectorAll('#schedule-form button, #schedule-form a')).every(control => {
+      const bounds = control.getBoundingClientRect();
+      return bounds.left >= 0 && bounds.right <= window.innerWidth;
+    })
+    """)
 
-    Map.put(context, :conn, conn)
+    :ok
   end
 
-  step "I have returned to Social after connecting a place", context do
-    {conn, group, place} = connected_place(context.conn)
+  step "I have returned to Social after connecting a place", %{session: session} = context do
+    {session, group, place} = connected_place(session)
+    schedule = schedule_dialog() |> filter(has_text: place.channel_name)
 
-    conn =
-      conn
-      |> visit("/organize/#{group.slug}/social?connected=#{place.id}")
-      |> assert_has("#schedule-sheet", text: place.channel_name)
-      |> reload_page()
-      |> assert_has("body .phx-connected")
-      |> assert_has("#schedule-sheet", text: place.channel_name)
+    session
+    |> visit("/organize/#{group.slug}/social?connected=#{place.id}")
+    |> assert(visible(schedule))
+    |> reload()
+    |> assert(visible(schedule))
 
-    Map.merge(context, %{conn: conn, place: place})
+    Map.put(context, :place, place)
   end
 
-  step "I finish its schedule and open Members", context do
-    conn =
-      context.conn
-      |> click_button("Start posting")
-      |> assert_browser("location.search === ''")
-      |> refute_has("#schedule-sheet [role='dialog']")
-      |> click_link("Members")
-      |> assert_has("h1", text: "Members")
+  step "I finish its schedule and open Members", %{session: session} do
+    session
+    |> click(by_role(:button, name: "Start posting", exact: true))
+    |> assert_browser("location.search === ''")
+    |> assert(count(schedule_dialog(), 0))
+    |> click(by_role(:link, name: "Members", exact: true))
+    |> assert(visible(by_role(:heading, name: "Members", level: 1)))
 
-    Map.put(context, :conn, conn)
+    :ok
   end
 
-  step "Back returns to Social and back again reopens the connected place's schedule", context do
-    conn =
-      context.conn
-      |> unwrap(&Playwright.Page.evaluate!(&1, "requestAnimationFrame(() => history.back())"))
-      |> assert_has("a[aria-current='page']", text: "Social")
-      |> refute_has("#schedule-sheet [role='dialog']")
-      |> unwrap(&Playwright.Page.evaluate!(&1, "requestAnimationFrame(() => history.back())"))
-      |> assert_has("#schedule-sheet", text: context.place.channel_name)
+  step "Back returns to Social and back again reopens the connected place's schedule",
+       %{session: session, place: place} do
+    session
+    |> Playwright.go_back()
+    |> assert(attribute(by_role(:link, name: "Social", exact: true), "aria-current", "page"))
+    |> assert(count(schedule_dialog(), 0))
+    |> Playwright.go_back()
+    |> assert(visible(schedule_dialog() |> filter(has_text: place.channel_name)))
 
-    Map.put(context, :conn, conn)
+    :ok
   end
 
-  step "Forward returns to Social with the schedule closed", context do
-    context.conn
-    |> unwrap(&Playwright.Page.evaluate!(&1, "requestAnimationFrame(() => history.forward())"))
-    |> refute_has("#schedule-sheet [role='dialog']")
-    |> assert_has("h1", text: "Social")
+  step "Forward returns to Social with the schedule closed", %{session: session} do
+    session
+    |> Playwright.go_forward()
+    |> assert(count(schedule_dialog(), 0))
+    |> assert(visible(by_role(:heading, name: "Social", level: 1)))
 
-    context
+    :ok
   end
 
-  defp connected_place(conn) do
+  defp connected_place(session) do
     owner = generate(user(role: :user))
     group = generate(group(owner_id: owner.id, is_public: true, actor: owner))
     place = generate(social_connection(group_id: group.id, actor: owner))
-    {sign_in(conn, owner), group, place}
+    {sign_in(session, owner), group, place}
   end
+
+  defp edit, do: by_role(:button, name: "Edit", exact: true)
+  defp preview, do: by_css("#social-post-preview")
+  defp sheet, do: by_css("#schedule-sheet-container")
+  defp schedule_dialog, do: by_role(by_css("#schedule-sheet"), :dialog)
+  defp morning_of, do: by_role(:switch, name: "The morning of", exact: true)
+  defp opening_line, do: by_label("Opening line", exact: true)
 end

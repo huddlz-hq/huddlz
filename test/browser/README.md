@@ -58,4 +58,4 @@ Screenshots and traces are captured for every attempt under `_build/browser/test
 MIX_ENV=test mix playwright.cli show-trace _build/browser/test-results/<scenario>/trace.zip
 ```
 
-Assertions wait for observable browser state instead of sleeping. `visit` waits for the LiveView to connect, so steps don't assert `.phx-connected` after it. JavaScript used in steps observes layout, image loading, or native form submissions; it does not implement the application behavior. The failed-cover scenario intentionally requests a missing image, so its expected 404 is not a suite-wide console failure.
+Steps use Fluffy's own locators, actions and assertions. They are strict: a locator that matches more than one element fails the step instead of acting on the first. Assertions wait for observable browser state instead of sleeping. `visit` waits for the LiveView to connect, so steps don't assert `.phx-connected` after it. JavaScript used in steps observes layout, image loading, or native form submissions; it does not implement the application behavior. The failed-cover scenario intentionally requests a missing image, so its expected 404 is not a suite-wide console failure.

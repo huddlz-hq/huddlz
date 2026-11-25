@@ -1,11 +1,13 @@
 defmodule BrowserMobileRsvpSteps do
   use Cucumber.StepDefinition
+  use Fluffy.Assert
 
+  import Fluffy, except: [step: 2, step: 3]
+  import Fluffy.Locator
   import Huddlz.Generator
   import Huddlz.Test.BrowserHelpers
-  import Fluffy.PhoenixTest
 
-  step "I am viewing an upcoming huddl in a narrow browser", context do
+  step "I am viewing an upcoming huddl in a narrow browser", %{session: session} do
     owner = generate(user(display_name: "Sam Rivera"))
     member = generate(user(display_name: "Ada Park"))
     group = generate(group(owner_id: owner.id, actor: owner))
@@ -22,16 +24,15 @@ defmodule BrowserMobileRsvpSteps do
         )
       )
 
-    conn =
-      context.conn
-      |> sign_in(member)
-      |> visit("/groups/#{group.slug}/huddlz/#{huddl.id}")
+    session
+    |> sign_in(member)
+    |> visit("/groups/#{group.slug}/huddlz/#{huddl.id}")
 
-    Map.merge(context, %{conn: conn, huddl: huddl})
+    %{huddl: huddl}
   end
 
-  step "the RSVP button is docked to the bottom edge before I scroll", context do
-    assert_browser(context.conn, """
+  step "the RSVP button is docked to the bottom edge before I scroll", %{session: session} do
+    assert_browser(session, """
     (() => {
       const dock = document.querySelector('.rsvp-state[data-dock]');
       if (!dock) return false;
@@ -43,22 +44,22 @@ defmodule BrowserMobileRsvpSteps do
     })()
     """)
 
-    context
+    :ok
   end
 
-  step "I scroll to the end of the page", context do
-    assert_browser(context.conn, """
+  step "I scroll to the end of the page", %{session: session} do
+    assert_browser(session, """
     (() => {
       window.scrollTo(0, document.documentElement.scrollHeight);
       return window.scrollY > 0;
     })()
     """)
 
-    context
+    :ok
   end
 
-  step "the dock still sits on the bottom edge and covers nothing", context do
-    assert_browser(context.conn, """
+  step "the dock still sits on the bottom edge and covers nothing", %{session: session} do
+    assert_browser(session, """
     (() => {
       const dock = document.querySelector('.rsvp-state[data-dock]').getBoundingClientRect();
       const last = document.querySelector('#huddl-group').getBoundingClientRect();
@@ -66,30 +67,29 @@ defmodule BrowserMobileRsvpSteps do
     })()
     """)
 
-    context
+    :ok
   end
 
-  step "I RSVP from the dock", context do
-    Map.put(
-      context,
-      :conn,
-      click_button(context.conn, ".rsvp-state[data-dock]", "RSVP to this huddl")
+  step "I RSVP from the dock", %{session: session} do
+    click(session, by_role(dock(), :button, name: "RSVP to this huddl"))
+    :ok
+  end
+
+  step "the dock shows I am attending and offers to cancel", %{session: session} do
+    session
+    |> assert(
+      visible(by_css(dock(), ".rsvp-banner.cyan") |> filter(has_text: "You're attending"))
     )
-  end
-
-  step "the dock shows I am attending and offers to cancel", context do
-    conn =
-      context.conn
-      |> assert_has(".rsvp-state[data-dock] .rsvp-banner.cyan", text: "You're attending")
-      |> assert_has(".rsvp-state[data-dock] button", text: "Cancel RSVP")
-
-    assert_browser(conn, """
+    |> assert(visible(by_role(dock(), :button, name: "Cancel RSVP")))
+    |> assert_browser("""
     (() => {
       const dock = document.querySelector('.rsvp-state[data-dock]').getBoundingClientRect();
       return Math.abs(dock.bottom - innerHeight) < 1 && document.documentElement.scrollWidth <= innerWidth;
     })()
     """)
 
-    Map.put(context, :conn, conn)
+    :ok
   end
+
+  defp dock, do: by_css(".rsvp-state[data-dock]")
 end

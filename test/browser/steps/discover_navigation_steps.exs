@@ -1,11 +1,13 @@
 defmodule BrowserDiscoverNavigationSteps do
   use Cucumber.StepDefinition
+  use Fluffy.Assert
 
+  import Fluffy, except: [step: 2, step: 3]
+  import Fluffy.Locator
   import Huddlz.Generator
   import Huddlz.Test.BrowserHelpers
-  import Fluffy.PhoenixTest
 
-  step "a public huddl titled {string} is upcoming", %{args: [title]} = context do
+  step "a public huddl titled {string} is upcoming", %{args: [title]} do
     host = generate(user(role: :user))
     group = generate(group(is_public: true, owner_id: host.id, actor: host))
 
@@ -20,37 +22,33 @@ defmodule BrowserDiscoverNavigationSteps do
         )
       )
 
-    Map.put(context, :huddl, huddl)
+    %{huddl: huddl}
   end
 
-  step "I have opened my agenda in a browser", context do
+  step "I have opened my agenda in a browser", %{session: session} do
     member = generate(user(role: :user))
 
-    conn =
-      context.conn
-      |> sign_in(member)
-      |> visit("/agenda")
-      |> assert_has("h1", text: "Agenda")
+    session
+    |> sign_in(member)
+    |> visit("/agenda")
+    |> assert(visible(by_role(:heading, level: 1, name: "Agenda")))
 
-    Map.merge(context, %{conn: conn, member: member})
+    %{member: member}
   end
 
-  step "I follow Discover in the sidebar", context do
-    unwrap(context.conn, &Playwright.Page.evaluate!(&1, "window.__huddlzPage = 'kept'"))
-
-    conn = click_link(context.conn, ".sb-nav a", "Discover")
-
-    Map.put(context, :conn, conn)
+  step "I follow Discover in the sidebar", %{session: session} do
+    Fluffy.Playwright.evaluate(session, "window.__huddlzPage = 'kept'")
+    click(session, by_role(by_css(".sb-nav"), :link, name: "Discover"))
+    :ok
   end
 
-  step "the discover results arrive without a page load", context do
-    conn =
-      context.conn
-      |> assert_has("h1", text: "Browse huddlz")
-      |> assert_has("h3.card-title", text: context.huddl.title)
-      |> refute_has(".grid-skeleton")
-      |> assert_browser("window.__huddlzPage === 'kept'")
+  step "the discover results arrive without a page load", %{session: session} = context do
+    session
+    |> assert(visible(by_role(:heading, level: 1, name: "Browse huddlz")))
+    |> assert(visible(by_role(:heading, level: 3, name: context.huddl.title)))
+    |> assert(count(by_css(".grid-skeleton") |> filter(visible: true), 0))
+    |> assert_browser("window.__huddlzPage === 'kept'")
 
-    Map.put(context, :conn, conn)
+    :ok
   end
 end

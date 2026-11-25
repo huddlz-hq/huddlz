@@ -1,59 +1,54 @@
 defmodule BrowserPictureSteps do
   use Cucumber.StepDefinition
+  use Fluffy.Assert
 
+  import Fluffy, except: [step: 2, step: 3]
+  import Fluffy.Locator
   import Huddlz.Test.BrowserHelpers
-  import Fluffy.PhoenixTest
 
-  step "I upload a profile picture through the file input", context do
+  alias Fluffy.Playwright.Keyboard
+
+  step "I upload a profile picture through the file input", %{session: session} do
     # The app intentionally hides its file input behind a visible upload label.
-    unwrap(
-      context.conn,
-      &Playwright.Page.set_input_files!(&1, "#avatar-form input[type=file]", [
-        Path.expand("test/fixtures/test_image.jpg")
-      ])
-    )
-
     # The crop sheet opens first; the picture is used as it is.
-    conn =
-      context.conn
-      |> assert_has("#avatar-upload-crop[open]")
-      |> click_button("Use photo")
-      |> assert_has("#open-remove-avatar-dialog")
+    session
+    |> set_input_files(by_label("Upload a photo…", exact: true), "test/fixtures/test_image.jpg")
+    |> assert(visible(by_css("#avatar-upload-crop[open]")))
+    |> click(by_role(:button, name: "Use photo"))
+    |> assert(visible(remove()))
 
-    Map.put(context, :conn, conn)
+    :ok
   end
 
-  step "my uploaded picture is decoded and displayed by the browser", context do
-    assert_browser(context.conn, """
+  step "my uploaded picture is decoded and displayed by the browser", %{session: session} do
+    assert_browser(session, """
     (() => {
       const image = document.querySelector('img.big-avatar');
       return image && image.complete && image.naturalWidth > 0 && image.getBoundingClientRect().width > 0;
     })()
     """)
 
-    context
+    :ok
   end
 
-  step "I open the remove picture confirmation with the keyboard", context do
-    conn =
-      context.conn
-      |> unwrap(&Playwright.Page.press!(&1, "#open-remove-avatar-dialog", "Enter"))
-      |> assert_has("#cancel-remove-avatar:focus")
+  step "I open the remove picture confirmation with the keyboard", %{session: session} do
+    session
+    |> press(remove(), "Enter")
+    |> assert(focused(keep()))
 
-    Map.put(context, :conn, conn)
+    :ok
   end
 
-  step "I open the remove picture confirmation by clicking Remove", context do
-    conn =
-      context.conn
-      |> click_button("Remove")
-      |> assert_has("#remove-avatar-dialog [role='dialog']")
+  step "I open the remove picture confirmation by clicking Remove", %{session: session} do
+    session
+    |> click(remove())
+    |> assert(visible(dialog()))
 
-    Map.put(context, :conn, conn)
+    :ok
   end
 
-  step "the Remove picture button is above the backdrop", context do
-    assert_browser(context.conn, """
+  step "the Remove picture button is above the backdrop", %{session: session} do
+    assert_browser(session, """
     (() => {
       const button = document.querySelector('#confirm-remove-avatar');
       if (!button) return false;
@@ -65,49 +60,56 @@ defmodule BrowserPictureSteps do
     })()
     """)
 
-    context
+    :ok
   end
 
-  step "I confirm picture removal by clicking Remove picture", context do
-    Map.put(context, :conn, click_button(context.conn, "Remove picture"))
+  step "I confirm picture removal by clicking Remove picture", %{session: session} do
+    click(session, confirm())
+    :ok
   end
 
-  step "my profile picture is replaced by initials", context do
-    conn =
-      context.conn
-      |> refute_has("#remove-avatar-dialog [role='dialog']")
-      |> assert_has("[role='alert']", text: "Profile picture removed")
-      |> refute_has("img.big-avatar")
-      |> assert_has("main .big-avatar", text: "BM")
+  step "my profile picture is replaced by initials", %{session: session} do
+    session
+    |> assert(count(dialog(), 0))
+    |> assert(visible(by_role(:alert) |> filter(has_text: "Profile picture removed")))
+    |> assert(count(by_css("img.big-avatar"), 0))
+    |> assert(visible(by_css("main .big-avatar") |> filter(has_text: "BM")))
 
-    Map.put(context, :conn, conn)
+    :ok
   end
 
-  step "Tab stays inside the confirmation dialog", context do
-    conn =
-      context.conn
-      |> unwrap(&Playwright.Page.press!(&1, ":focus", "Tab"))
-      |> assert_has("#confirm-remove-avatar:focus")
-      |> unwrap(&Playwright.Page.press!(&1, ":focus", "Tab"))
-      |> assert_has("#remove-avatar-dialog button[aria-label='close']:focus")
-      |> unwrap(&Playwright.Page.press!(&1, ":focus", "Tab"))
-      |> assert_has("#cancel-remove-avatar:focus")
-      |> unwrap(&Playwright.Page.press!(&1, ":focus", "Shift+Tab"))
-      |> assert_has("#remove-avatar-dialog button[aria-label='close']:focus")
+  step "Tab stays inside the confirmation dialog", %{session: session} do
+    close = by_role(by_css("#remove-avatar-dialog"), :button, name: "close", exact: true)
 
-    Map.put(context, :conn, conn)
+    session
+    |> Keyboard.press("Tab")
+    |> assert(focused(confirm()))
+    |> Keyboard.press("Tab")
+    |> assert(focused(close))
+    |> Keyboard.press("Tab")
+    |> assert(focused(keep()))
+    |> Keyboard.press("Shift+Tab")
+    |> assert(focused(close))
+
+    :ok
   end
 
-  step "I dismiss the confirmation with Escape", context do
-    Map.put(context, :conn, unwrap(context.conn, &Playwright.Page.press!(&1, ":focus", "Escape")))
+  step "I dismiss the confirmation with Escape", %{session: session} do
+    Keyboard.press(session, "Escape")
+    :ok
   end
 
-  step "focus returns to Remove and my picture remains", context do
-    context.conn
-    |> refute_has("#remove-avatar-dialog [role='dialog']")
-    |> assert_has("#open-remove-avatar-dialog:focus")
-    |> assert_has("img.big-avatar")
+  step "focus returns to Remove and my picture remains", %{session: session} do
+    session
+    |> assert(count(dialog(), 0))
+    |> assert(focused(remove()))
+    |> assert(visible(by_css("img.big-avatar")))
 
-    context
+    :ok
   end
+
+  defp remove, do: by_role(:button, name: "Remove", exact: true)
+  defp dialog, do: by_role(by_css("#remove-avatar-dialog"), :dialog)
+  defp keep, do: by_role(dialog(), :button, name: "Keep picture")
+  defp confirm, do: by_role(dialog(), :button, name: "Remove picture")
 end
