@@ -125,21 +125,21 @@ defmodule Huddlz.Communities.HuddlRsvpConcurrencyTest do
       Repo.transact(fn ->
         Communities.cancel_rsvp_huddl!(ctx.huddl, actor: cancelling)
 
-        task =
-          Task.async(fn ->
-            Sandbox.unboxed_run(Repo, fn ->
-              %{rows: [[pid]]} = Repo.query!("SELECT pg_backend_pid()")
-              send(parent, {:suspending, pid})
-              Accounts.suspend_user(ctx.leaving, "Spam", actor: ctx.admin)
-            end)
-          end)
-
+        task = Task.async(fn -> suspend_on_own_connection(ctx, parent) end)
         assert_receive {:suspending, pid}, 5_000
         wait_for_lock(pid, System.monotonic_time(:millisecond) + 5_000)
         {:ok, task}
       end)
 
     assert {:ok, %{suspended_at: %DateTime{}}} = Task.await(suspension, 10_000)
+  end
+
+  defp suspend_on_own_connection(ctx, parent) do
+    Sandbox.unboxed_run(Repo, fn ->
+      %{rows: [[pid]]} = Repo.query!("SELECT pg_backend_pid()")
+      send(parent, {:suspending, pid})
+      Accounts.suspend_user(ctx.leaving, "Spam", actor: ctx.admin)
+    end)
   end
 
   defp wait_for_lock(pid, deadline) do
@@ -163,17 +163,17 @@ defmodule Huddlz.Communities.HuddlRsvpConcurrencyTest do
   defp cleanup_on_exit(users) do
     ids = Enum.map(users, & &1.id)
 
-    on_exit(fn ->
-      Sandbox.unboxed_run(Repo, fn ->
-        for resource <- Audit.version_resources() do
-          Repo.delete_all(from version in resource, where: version.actor_id in ^ids)
-        end
+    on_exit(fn -> Sandbox.unboxed_run(Repo, fn -> delete_fixtures(ids) end) end)
+  end
 
-        Repo.query!("DELETE FROM oban_jobs WHERE args->>'user_id' = ANY($1)", [ids])
-        uuids = Enum.map(ids, &Ecto.UUID.dump!/1)
-        Repo.query!("DELETE FROM groups WHERE owner_id = ANY($1::uuid[])", [uuids])
-        Repo.query!("DELETE FROM users WHERE id = ANY($1::uuid[])", [uuids])
-      end)
-    end)
+  defp delete_fixtures(ids) do
+    for resource <- Audit.version_resources() do
+      Repo.delete_all(from version in resource, where: version.actor_id in ^ids)
+    end
+
+    Repo.query!("DELETE FROM oban_jobs WHERE args->>'user_id' = ANY($1)", [ids])
+    uuids = Enum.map(ids, &Ecto.UUID.dump!/1)
+    Repo.query!("DELETE FROM groups WHERE owner_id = ANY($1::uuid[])", [uuids])
+    Repo.query!("DELETE FROM users WHERE id = ANY($1::uuid[])", [uuids])
   end
 end
