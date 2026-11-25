@@ -140,7 +140,7 @@ defmodule Huddlz.MixProject do
       {:dns_cluster, "~> 0.3"},
       {:bandit, "~> 1.5"},
       {:corsica, "~> 2.1"},
-      {:cucumber, "~> 1.2", only: [:dev, :test]},
+      {:cucumber, github: "ftes/cucumber", branch: "playwright", only: [:dev, :test]},
       {:mox, "~> 1.0", only: :test},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:phoenix_test, "~> 0.12", only: :test},
