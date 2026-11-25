@@ -73,6 +73,7 @@ defmodule AccountDeletionSteps do
         starts_at: starts_at,
         ends_at: ends_at,
         event_type: :virtual,
+        virtual_link: "https://example.com/draft",
         lifecycle_state: :draft,
         group_id: group.id
       },
