@@ -12,6 +12,7 @@ defmodule HuddlzWeb.AdminLive do
   alias Huddlz.Admin
   alias Huddlz.Communities.Periods
   alias HuddlzWeb.Components.Card
+  alias HuddlzWeb.HuddlSchedule
   alias HuddlzWeb.Layouts
 
   on_mount {HuddlzWeb.LiveUserAuth, :admin_required}
@@ -312,7 +313,7 @@ defmodule HuddlzWeb.AdminLive do
             </div>
             <div class="upcoming">
               <div :for={huddl <- @stats.coming_up.next} class="upcoming-row">
-                <span class="upcoming-date">{short_date(huddl)}</span>
+                <span class="upcoming-date">{HuddlSchedule.short_date(huddl)}</span>
                 <span class="upcoming-copy">
                   <.link navigate={~p"/groups/#{huddl.group.slug}/huddlz/#{huddl.id}"}>
                     {huddl.title}
@@ -637,10 +638,6 @@ defmodule HuddlzWeb.AdminLive do
       1 -> "mark-magenta"
       2 -> "mark-warm"
     end
-  end
-
-  defp short_date(%{starts_at: starts_at, time_zone: time_zone}) do
-    starts_at |> DateTime.shift_zone!(time_zone) |> Calendar.strftime("%b %-d")
   end
 
   defp signups_figure(%{capacity: nil, rsvp_count: count}), do: "#{count}"

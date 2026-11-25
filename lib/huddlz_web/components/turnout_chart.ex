@@ -10,6 +10,8 @@ defmodule HuddlzWeb.Components.TurnoutChart do
   """
   use Phoenix.Component
 
+  alias HuddlzWeb.HuddlSchedule
+
   @height 300
   @left 36
   @right 20
@@ -124,7 +126,9 @@ defmodule HuddlzWeb.Components.TurnoutChart do
           </text>
         <% end %>
 
-        <text x={slot.x} y={@chart.height - 10} text-anchor="middle">{label(huddl)}</text>
+        <text x={slot.x} y={@chart.height - 10} text-anchor="middle">
+          {HuddlSchedule.short_date(huddl)}
+        </text>
       </g>
     </svg>
     """
@@ -192,10 +196,6 @@ defmodule HuddlzWeb.Components.TurnoutChart do
       max <= 50 -> div(max + 4, 5) * 5
       true -> div(max + 9, 10) * 10
     end
-  end
-
-  defp label(%{starts_at: starts_at, time_zone: time_zone}) do
-    starts_at |> DateTime.shift_zone!(time_zone) |> Calendar.strftime("%b %-d")
   end
 
   defp description(huddlz) do

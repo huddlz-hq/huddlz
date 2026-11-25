@@ -22,6 +22,7 @@ defmodule HuddlzWeb.CalendarLive do
   use HuddlzWeb, :live_view
 
   alias Huddlz.Communities
+  alias HuddlzWeb.HuddlSchedule
   alias HuddlzWeb.HuddlStatus
   alias HuddlzWeb.Layouts
   alias HuddlzWeb.Live.Helpers.BrowserTimeZone
@@ -433,13 +434,8 @@ defmodule HuddlzWeb.CalendarLive do
     end
   end
 
-  defp format_pill_time(%{huddl: huddl}) do
-    local = HuddlCardHelpers.local_starts_at(huddl)
-    Calendar.strftime(local, "%-I:%M %p") <> " " <> local.zone_abbr
-  end
-
   defp format_pill_tooltip(%{huddl: %{title: title}} = entry, today) do
-    "#{format_pill_time(entry)} · #{title} · #{entry_status(entry, today).label}"
+    "#{HuddlSchedule.start_time(entry.huddl)} · #{title} · #{entry_status(entry, today).label}"
   end
 
   defp format_calendar_link_label(entry, today) do
@@ -803,7 +799,7 @@ defmodule HuddlzWeb.CalendarLive do
                         class="cal-pill-time"
                         datetime={DateTime.to_iso8601(entry.huddl.starts_at)}
                       >
-                        {format_pill_time(entry)}
+                        {HuddlSchedule.start_time(entry.huddl)}
                       </time>
                       <span class="cal-pill-separator">·</span>
                       <span class="cal-pill-title">{entry.huddl.title}</span>
@@ -1102,7 +1098,7 @@ defmodule HuddlzWeb.CalendarLive do
       </div>
       <div class="cal-agenda-body">
         <time class="cal-agenda-time" datetime={DateTime.to_iso8601(@entry.huddl.starts_at)}>
-          {format_pill_time(@entry)}
+          {HuddlSchedule.start_time(@entry.huddl)}
         </time>
         <span class="cal-agenda-title">{@entry.huddl.title}</span>
         <span class="cal-agenda-meta">

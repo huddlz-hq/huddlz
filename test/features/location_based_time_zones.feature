@@ -157,6 +157,11 @@ Feature: Location-based time zones
     And the Denver huddl should appear on July 16
     And its calendar time should be "11:30 PM MDT"
 
+  Scenario: My groups shows the date of my RSVP in the huddl's zone
+    Given I am attending a Denver huddl at 11:30 PM on July 15, 2030
+    When I visit "/groups"
+    Then I should see "You're going to Denver Late Night Huddl on Jul 15"
+
   Scenario: Huddl details use the huddl's own time zone
     Given I am attending a Denver huddl at 11:30 PM on July 15, 2030
     When I open the Denver huddl from a browser in "America/New_York"
