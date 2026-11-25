@@ -162,7 +162,7 @@ defmodule HuddlOrganizerModerationSteps do
 
     response =
       api_conn(context)
-      |> dispatch(HuddlzWeb.Endpoint, :delete, "/api/json/blocks/#{block["id"]}", %{})
+      |> dispatch(HuddlzWeb.Endpoint, :delete, "/api/json/blocks/#{block["id"]}", nil)
 
     assert response.status in 200..299, response.resp_body
     context
@@ -174,7 +174,7 @@ defmodule HuddlOrganizerModerationSteps do
 
     response =
       api_conn(context)
-      |> dispatch(HuddlzWeb.Endpoint, :delete, "/api/json/blocks/#{block.id}", %{})
+      |> dispatch(HuddlzWeb.Endpoint, :delete, "/api/json/blocks/#{block.id}", nil)
 
     assert response.status in 400..499
     context
@@ -189,17 +189,21 @@ defmodule HuddlOrganizerModerationSteps do
   # ── what the person sees ────────────────────────────────────────────
 
   step "discovery through JSON:API shows {string}", %{args: [title]} = context do
-    assert title in titles(context, "/api/json/huddlz", %{})
+    assert title in titles(context, "/api/json/huddlz", %{"date_filter" => "upcoming"})
     context
   end
 
   step "discovery through JSON:API does not show {string}", %{args: [title]} = context do
-    refute title in titles(context, "/api/json/huddlz", %{})
+    refute title in titles(context, "/api/json/huddlz", %{"date_filter" => "upcoming"})
     context
   end
 
   step "member discovery through JSON:API does not show {string}", %{args: [title]} = context do
-    refute title in titles(context, "/api/json/huddlz", %{"relationship" => "member"})
+    refute title in titles(context, "/api/json/huddlz", %{
+             "date_filter" => "upcoming",
+             "relationship" => "member"
+           })
+
     context
   end
 

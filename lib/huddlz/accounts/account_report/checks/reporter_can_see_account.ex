@@ -21,18 +21,18 @@ defmodule Huddlz.Accounts.AccountReport.Checks.ReporterCanSeeAccount do
     case Ash.Changeset.get_attribute(changeset, :reported_user_id) do
       nil -> false
       ^actor_id -> false
-      reported_id -> visible?(actor_id, reported_id)
+      reported_id -> visible?(actor_id, reported_id, changeset)
     end
   end
 
   def match?(_actor, _context, _opts), do: false
 
-  defp visible?(actor_id, reported_id) do
+  defp visible?(actor_id, reported_id, changeset) do
     shares_group?(actor_id, reported_id) or
       shares_huddl?(actor_id, reported_id) or
       organizes_attended_huddl?(actor_id, reported_id) or
       organizes_public_huddl?(reported_id) or
-      owns_public_group?(reported_id)
+      owns_reported_public_group?(reported_id, changeset)
   end
 
   defp shares_group?(actor_id, reported_id) do
@@ -63,10 +63,15 @@ defmodule Huddlz.Accounts.AccountReport.Checks.ReporterCanSeeAccount do
     |> Ash.exists?()
   end
 
-  defp owns_public_group?(reported_id) do
-    Group
-    |> Ash.Query.for_read(:read, %{}, actor: nil)
-    |> Ash.Query.filter(owner_id == ^reported_id)
-    |> Ash.exists?()
+  defp owns_reported_public_group?(reported_id, changeset) do
+    with :group <- Ash.Changeset.get_attribute(changeset, :source_type),
+         group_id when is_binary(group_id) <- Ash.Changeset.get_attribute(changeset, :source_id) do
+      Group
+      |> Ash.Query.for_read(:read, %{}, actor: nil)
+      |> Ash.Query.filter(id == ^group_id and owner_id == ^reported_id)
+      |> Ash.exists?()
+    else
+      _ -> false
+    end
   end
 end
