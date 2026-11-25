@@ -11,18 +11,11 @@ defmodule Huddlz.Communities.Huddl.Changes.PromoteOnCapacityIncrease do
 
   def change(changeset, _opts, _context) do
     if Ash.Changeset.changing_attribute?(changeset, :max_attendees) do
-      Ash.Changeset.after_action(changeset, &promote_then_notify/2)
+      Ash.Changeset.after_action(changeset, fn cs, huddl ->
+        {:ok, WaitlistPromotion.fill_open_seats(huddl, Huddlz.Audit.nested_opts(cs))}
+      end)
     else
       changeset
     end
-  end
-
-  defp promote_then_notify(changeset, huddl) do
-    huddl = Ash.load!(huddl, [:rsvp_count, :group], authorize?: false)
-
-    user_ids = WaitlistPromotion.fill_open_seats(huddl, Huddlz.Audit.nested_opts(changeset))
-    WaitlistPromotion.notify(huddl, user_ids)
-
-    {:ok, huddl}
   end
 end

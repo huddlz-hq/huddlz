@@ -14,13 +14,19 @@ defmodule Huddlz.Communities.WaitlistPromotion do
   def fill_released_seat(%Huddl{at_capacity: true}, _opts), do: []
   def fill_released_seat(%Huddl{at_capacity: false} = huddl, opts), do: promote(huddl, 1, opts)
 
-  @doc "Fill the seats available under the new capacity. Lifting the cap admits everyone waiting."
-  @spec fill_open_seats(Huddl.t(), keyword()) :: [Ecto.UUID.t()]
-  def fill_open_seats(%Huddl{max_attendees: nil} = huddl, opts), do: promote(huddl, nil, opts)
-
-  def fill_open_seats(%Huddl{max_attendees: capacity, rsvp_count: count} = huddl, opts) do
-    promote(huddl, max(capacity - count, 0), opts)
+  @doc "Fill the seats available under the new capacity and notify everyone promoted."
+  @spec fill_open_seats(Huddl.t(), keyword()) :: Huddl.t()
+  def fill_open_seats(huddl, opts) do
+    huddl = Ash.load!(huddl, [:rsvp_count, :group], authorize?: false)
+    user_ids = promote(huddl, open_seats(huddl), opts)
+    deliver(huddl, user_ids)
+    huddl
   end
+
+  defp open_seats(%Huddl{max_attendees: nil}), do: nil
+
+  defp open_seats(%Huddl{max_attendees: capacity, rsvp_count: count}),
+    do: max(capacity - count, 0)
 
   defp promote(_huddl, 0, _opts), do: []
 
@@ -43,7 +49,12 @@ defmodule Huddlz.Communities.WaitlistPromotion do
 
   def notify(huddl, user_ids) do
     huddl = Ash.load!(huddl, :group, authorize?: false)
+    deliver(huddl, user_ids)
+  end
 
+  defp deliver(_huddl, []), do: :ok
+
+  defp deliver(huddl, user_ids) do
     payload = %{
       "huddl_id" => huddl.id,
       "huddl_title" => to_string(huddl.title),

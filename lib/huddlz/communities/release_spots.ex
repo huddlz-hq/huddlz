@@ -11,6 +11,7 @@ defmodule Huddlz.Communities.ReleaseSpots do
   """
 
   alias Huddlz.Accounts.User
+  alias Huddlz.Communities
   alias Huddlz.Communities.Huddl
   alias Huddlz.Communities.Huddl.Changes.LockedHuddl
   alias Huddlz.Communities.HuddlAttendee
@@ -24,26 +25,34 @@ defmodule Huddlz.Communities.ReleaseSpots do
   Returns the released rows.
   """
   @spec release_upcoming(User.t(), keyword()) :: [HuddlAttendee.t()]
-  def release_upcoming(%User{id: user_id}, opts) do
+  def release_upcoming(%User{id: user_id} = user, opts) do
     HuddlAttendee
     |> Ash.Query.filter(user_id == ^user_id and huddl.ends_at > now())
+    |> Ash.Query.select(:huddl_id)
     |> Ash.read!(authorize?: false)
-    |> Enum.map(&release(&1, opts))
+    |> Enum.flat_map(&release_for_huddl(&1.huddl_id, user, opts))
   end
 
-  defp release(%HuddlAttendee{} = attendee, opts) do
-    case LockedHuddl.fetch(attendee.huddl_id) do
+  defp release_for_huddl(huddl_id, user, opts) do
+    case LockedHuddl.fetch(huddl_id) do
       {:ok, %Huddl{}} ->
-        attendee
-        |> Ash.Changeset.for_destroy(:cancel_rsvp, %{}, opts)
-        |> Ash.destroy!(authorize?: false)
-
-        if is_nil(attendee.waitlisted_at), do: fill_seat(attendee.huddl_id, opts)
+        # A cancellation may have promoted or removed this person's spot
+        # since enumeration. Decide what to release under the huddl lock.
+        huddl_id
+        |> Communities.check_user_rsvp!(actor: user, authorize?: false)
+        |> Enum.map(&release(&1, opts))
 
       _gone ->
-        :ok
+        []
     end
+  end
 
+  defp release(attendee, opts) do
+    attendee
+    |> Ash.Changeset.for_destroy(:cancel_rsvp, %{}, opts)
+    |> Ash.destroy!(authorize?: false)
+
+    if is_nil(attendee.waitlisted_at), do: fill_seat(attendee.huddl_id, opts)
     attendee
   end
 
