@@ -52,7 +52,7 @@ Cucumber generates each feature's test module with `HuddlzWeb.BrowserCase` as it
 
 The **Browser scenarios (Chromium)** job runs separately on every PR, including stacked PRs, and every push to `main`, alongside the fast tests. It installs the Playwright driver that Fluffy pins, Chromium headless shell, and Linux libraries. It uses one worker, a two-minute test-step timeout, and no automatic retries. Dependency compilation is cached; browser binaries and diagnostics are not part of that cache.
 
-Screenshots and traces are captured for every attempt under `_build/browser/test-results`, one directory per scenario; explicit screenshots go to `_build/browser/screenshots`. Failed CI runs upload these directories as `browser-failure-diagnostics` for seven days. Inspect the original failure before rerunning:
+A failed scenario keeps a screenshot, its trace and `error-context.md` under `_build/browser/test-results`, one directory per scenario; passing scenarios keep none. Explicit screenshots go to `_build/browser/screenshots`. Failed CI runs upload these directories as `browser-failure-diagnostics` for seven days. Inspect the original failure before rerunning:
 
 ```sh
 MIX_ENV=test mix playwright.cli show-trace _build/browser/test-results/<scenario>/trace.zip

@@ -40,8 +40,8 @@ config :fluffy, Fluffy.Sandbox, header: "user-agent"
 
 config :playwright, :test,
   timezone_id: "America/New_York",
-  screenshot: :on,
-  trace: :on,
+  screenshot: :only_on_failure,
+  trace: :retain_on_failure,
   output_dir: "_build/browser/test-results"
 
 # Disable swoosh api client in test
