@@ -2,5 +2,6 @@ Cucumber.compile_features!(
   features: ["test/browser/features/**/*.feature"],
   steps: ["test/browser/steps/**/*.exs"],
   support: ["test/browser/support/**/*.exs"],
-  case_template: HuddlzWeb.BrowserCase
+  case_template: HuddlzWeb.BrowserCase,
+  step_wrapper: {HuddlzWeb.BrowserCase, :wrap}
 )

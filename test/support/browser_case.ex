@@ -22,8 +22,8 @@ defmodule HuddlzWeb.BrowserCase do
   end
 
   @doc """
-  Cucumber's step wrapper (`test/browser/test_helper.exs`): each Gherkin step
-  is a step in the trace, with its actions inside.
+  Cucumber's step wrapper (`test/browser/browser_features_test.exs`): each
+  Gherkin step is a step in the trace, with its actions inside.
   """
   def wrap(step, _context, run), do: Playwright.Test.step("#{step.keyword} #{step.text}", run)
 end
