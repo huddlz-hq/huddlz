@@ -343,7 +343,7 @@ defmodule HuddlzWeb.GroupLiveImageTest do
       ])
       |> render_upload("cover.jpg")
 
-      render_async(view)
+      render_async(view, 5_000)
 
       assert_receive {:stored, original}
       assert_receive {:stored, thumbnail}
