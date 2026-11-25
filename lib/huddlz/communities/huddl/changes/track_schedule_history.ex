@@ -27,9 +27,14 @@ defmodule Huddlz.Communities.Huddl.Changes.TrackScheduleHistory do
   defp track_start(changeset, current) do
     if DateTime.compare(Ash.Changeset.get_attribute(changeset, :starts_at), current.starts_at) !=
          :eq do
+      # A stale copy may already carry these values in its history. Write them
+      # even then, since the history on the locked row may have changed.
       changeset
-      |> Ash.Changeset.force_change_attribute(:previous_starts_at, current.starts_at)
-      |> Ash.Changeset.force_change_attribute(:previous_time_zone, current.time_zone)
+      |> Ash.Changeset.atomic_update(
+        previous_starts_at: current.starts_at,
+        previous_time_zone: current.time_zone
+      )
+      |> Ash.Changeset.put_context(:rescheduled_from, {current.starts_at, current.time_zone})
     else
       changeset
     end

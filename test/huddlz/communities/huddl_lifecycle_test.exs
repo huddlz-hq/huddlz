@@ -97,6 +97,32 @@ defmodule Huddlz.Communities.HuddlLifecycleTest do
   end
 
   @tag :huddl_lifecycle
+  test "a stale edit records a schedule the huddl has returned to", %{group: group, owner: owner} do
+    original = generate(huddl(group_id: group.id, actor: owner))
+
+    denver =
+      generate(group_location(group_id: group.id, actor: owner, time_zone: "America/Denver"))
+
+    opts = [actor: owner]
+
+    in_denver = Communities.update_huddl!(original, %{group_location_id: denver.id}, opts)
+    Communities.update_huddl!(in_denver, %{group_location_id: original.group_location_id}, opts)
+
+    Communities.update_huddl!(
+      in_denver,
+      %{
+        starts_at: DateTime.add(in_denver.starts_at, 1, :day),
+        ends_at: DateTime.add(in_denver.ends_at, 1, :day)
+      },
+      opts
+    )
+
+    current = Communities.get_huddl!(original.id)
+    assert current.previous_starts_at == original.starts_at
+    assert current.previous_time_zone == original.time_zone
+  end
+
+  @tag :huddl_lifecycle
   test "invalid lifecycle transitions return handled errors", context do
     draft = create_draft(context)
 
