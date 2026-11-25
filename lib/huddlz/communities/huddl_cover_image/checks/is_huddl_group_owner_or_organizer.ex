@@ -5,8 +5,7 @@ defmodule Huddlz.Communities.HuddlCoverImage.Checks.IsHuddlGroupOwnerOrOrganizer
   """
   use Ash.Policy.SimpleCheck
 
-  alias Huddlz.Communities.{Group, GroupMember, Huddl}
-  require Ash.Query
+  alias Huddlz.Communities.{GroupRoles, Huddl}
 
   @impl true
   def describe(_opts) do
@@ -38,25 +37,7 @@ defmodule Huddlz.Communities.HuddlCoverImage.Checks.IsHuddlGroupOwnerOrOrganizer
     # Get the huddl to find its group_id
     case Ash.get(Huddl, huddl_id, actor: actor) do
       {:ok, %Huddl{group_id: group_id}} ->
-        check_authorization(actor, group_id)
-
-      _ ->
-        false
-    end
-  end
-
-  defp check_authorization(actor, group_id) do
-    # Check if user is the owner
-    case Ash.get(Group, group_id, authorize?: false) do
-      {:ok, group} when group.owner_id == actor.id ->
-        true
-
-      {:ok, group} ->
-        # Check if user is an organizer
-        GroupMember
-        |> Ash.Query.for_read(:read, %{}, authorize?: false)
-        |> Ash.Query.filter(group_id: group.id, user_id: actor.id, role: :organizer)
-        |> Ash.exists?(authorize?: false)
+        GroupRoles.owns_or_organizes?(actor, group_id)
 
       _ ->
         false
