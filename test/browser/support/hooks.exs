@@ -30,8 +30,10 @@ defmodule BrowserHooks do
     # first, stops last, after the scenario's browser contexts have closed.
     Huddlz.DataCase.setup_sandbox(context)
 
-    # Cucumber creates the ExUnit modules, so no `use Playwright.Test` can
-    # register the scenario: run its per-test setup here.
+    # A stop-gap until Cucumber can add a case template's `use` to the modules
+    # it generates. They only `use ExUnit.Case`, so run Playwright.Test's
+    # per-test setup here. Without its `test`, Playwright.Test never learns a
+    # scenario's result, so every scenario's screenshot is named as failed.
     Playwright.Test.__setup__(context)
 
     session =
