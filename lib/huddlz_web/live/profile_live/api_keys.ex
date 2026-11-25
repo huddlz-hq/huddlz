@@ -17,6 +17,7 @@ defmodule HuddlzWeb.ProfileLive.ApiKeys do
   alias HuddlzWeb.Layouts
 
   @expiry_choices [{"30", "30 days"}, {"90", "90 days"}, {"365", "1 year"}]
+  @expiry_values Enum.map(@expiry_choices, &elem(&1, 0))
   @default_expiry "90"
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
@@ -52,13 +53,13 @@ defmodule HuddlzWeb.ProfileLive.ApiKeys do
   end
 
   def handle_event("validate", %{"api_key" => params}, socket) do
-    {expiry, params} = Map.pop(params, "expires_in_days", @default_expiry)
+    {expiry, params} = pop_expiry(params)
     form = AshPhoenix.Form.validate(socket.assigns.form, params)
     {:noreply, socket |> assign(:form, form) |> assign(:expiry, expiry)}
   end
 
   def handle_event("create", %{"api_key" => params}, socket) do
-    {expiry, params} = Map.pop(params, "expires_in_days", @default_expiry)
+    {expiry, params} = pop_expiry(params)
     params = Map.put(params, "expires_at", expires_at(expiry))
 
     case AshPhoenix.Form.submit(socket.assigns.form, params: params) do
@@ -139,9 +140,16 @@ defmodule HuddlzWeb.ProfileLive.ApiKeys do
     socket |> assign(:form, form) |> assign(:expiry, expiry)
   end
 
+  defp pop_expiry(params) do
+    case Map.pop(params, "expires_in_days") do
+      {days, rest} when days in @expiry_values -> {days, rest}
+      {_other, rest} -> {@default_expiry, rest}
+    end
+  end
+
   defp expires_at(expiry) do
-    days = if expiry in Enum.map(@expiry_choices, &elem(&1, 0)), do: expiry, else: @default_expiry
-    DateTime.add(DateTime.utc_now(), String.to_integer(days) * 86_400, :second)
+    {:ok, expires_at} = ApiKey.Expiry.from_days(expiry)
+    expires_at
   end
 
   @impl true
@@ -280,9 +288,7 @@ defmodule HuddlzWeb.ProfileLive.ApiKeys do
             </label>
           </div>
           <p class="form-help">
-            Expires {format_date(
-              DateTime.add(DateTime.utc_now(), String.to_integer(@expiry) * 86_400)
-            )}. You can revoke it sooner.
+            Expires {format_date(expires_at(@expiry))}. You can revoke it sooner.
           </p>
         </fieldset>
       </div>

@@ -164,15 +164,12 @@ defmodule HuddlzWeb.Api.AuthController do
     end
   end
 
-  @api_key_min_days 1
-  @api_key_max_days 365
   @api_key_default_days 30
 
   def create_api_key(conn, params) do
     with %User{} = user <- conn.assigns[:current_user] || :unauthorized,
-         {:ok, days} <- parse_expires_in_days(params) do
-      expires_at = DateTime.utc_now() |> DateTime.add(days * 24 * 3600, :second)
-
+         {:ok, expires_at} <-
+           ApiKey.Expiry.from_days(Map.get(params, "expires_in_days", @api_key_default_days)) do
       ApiKey
       |> Ash.Changeset.for_create(:create, %{name: params["name"], expires_at: expires_at},
         actor: user
@@ -287,26 +284,6 @@ defmodule HuddlzWeb.Api.AuthController do
     |> put_status(:not_found)
     |> json(%{error: "Not found"})
   end
-
-  defp parse_expires_in_days(%{"expires_in_days" => value}) when is_integer(value),
-    do: validate_days(value)
-
-  defp parse_expires_in_days(%{"expires_in_days" => value}) when is_binary(value) do
-    case Integer.parse(value) do
-      {n, ""} -> validate_days(n)
-      _ -> {:error, "must be an integer"}
-    end
-  end
-
-  defp parse_expires_in_days(%{"expires_in_days" => _}),
-    do: {:error, "must be an integer"}
-
-  defp parse_expires_in_days(_), do: {:ok, @api_key_default_days}
-
-  defp validate_days(n) when n in @api_key_min_days..@api_key_max_days, do: {:ok, n}
-
-  defp validate_days(_),
-    do: {:error, "must be between #{@api_key_min_days} and #{@api_key_max_days} days"}
 
   defp serialize_self(user) do
     user = Ash.load!(user, [:current_profile_picture_url], actor: user)

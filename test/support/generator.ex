@@ -4,10 +4,19 @@ defmodule Huddlz.Generator do
   """
   use Ash.Generator
 
-  alias Huddlz.Accounts.User
+  alias Huddlz.Accounts.{ApiKey, User}
   alias Huddlz.Communities.Group
   alias Huddlz.Communities.GroupMember
   alias Huddlz.Communities.Huddl
+
+  def expired_api_key(owner, name) do
+    key =
+      Ash.create!(ApiKey, %{name: name, expires_at: DateTime.add(DateTime.utc_now(), 1, :day)},
+        actor: owner
+      )
+
+    Ash.Seed.update!(key, %{expires_at: DateTime.add(DateTime.utc_now(), -1, :day)})
+  end
 
   @doc """
   Create a user with given attributes.

@@ -6,6 +6,33 @@ defmodule Huddlz.Accounts.ApiKeyTest do
   alias Huddlz.Accounts.{ApiKey, User}
 
   describe "ApiKey :create action" do
+    test "requires an absolute expiry in the future and within 365 days" do
+      user = generate(user())
+
+      for expires_at <- [DateTime.utc_now(), DateTime.add(in_days(365), 1, :hour)] do
+        assert {:error, %Ash.Error.Invalid{errors: errors}} =
+                 Ash.create(ApiKey, %{name: "Laptop", expires_at: expires_at}, actor: user)
+
+        assert Enum.any?(errors, &match?(%{field: :expires_at}, &1))
+      end
+
+      for expires_at <- [DateTime.add(DateTime.utc_now(), 60), in_days(365)] do
+        assert DateTime.compare(build_key!(user, expires_at).expires_at, expires_at) == :eq
+      end
+    end
+
+    test "checks the final expiry when the key is issued" do
+      changeset =
+        ApiKey
+        |> Ash.Changeset.for_create(:create, %{name: "Laptop", expires_at: in_days(7)},
+          actor: generate(user())
+        )
+        |> Ash.Changeset.change_attribute(:expires_at, in_days(-1))
+
+      assert {:error, %Ash.Error.Invalid{errors: errors}} = Ash.create(changeset)
+      assert Enum.any?(errors, &match?(%{field: :expires_at}, &1))
+    end
+
     test "generates a plaintext key with the huddlz prefix and persists a hash" do
       user = generate(user())
 
@@ -86,6 +113,18 @@ defmodule Huddlz.Accounts.ApiKeyTest do
       assert {:error, %Ash.Error.Forbidden{}} =
                key |> Ash.Changeset.for_update(:mark_used, %{}, actor: stranger) |> Ash.update()
     end
+
+    test "an existing key with more than a year left can still be used and revoked" do
+      user = generate(user())
+      key = user |> build_key!(in_days(7)) |> Ash.Seed.update!(%{expires_at: in_days(400)})
+
+      assert %{valid: true} = load_valid(key)
+
+      assert {:ok, %{last_used_at: %DateTime{}}} =
+               Ash.update(key, %{}, action: :mark_used, actor: user)
+
+      assert :ok = Ash.destroy(key, actor: user)
+    end
   end
 
   describe "ownership invariants" do
@@ -118,7 +157,7 @@ defmodule Huddlz.Accounts.ApiKeyTest do
       user = generate(user())
 
       future = build_key!(user, in_days(7))
-      past = build_key!(user, in_days(-1))
+      past = expired_api_key(user, "Old laptop")
 
       assert load_valid(future).valid
       refute load_valid(past).valid
@@ -149,7 +188,7 @@ defmodule Huddlz.Accounts.ApiKeyTest do
 
     test "fails when the key is expired" do
       user = generate(user())
-      plaintext = build_key!(user, in_days(-1)).__metadata__.plaintext_api_key
+      plaintext = expired_api_key(user, "Old laptop").__metadata__.plaintext_api_key
 
       result =
         User

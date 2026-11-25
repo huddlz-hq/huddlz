@@ -52,6 +52,13 @@ defmodule Huddlz.Accounts.ApiKey do
       primary? true
       accept [:name, :expires_at]
 
+      validate compare(:expires_at,
+                 greater_than: &DateTime.utc_now/0,
+                 less_than_or_equal_to: &Huddlz.Accounts.ApiKey.Expiry.latest/0
+               ) do
+        before_action? true
+      end
+
       change relate_actor(:user)
 
       change {AshAuthentication.Strategy.ApiKey.GenerateApiKey,

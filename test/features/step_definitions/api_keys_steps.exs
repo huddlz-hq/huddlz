@@ -47,7 +47,7 @@ defmodule ApiKeysSteps do
   end
 
   step "I have an API key named {string} that expired yesterday", %{args: [name]} = context do
-    add_key(context, context.current_user, name, days_from_now(-1))
+    remember_key(context, Huddlz.Generator.expired_api_key(context.current_user, name))
   end
 
   step "{string} has an API key named {string}", %{args: [email, name]} = context do
@@ -98,7 +98,11 @@ defmodule ApiKeysSteps do
       |> Ash.Changeset.for_create(:create, %{name: name, expires_at: expires_at}, actor: owner)
       |> Ash.create!()
 
-    keys = Map.put(context[:keys] || %{}, name, record.__metadata__.plaintext_api_key)
+    remember_key(context, record)
+  end
+
+  defp remember_key(context, record) do
+    keys = Map.put(context[:keys] || %{}, record.name, record.__metadata__.plaintext_api_key)
     Map.put(context, :keys, keys)
   end
 
