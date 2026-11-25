@@ -42,11 +42,11 @@ The command builds the actual app assets, starts the test endpoint and Chromium,
 | Crop on upload | The crop sheet opens on choosing a picture, real pointer drags move it, and the upload is the 16:9 crop that was chosen; full-screen sheet at 320px |
 | Password recovery | A reset finished in the same browser returns to the huddl where Sign in was chosen; the destination rides on the session cookie written during a LiveView redirect, which the fast suite does not keep |
 
-Browser scenarios live in `features/`, their steps in `steps/`, and Cucumber hooks in `support/`. `browser_features_test.exs` supplies explicit feature/step/support globs to Cucumber. The existing fast root and its steps are loaded only by the normal test runner. No Cucumber fork or second library is needed. Use descriptive tags such as `@calendar_browser`; `@browser` conflicts with the adapter's browser-selection option.
+Browser scenarios live in `features/`, their steps in `steps/`, and Cucumber hooks in `support/`. `browser_features_test.exs` supplies explicit feature/step/support globs and the case template to Cucumber. The existing fast root and its steps are loaded only by the normal test runner. Use descriptive tags such as `@calendar_browser`; `@browser` conflicts with the adapter's browser-selection option.
 
 Keep this suite serial: its SQL sandbox ownership and global Mox stubs are shared with HTTP/LiveView processes. Do not add `@async` or extra workers without changing that fixture strategy. Each scenario gets a fresh browser context. Authentication uses a signed session cookie; apart from password recovery, these are not sign-in UI tests. Places/geocoding are deterministic stubs, with no external service credentials needed. The test endpoint serves the app over HTTP. Each browser context answers HTTPS requests locally so third-party services cannot delay page loads. Google Fonts requests receive the Inter fixture from `test/fixtures/fonts` to preserve layout measurements. Other HTTPS requests, including Maps embeds, receive an empty response. Browser contexts use `America/New_York`; `@mobile` selects a 320×720 viewport.
 
-Browser setup calls `Playwright.Test`'s per-test setup from the hook because Cucumber creates the ExUnit modules, so none of them can `use Playwright.Test`. SQL sandbox HTTP metadata and the LiveView allowance hook are enabled only in test builds, before authentication queries.
+Cucumber generates each feature's test module with `HuddlzWeb.BrowserCase` as its case template, which brings in `Playwright.Test` and owns the SQL sandbox. SQL sandbox HTTP metadata and the LiveView allowance hook are enabled only in test builds, before authentication queries.
 
 ## CI and diagnostics
 
