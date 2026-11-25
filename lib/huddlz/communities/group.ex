@@ -213,6 +213,9 @@ defmodule Huddlz.Communities.Group do
       argument :provided_latitude, :float, allow_nil?: true, public?: false
       argument :provided_longitude, :float, allow_nil?: true, public?: false
 
+      argument :pending_image_id, :uuid, public?: false
+      change Huddlz.Communities.Changes.ReplaceCover
+
       change Huddlz.Communities.Group.Changes.SetOwnerToActor
       change Huddlz.Communities.Group.Changes.AddOwnerAsMember
       change Huddlz.Communities.Group.Changes.GenerateSlug

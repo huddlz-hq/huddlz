@@ -275,7 +275,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
           image_url={cover_url(@pending_preview_url, @huddl)}
           caption={cover_caption(@pending_preview_url, @huddl)}
           processing?={@upload_processing}
-          image_error={@image_error}
+          image_error={ImageUploadPipeline.edit_cover_error(@image_error, @form, @pending_image_id)}
           saved_image_url={cover_url(nil, @huddl)}
         >
           <:actions>
@@ -472,13 +472,26 @@ defmodule HuddlzWeb.HuddlLive.Edit do
          )}
 
       {:upload_error, message} ->
-        {:noreply, put_flash(socket, :error, message)}
-
-      {:error, form} ->
         {:noreply,
          socket
+         |> ImageUploadPipeline.refresh_saved_cover(:huddl, [
+           :current_image_url,
+           group: :current_image_url
+         ])
+         |> put_flash(:error, message)}
+
+      {:error, form} ->
+        {cover_error, message} = ImageUploadPipeline.save_errors(form)
+
+        {:noreply,
+         socket
+         |> ImageUploadPipeline.refresh_saved_cover(:huddl, [
+           :current_image_url,
+           group: :current_image_url
+         ])
          |> assign(:form, to_form(form))
-         |> assign(:image_error, AshPhoenix.Form.errors(form, format: :simple)[:pending_image_id])
+         |> assign(:image_error, cover_error)
+         |> put_flash(:error, message)
          |> FormFocus.first_error("huddl-form")}
     end
   end

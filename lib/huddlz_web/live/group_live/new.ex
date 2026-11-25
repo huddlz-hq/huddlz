@@ -119,7 +119,7 @@ defmodule HuddlzWeb.GroupLive.New do
 
   @impl true
   def handle_event("cancel_pending_image", _params, socket) do
-    {:noreply, cleanup_pending_image(socket)}
+    {:noreply, socket |> cleanup_pending_image() |> assign(:image_error, nil)}
   end
 
   @impl true
@@ -131,22 +131,25 @@ defmodule HuddlzWeb.GroupLive.New do
       |> Map.put("owner_id", socket.assigns.current_user.id)
       |> inject_group_location_param(socket.assigns.selected_location_data)
 
-    case socket.assigns.form.source
-         |> AshPhoenix.Form.validate(params_with_owner)
-         |> AshPhoenix.Form.submit(
-           params: params_with_owner,
-           actor: socket.assigns.current_user
-         ) do
+    case ImageUploadPipeline.submit_with_cover(socket, params_with_owner) do
       {:ok, group} ->
-        assign_pending_image_to_group(socket, group)
-
         {:noreply,
          socket
          |> put_flash(:info, "Group created successfully")
          |> redirect(to: ~p"/groups/#{group.slug}")}
 
+      {:upload_error, message} ->
+        {:noreply, put_flash(socket, :error, message)}
+
       {:error, form} ->
-        {:noreply, socket |> assign(:form, to_form(form)) |> FormFocus.first_error("group-form")}
+        {cover_error, message} = ImageUploadPipeline.save_errors(form)
+
+        {:noreply,
+         socket
+         |> assign(:form, to_form(form))
+         |> assign(:image_error, cover_error)
+         |> put_flash(:error, message)
+         |> FormFocus.first_error("group-form")}
     end
   end
 
@@ -171,20 +174,6 @@ defmodule HuddlzWeb.GroupLive.New do
      socket
      |> assign(:selected_location_data, nil)
      |> apply_group_location_to_form(nil)}
-  end
-
-  defp assign_pending_image_to_group(socket, group) do
-    case socket.assigns[:pending_image_id] do
-      nil ->
-        :ok
-
-      image_id ->
-        with {:ok, image} <- Ash.get(GroupImage, image_id) do
-          Communities.assign_group_image_to_group(image, group.id,
-            actor: socket.assigns.current_user
-          )
-        end
-    end
   end
 
   @impl true
@@ -276,6 +265,14 @@ defmodule HuddlzWeb.GroupLive.New do
               <.cover_slot_button phx-click="cancel_pending_image">Remove</.cover_slot_button>
             </:actions>
           </.cover_upload>
+          <.button
+            :if={@image_error && @pending_image_id}
+            variant={:muted}
+            type="button"
+            phx-click="cancel_pending_image"
+          >
+            Discard cover
+          </.button>
         </div>
 
         <div class="panel">

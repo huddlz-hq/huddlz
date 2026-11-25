@@ -50,6 +50,43 @@ defmodule GroupImageSteps do
     Map.put(context, :original_group_cover, image.thumbnail_path)
   end
 
+  step "the pending group image predates upload ownership tracking", context do
+    pending = GroupImage |> Ash.Query.filter(is_nil(group_id)) |> Ash.read_one!(authorize?: false)
+    Ash.Seed.update!(pending, %{uploaded_by_id: nil})
+    context
+  end
+
+  step "the owner saves a different cover in another edit", context do
+    group = context.current_group
+    owner = Enum.find(context.users, &(&1.id == group.owner_id))
+
+    image =
+      Communities.create_pending_group_image!(
+        %{
+          group_id: group.id,
+          filename: "other.jpg",
+          content_type: "image/jpeg",
+          size_bytes: 100,
+          storage_path: "/uploads/#{group.id}/other.jpg",
+          thumbnail_path: "/uploads/#{group.id}/other-thumb.jpg"
+        },
+        actor: owner
+      )
+
+    Ash.update!(group, %{},
+      action: :update_details,
+      actor: owner,
+      private_arguments: %{pending_image_id: image.id}
+    )
+
+    Map.put(context, :other_cover, image.thumbnail_path)
+  end
+
+  step "the edit form should show the cover from the other edit", context do
+    assert_has(context.session, "img[src='#{Huddlz.Storage.url(context.other_cover)}']")
+    context
+  end
+
   step "my pending group image expires", context do
     pending = GroupImage |> Ash.Query.filter(is_nil(group_id)) |> Ash.read_one!(authorize?: false)
     Communities.soft_delete_group_image!(pending, authorize?: false)

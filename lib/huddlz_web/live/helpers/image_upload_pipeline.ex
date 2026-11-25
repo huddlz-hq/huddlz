@@ -17,7 +17,7 @@ defmodule HuddlzWeb.Live.Helpers.ImageUploadPipeline do
 
       %{
         upload_name: :group_image | :huddl_cover_image,
-        storage: Huddlz.Storage.GroupImages,   # needs store_pending/3 + url/1
+        storage: Huddlz.Storage.GroupImages,   # needs store_pending/3, url/1 and delete/1
         create_pending: fn actor, entry, metadata -> {:ok, image} | {:error, reason} end,
         cleanup: fn socket, image_id -> :ok end
       }
@@ -30,6 +30,8 @@ defmodule HuddlzWeb.Live.Helpers.ImageUploadPipeline do
   import Phoenix.Component, only: [assign: 2, assign: 3]
   import Phoenix.LiveView, only: [cancel_upload: 3, consume_uploaded_entries: 3, start_async: 3]
   import HuddlzWeb.Live.Helpers.UploadHelpers, only: [format_upload_error: 1]
+
+  require Logger
 
   @async_name :prepare_cover
 
@@ -102,13 +104,18 @@ defmodule HuddlzWeb.Live.Helpers.ImageUploadPipeline do
   end
 
   @doc "Submit an edit with the pending cover selected by this LiveView."
-  def submit_edit(%{assigns: %{upload_processing: true}}, _params),
-    do: {:upload_error, "Wait for the cover to finish uploading."}
-
   def submit_edit(%{assigns: %{image_error: message}}, _params) when is_binary(message),
     do: {:upload_error, message}
 
   def submit_edit(socket, params) do
+    submit_with_cover(socket, params)
+  end
+
+  @doc "Pass the server-selected cover to the parent save transaction."
+  def submit_with_cover(%{assigns: %{upload_processing: true}}, _params),
+    do: {:upload_error, "Wait for the cover to finish uploading."}
+
+  def submit_with_cover(socket, params) do
     pending_image_id = socket.assigns.pending_image_id
 
     socket.assigns.form.source
@@ -117,6 +124,38 @@ defmodule HuddlzWeb.Live.Helpers.ImageUploadPipeline do
     )
     |> AshPhoenix.Form.submit(params: params)
   end
+
+  @doc "Refresh the saved cover after a failed submit while retaining the edit form."
+  def refresh_saved_cover(socket, parent, loads) do
+    case Ash.load(socket.assigns[parent], loads, actor: socket.assigns.current_user) do
+      # The open huddl form still needs its group if it was archived during the edit.
+      {:ok, %{group: nil}} -> socket
+      {:ok, refreshed} -> assign(socket, parent, refreshed)
+      {:error, _} -> socket
+    end
+  end
+
+  @doc "Return the cover-specific error and the message for a failed form submission."
+  def save_errors(form) do
+    errors = AshPhoenix.Form.errors(form, format: :simple)
+    cover_error = errors[:pending_image_id]
+
+    case errors do
+      [] ->
+        {nil, "Changes could not be saved."}
+
+      _ ->
+        {cover_error,
+         cover_error || Enum.join(AshPhoenix.Form.errors(form, format: :plaintext), ". ")}
+    end
+  end
+
+  @doc "Show the published cover when a form error leaves a replacement pending for retry."
+  def edit_cover_error(nil, %{source: %{just_submitted?: true}}, pending_id)
+      when not is_nil(pending_id),
+      do: "The replacement is still pending. Correct the form and save again."
+
+  def edit_cover_error(image_error, _form, _pending_id), do: image_error
 
   @doc "Soft-delete any pending image attached to the socket and clear the preview assigns."
   def cleanup_pending_image(socket, %{cleanup: cleanup}) do
@@ -138,15 +177,37 @@ defmodule HuddlzWeb.Live.Helpers.ImageUploadPipeline do
   end
 
   defp prepare(copy, entry, actor, storage, config) do
-    result =
-      with {:ok, metadata} <- storage.store_pending(copy, entry.client_name, entry.client_type),
-           {:ok, image} <- config.create_pending.(actor, entry, metadata) do
-        {:success, image.id, metadata.thumbnail_path}
-      else
-        {:error, reason} -> {:error, reason}
-      end
-
+    with {:ok, metadata} <- storage.store_pending(copy, entry.client_name, entry.client_type) do
+      persist_pending(metadata, actor, entry, config.create_pending, storage)
+    end
+  after
     File.rm(copy)
-    result
+  end
+
+  defp persist_pending(metadata, actor, entry, create_pending, storage) do
+    case create_pending.(actor, entry, metadata) do
+      {:ok, image} ->
+        {:success, image.id, metadata.thumbnail_path}
+
+      {:error, reason} ->
+        delete_stored_cover(storage, metadata)
+        {:error, reason}
+    end
+  rescue
+    error ->
+      delete_stored_cover(storage, metadata)
+      reraise error, __STACKTRACE__
+  end
+
+  defp delete_stored_cover(storage, metadata) do
+    Enum.each([metadata.storage_path, metadata.thumbnail_path], fn path ->
+      case storage.delete(path) do
+        :ok ->
+          :ok
+
+        {:error, reason} ->
+          Logger.warning("Failed to delete unpublished cover #{path}: #{inspect(reason)}")
+      end
+    end)
   end
 end

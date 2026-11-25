@@ -160,6 +160,7 @@ defmodule Huddlz.Communities.HuddlCoverImage do
       description "Soft-delete a huddl image and trigger cleanup job"
       accept []
       # A stale discard of a pending upload must not retire a cover that has since been saved.
+      change filter(expr(is_nil(deleted_at)))
       change filter(expr(is_nil(huddl_id))), where: [attributes_absent(:huddl_id)]
       change set_attribute(:deleted_at, &DateTime.utc_now/0)
       change run_oban_trigger(:cleanup_storage)
@@ -297,13 +298,10 @@ defmodule Huddlz.Communities.HuddlCoverImage do
       authorize_if Huddlz.Communities.HuddlCoverImage.Checks.IsHuddlGroupOwnerOrOrganizer
     end
 
-    # Group owners/organizers can soft-delete their huddl's images
-    # For pending images (no huddl), any authenticated user can soft-delete their own
     policy action(:soft_delete) do
-      description "Group owners/organizers can soft-delete huddl images; authenticated users can soft-delete pending images"
-      # Allow if the image has no huddl (pending) and actor is present
-      authorize_if expr(is_nil(huddl_id) and not is_nil(^actor(:id)))
-      # Allow if the actor is owner/organizer of the huddl's group
+      description "Uploaders can discard pending covers; authorized editors can remove saved covers"
+      forbid_unless actor_present()
+      authorize_if expr(is_nil(huddl_id) and uploaded_by_id == ^actor(:id))
       authorize_if Huddlz.Communities.HuddlCoverImage.Checks.IsHuddlGroupOwnerOrOrganizer
     end
 
