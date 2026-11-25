@@ -17,6 +17,8 @@ defmodule Huddlz.Accounts.ApiKey do
     authorizers: [Ash.Policy.Authorizer],
     extensions: [AshPaperTrail.Resource]
 
+  alias Huddlz.Accounts.ApiKey.Expiry
+
   postgres do
     table "api_keys"
     repo Huddlz.Repo
@@ -54,7 +56,7 @@ defmodule Huddlz.Accounts.ApiKey do
 
       validate compare(:expires_at,
                  greater_than: &DateTime.utc_now/0,
-                 less_than_or_equal_to: &Huddlz.Accounts.ApiKey.Expiry.latest/0
+                 less_than_or_equal_to: &Expiry.latest/0
                ) do
         before_action? true
       end
