@@ -54,6 +54,12 @@ defmodule Huddlz.Accounts.User do
                                limit: 3,
                                per: :timer.hours(1)
                              )
+  @delete_account_rate_limit Application.compile_env(
+                               :huddlz,
+                               [:auth_rate_limits, :delete_account],
+                               limit: 5,
+                               per: :timer.minutes(5)
+                             )
 
   paper_trail do
     change_tracking_mode :snapshot
@@ -162,6 +168,12 @@ defmodule Huddlz.Accounts.User do
       limit: @password_reset_rate_limit[:limit],
       per: @password_reset_rate_limit[:per],
       key: &Keys.password_reset/2,
+      on: :before_transaction
+
+    action :delete_account,
+      limit: @delete_account_rate_limit[:limit],
+      per: @delete_account_rate_limit[:per],
+      key: &Keys.delete_account/2,
       on: :before_transaction
   end
 

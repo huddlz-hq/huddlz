@@ -70,3 +70,26 @@ Feature: People delete their own account
     Given "leave801@example.com" is signed in to the app with password "Password123!"
     When "leave801@example.com" deletes their account in the app with password "Password123!"
     Then someone can register in the app as "leave801@example.com"
+
+  Scenario: Missing password refuses account deletion
+    Given "leave801@example.com" is signed in to the app with password "Password123!"
+    When "leave801@example.com" tries to delete their account in the app without a password
+    Then the account deletion is refused with "Enter your password to delete your account."
+    And the app is still signed in as "Lee Leaving"
+
+  Scenario: Deleting an account clears invitations, notifications, drafts, and admin role
+    Given "leave801@example.com" is an admin
+    And a public group "Deletion Draft Club" exists with owner "leave801@example.com"
+    And a draft huddl "Secret Draft" exists in group "Deletion Draft Club" hosted by "leave801@example.com"
+    And a private group "Invite Only Club" exists with owner "owner801@example.com"
+    And "owner801@example.com" invited "leave801@example.com" to "Invite Only Club"
+    And "member801@example.com" has a notification naming "leave801@example.com"
+    And "leave801@example.com" has a notification
+    And "leave801@example.com" is signed in to the app with password "Password123!"
+    When "leave801@example.com" deletes their account in the app with password "Password123!"
+    Then the account is deleted
+    And the deleted account has role "user"
+    And no invitation exists for "leave801@example.com"
+    And the draft huddl "Secret Draft" no longer exists
+    And the deleted account has no notifications
+    And notifications for "member801@example.com" show "Deleted member" instead of "Lee Leaving"

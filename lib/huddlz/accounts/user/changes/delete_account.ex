@@ -22,7 +22,8 @@ defmodule Huddlz.Accounts.User.Changes.DeleteAccount do
   use Ash.Resource.Change
 
   alias Huddlz.Accounts.{ApiKey, ProfilePicture, Token, User}
-  alias Huddlz.Communities.{Group, GroupMember, Huddl, ReleaseSpots}
+  alias Huddlz.Communities.{Group, GroupInvitation, GroupMember, Huddl, ReleaseSpots}
+  alias Huddlz.Notifications.Notification
 
   require Ash.Query
 
@@ -38,6 +39,7 @@ defmodule Huddlz.Accounts.User.Changes.DeleteAccount do
     |> Ash.Changeset.force_change_attributes(%{
       email: "deleted-#{changeset.data.id}@deleted.huddlz.invalid",
       display_name: @display_name,
+      role: :user,
       hashed_password: nil,
       pending_email_change: nil,
       email_change_resends: [],
@@ -58,6 +60,8 @@ defmodule Huddlz.Accounts.User.Changes.DeleteAccount do
     revoke_tokens(user)
     destroy_api_keys(user, opts)
     remove_profile_pictures(user, opts)
+    destroy_notifications(user)
+    destroy_invitations(user, changeset.data.email, opts)
     ReleaseSpots.release_upcoming(user, opts)
     archive_owned_groups(user, opts)
     leave_groups(user, opts)
@@ -101,15 +105,53 @@ defmodule Huddlz.Accounts.User.Changes.DeleteAccount do
     end)
   end
 
+  defp destroy_notifications(user) do
+    %{status: :success} =
+      Notification
+      |> Ash.Query.filter(user_id == ^user.id)
+      |> Ash.bulk_destroy(:destroy, %{},
+        authorize?: false,
+        strategy: [:atomic, :atomic_batches, :stream],
+        return_errors?: true,
+        stop_on_error?: true
+      )
+
+    :ok
+  end
+
+  defp destroy_invitations(user, original_email, opts) do
+    GroupInvitation
+    |> Ash.Query.filter(invitee_id == ^user.id or email == ^original_email)
+    |> Ash.read!(authorize?: false)
+    |> Enum.each(fn invitation ->
+      invitation
+      |> Ash.Changeset.for_destroy(:destroy, %{}, opts)
+      |> Ash.destroy!(authorize?: false)
+    end)
+  end
+
   defp archive_owned_groups(user, opts) do
     Group
     |> Ash.Query.filter(owner_id == ^user.id)
     |> Ash.read!(authorize?: false)
     |> Enum.each(fn group ->
+      destroy_draft_huddlz(group, opts)
       cancel_upcoming_huddlz(group, opts)
 
       group
       |> Ash.Changeset.for_destroy(:archive, %{}, opts)
+      |> Ash.destroy!(authorize?: false)
+    end)
+  end
+
+  defp destroy_draft_huddlz(group, opts) do
+    Huddl
+    |> Ash.Query.for_read(:read_for_group_lifecycle, %{}, authorize?: false)
+    |> Ash.Query.filter(group_id == ^group.id and lifecycle_state == :draft)
+    |> Ash.read!()
+    |> Enum.each(fn huddl ->
+      huddl
+      |> Ash.Changeset.for_destroy(:destroy, %{}, opts)
       |> Ash.destroy!(authorize?: false)
     end)
   end

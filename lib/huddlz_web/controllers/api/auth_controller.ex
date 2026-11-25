@@ -106,9 +106,15 @@ defmodule HuddlzWeb.Api.AuthController do
         end
 
       {:error, error} ->
-        conn
-        |> put_status(:unprocessable_entity)
-        |> json(%{errors: format_errors(error)})
+        case rate_limit_error(error) do
+          nil ->
+            conn
+            |> put_status(:unprocessable_entity)
+            |> json(%{errors: format_errors(error)})
+
+          limit_exceeded ->
+            too_many_requests(conn, limit_exceeded)
+        end
     end
   end
 

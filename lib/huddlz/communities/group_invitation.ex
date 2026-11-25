@@ -234,9 +234,17 @@ defmodule Huddlz.Communities.GroupInvitation do
       change set_attribute(:status, :expired)
       change set_attribute(:responded_at, &DateTime.utc_now/0)
     end
+
+    destroy :destroy do
+      description "System-only: remove invitations when an account is deleted."
+    end
   end
 
   policies do
+    policy action(:destroy) do
+      forbid_if always()
+    end
+
     policy action([:accept, :decline, :invite, :revoke]) do
       authorize_if Huddlz.Accounts.Checks.ConfirmedActor
     end

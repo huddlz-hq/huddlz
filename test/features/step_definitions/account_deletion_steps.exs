@@ -7,7 +7,8 @@ defmodule AccountDeletionSteps do
   require Ash.Query
 
   alias Huddlz.Accounts.User
-  alias Huddlz.Communities.{Group, GroupMember, Huddl, HuddlAttendee}
+  alias Huddlz.Communities.{Group, GroupInvitation, GroupMember, Huddl, HuddlAttendee}
+  alias Huddlz.Notifications.Notification
 
   @endpoint HuddlzWeb.Endpoint
 
@@ -33,6 +34,130 @@ defmodule AccountDeletionSteps do
       |> dispatch(@endpoint, :delete, "/api/auth/account", %{password: password})
 
     Map.merge(context, %{deletion_response: conn, deleted_user_id: user.id})
+  end
+
+  step "{string} tries to delete their account in the app without a password",
+       %{args: [email]} = context do
+    user = find_user(email)
+
+    conn =
+      context.app_token
+      |> bearer_conn()
+      |> dispatch(@endpoint, :delete, "/api/auth/account", %{})
+
+    Map.merge(context, %{deletion_response: conn, deleted_user_id: user.id})
+  end
+
+  step "{string} is an admin", %{args: [email]} = context do
+    user = find_user(email)
+
+    user
+    |> Ash.Changeset.for_update(:update_role, %{role: :admin}, authorize?: false)
+    |> Ash.update!()
+
+    context
+  end
+
+  step "a draft huddl {string} exists in group {string} hosted by {string}",
+       %{args: [title, group_name, email]} = context do
+    group = group_with_archived(group_name)
+    host = find_user(email)
+    starts_at = DateTime.add(DateTime.utc_now(), 48, :hour)
+    ends_at = DateTime.add(starts_at, 2, :hour)
+
+    Huddl
+    |> Ash.Changeset.for_create(
+      :create,
+      %{
+        title: title,
+        starts_at: starts_at,
+        ends_at: ends_at,
+        time_zone: "UTC",
+        event_type: :virtual,
+        lifecycle_state: :draft,
+        group_id: group.id
+      },
+      actor: host
+    )
+    |> Ash.create!()
+
+    context
+  end
+
+  step "a private group {string} exists with owner {string}",
+       %{args: [name, email]} = context do
+    owner = find_user(email)
+
+    Group
+    |> Ash.Changeset.for_create(
+      :create,
+      %{name: name, visibility: :private},
+      actor: owner
+    )
+    |> Ash.create!()
+
+    context
+  end
+
+  step "{string} invited {string} to {string}",
+       %{args: [inviter_email, invitee_email, group_name]} = context do
+    inviter = find_user(inviter_email)
+    group = group_with_archived(group_name)
+
+    GroupInvitation
+    |> Ash.Changeset.for_create(
+      :invite,
+      %{group_id: group.id, email: invitee_email, role: :member},
+      actor: inviter
+    )
+    |> Ash.create!()
+
+    context
+  end
+
+  step "{string} has a notification naming {string}",
+       %{args: [recipient_email, named_email]} = context do
+    recipient = find_user(recipient_email)
+    named = find_user(named_email)
+
+    Notification
+    |> Ash.Changeset.for_create(
+      :create,
+      %{
+        user_id: recipient.id,
+        trigger: :new_rsvp,
+        title: "New RSVP",
+        description: "#{named.display_name} is going",
+        payload: %{
+          "rsvper_id" => named.id,
+          "rsvper_display_name" => named.display_name
+        }
+      },
+      authorize?: false
+    )
+    |> Ash.create!()
+
+    context
+  end
+
+  step "{string} has a notification", %{args: [email]} = context do
+    recipient = find_user(email)
+
+    Notification
+    |> Ash.Changeset.for_create(
+      :create,
+      %{
+        user_id: recipient.id,
+        trigger: :new_rsvp,
+        title: "Hello",
+        description: "Test notification",
+        payload: %{}
+      },
+      authorize?: false
+    )
+    |> Ash.create!()
+
+    context
   end
 
   step "the account is deleted", context do
@@ -144,6 +269,49 @@ defmodule AccountDeletionSteps do
 
   step "the huddl {string} is cancelled", %{args: [title]} = context do
     assert find_huddl(title).lifecycle_state == :cancelled
+    context
+  end
+
+  step "the deleted account has role {string}", %{args: [role]} = context do
+    assert to_string(deleted_user(context).role) == role
+    context
+  end
+
+  step "no invitation exists for {string}", %{args: [email]} = context do
+    refute GroupInvitation
+           |> Ash.Query.filter(invitee_id == ^context.deleted_user_id or email == ^email)
+           |> Ash.exists?(authorize?: false)
+
+    context
+  end
+
+  step "the draft huddl {string} no longer exists", %{args: [title]} = context do
+    refute find_huddl(title)
+    context
+  end
+
+  step "the deleted account has no notifications", context do
+    refute Notification
+           |> Ash.Query.filter(user_id == ^context.deleted_user_id)
+           |> Ash.exists?(authorize?: false)
+
+    context
+  end
+
+  step "notifications for {string} show {string} instead of {string}",
+       %{args: [email, expected, forbidden]} = context do
+    recipient = find_user(email)
+
+    page =
+      Notification
+      |> Ash.Query.for_read(:for_user, %{}, actor: recipient)
+      |> Ash.read!(actor: recipient)
+
+    notifications = page.results
+    assert notifications != []
+
+    assert Enum.any?(notifications, &(&1.payload["rsvper_display_name"] == expected))
+    refute Enum.any?(notifications, &(&1.payload["rsvper_display_name"] == forbidden))
     context
   end
 
