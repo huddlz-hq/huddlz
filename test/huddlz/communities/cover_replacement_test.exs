@@ -43,16 +43,25 @@ defmodule Huddlz.Communities.CoverReplacementTest do
         actor: owner
       )
 
-    wrong_actor =
-      Communities.create_pending_group_image!(Map.put(attrs(), :group_id, group.id),
-        actor: other_user
-      )
+    assert {:error, %Ash.Error.Forbidden{}} =
+             Communities.create_pending_group_image(Map.put(attrs(), :group_id, group.id),
+               actor: other_user
+             )
+
+    wrong_actor = Communities.create_pending_group_image!(attrs(), actor: other_user)
+
+    assert {:error, %Ash.Error.Forbidden{}} =
+             Communities.soft_delete_group_image(wrong_actor, actor: owner)
 
     for image <- [wrong_group, wrong_actor] do
       assert {:error, _} = replace(group, :update_details, image, owner)
       assert {:error, _} = Communities.assign_group_image_to_group(image, group.id, actor: owner)
       assert is_nil(Ash.reload!(image, actor: owner).group_id)
     end
+
+    assert {:ok, _} = Communities.soft_delete_group_image(wrong_actor, actor: other_user)
+    assert {:error, _} = Communities.soft_delete_group_image(wrong_actor, actor: other_user)
+    assert length(all_enqueued(worker: Huddlz.Workers.GroupImageCleanup)) == 1
   end
 
   test "huddl assignment checks the original group and uploader",
@@ -67,6 +76,9 @@ defmodule Huddlz.Communities.CoverReplacementTest do
 
     wrong_actor = Communities.create_pending_huddl_cover_image!(group.id, attrs(), actor: member)
 
+    assert {:error, %Ash.Error.Forbidden{}} =
+             Communities.soft_delete_huddl_cover_image(wrong_actor, actor: owner)
+
     for image <- [wrong_group, wrong_actor] do
       assert {:error, _} = replace(huddl, :update, image, owner)
 
@@ -75,6 +87,10 @@ defmodule Huddlz.Communities.CoverReplacementTest do
 
       assert is_nil(Ash.reload!(image, actor: owner).huddl_id)
     end
+
+    assert {:ok, _} = Communities.soft_delete_huddl_cover_image(wrong_actor, actor: member)
+    assert {:error, _} = Communities.soft_delete_huddl_cover_image(wrong_actor, actor: member)
+    assert length(all_enqueued(worker: Huddlz.Workers.HuddlImageCleanup)) == 1
   end
 
   test "a failed huddl save rolls back assignment, retirement and queued cleanup",

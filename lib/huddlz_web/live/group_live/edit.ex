@@ -171,7 +171,9 @@ defmodule HuddlzWeb.GroupLive.Edit do
                 image_url={@pending_preview_url}
                 caption="New image uploaded. Save to apply."
                 processing?={@upload_processing}
-                image_error={@image_error}
+                image_error={
+                  ImageUploadPipeline.edit_cover_error(@image_error, @form, @pending_image_id)
+                }
                 saved_image_url={GroupImages.url(@group.current_image_url)}
               >
                 <:actions>
@@ -570,14 +572,17 @@ defmodule HuddlzWeb.GroupLive.Edit do
          |> redirect(to: ~p"/groups/#{updated_group.slug}")}
 
       {:upload_error, message} ->
-        {:noreply, put_flash(socket, :error, message)}
+        {:noreply,
+         socket
+         |> ImageUploadPipeline.refresh_saved_cover(:group, :current_image_url)
+         |> put_flash(:error, message)}
 
       {:error, form} ->
-        cover_error = AshPhoenix.Form.errors(form, format: :simple)[:pending_image_id]
-        message = cover_error || Enum.join(AshPhoenix.Form.errors(form, format: :plaintext), ". ")
+        {cover_error, message} = ImageUploadPipeline.save_errors(form)
 
         {:noreply,
          socket
+         |> ImageUploadPipeline.refresh_saved_cover(:group, :current_image_url)
          |> assign(:form, to_form(form))
          |> assign(:image_error, cover_error)
          |> put_flash(:error, message)

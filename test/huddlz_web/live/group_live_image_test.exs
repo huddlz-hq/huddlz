@@ -10,6 +10,7 @@ defmodule HuddlzWeb.GroupLiveImageTest do
   alias Huddlz.Communities
   alias Huddlz.Communities.Group
   alias Huddlz.Communities.GroupImage
+  alias Huddlz.Storage.Local
 
   require Ash.Query
 
@@ -320,6 +321,37 @@ defmodule HuddlzWeb.GroupLiveImageTest do
         |> live(~p"/groups/#{group.slug}/edit")
 
       assert has_element?(view, "*", "Current image")
+    end
+
+    test "removes both stored files when the group can no longer accept the pending upload", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      {:ok, view, _html} = conn |> login(owner) |> live(~p"/groups/#{group.slug}/edit")
+      assert :ok = Communities.archive_group(group, actor: owner)
+      test_pid = self()
+
+      Mox.stub(Huddlz.MockStorage, :put, fn source, path, type ->
+        result = Local.put(source, path, type)
+        send(test_pid, {:stored, path})
+        result
+      end)
+
+      file_input(view, "#edit-group-form", :group_image, [
+        %{name: "cover.jpg", type: "image/jpeg", content: File.read!(@test_image_path)}
+      ])
+      |> render_upload("cover.jpg")
+
+      render_async(view)
+
+      assert_receive {:stored, original}
+      assert_receive {:stored, thumbnail}
+      on_exit(fn -> Enum.each([original, thumbnail], &Local.delete/1) end)
+      assert original != thumbnail
+      assert has_element?(view, ".cover-slot-error", "The image could not be uploaded")
+      refute Local.exists?(original)
+      refute Local.exists?(thumbnail)
     end
 
     test "uploading new image shows pending preview", %{conn: conn, owner: owner, group: group} do

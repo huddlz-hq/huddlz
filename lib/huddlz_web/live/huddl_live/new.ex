@@ -364,6 +364,12 @@ defmodule HuddlzWeb.HuddlLive.New do
          |> redirect(to: path)}
 
       {:error, form} ->
+        socket =
+          case AshPhoenix.Form.errors(form, format: :simple)[:pending_image_id] do
+            nil -> socket
+            message -> put_flash(socket, :error, message)
+          end
+
         {:noreply, socket |> assign(:form, to_form(form)) |> FormFocus.first_error("huddl-form")}
     end
   end

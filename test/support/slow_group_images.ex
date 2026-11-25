@@ -15,5 +15,6 @@ defmodule Huddlz.Test.SlowGroupImages do
     GroupImages.store_pending(source_path, original_filename, content_type)
   end
 
+  defdelegate delete(path), to: GroupImages
   defdelegate url(path), to: GroupImages
 end

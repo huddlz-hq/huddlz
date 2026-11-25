@@ -2,9 +2,11 @@ defmodule Huddlz.Communities.CoverReplacementConcurrencyTest do
   use ExUnit.Case, async: false
 
   import Huddlz.Generator
+  import Ecto.Query, only: [from: 2]
 
   alias Ecto.Adapters.SQL.Sandbox
   alias Huddlz.Communities
+  alias Huddlz.Communities.{Group, GroupImage, GroupMember}
   alias Huddlz.Repo
 
   test "competing replacements leave one cover, and retrying the superseded save cannot restore it" do
@@ -23,6 +25,11 @@ defmodule Huddlz.Communities.CoverReplacementConcurrencyTest do
           ])
 
           Repo.query!("DELETE FROM groups WHERE id = $1", [Ecto.UUID.dump!(group.id)])
+
+          for version <- [Group.Version, GroupImage.Version, GroupMember.Version] do
+            Repo.delete_all(from v in version, where: v.actor_id == ^owner.id)
+          end
+
           Repo.query!("DELETE FROM users WHERE id = $1", [Ecto.UUID.dump!(owner.id)])
         end)
       end)

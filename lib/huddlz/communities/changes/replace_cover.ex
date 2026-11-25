@@ -1,6 +1,6 @@
 defmodule Huddlz.Communities.Changes.ReplaceCover do
   @moduledoc """
-  Applies an eagerly uploaded cover inside the parent update transaction.
+  Applies an eagerly uploaded cover inside the parent save transaction.
   RequireActiveGroup holds the group row lock across selection, assignment
   and retirement, including on edits that only change the cover.
   """
@@ -21,7 +21,7 @@ defmodule Huddlz.Communities.Changes.ReplaceCover do
           changeset,
           fn cs, parent ->
             opts = [actor: context.actor, context: Map.take(cs.context, [:paper_trail_metadata])]
-            replace(parent, image_id, opts)
+            replace(parent, image_id, cs.action_type, opts)
           end,
           prepend?: true
         )
@@ -33,14 +33,15 @@ defmodule Huddlz.Communities.Changes.ReplaceCover do
   defp cover(%Huddl{group_id: group_id}),
     do: {HuddlCoverImage, :huddl_id, group_id, :assign_to_huddl}
 
-  defp replace(parent, image_id, opts) do
+  defp replace(parent, image_id, action_type, opts) do
     {resource, parent_key, group_id, action} = cover(parent)
     actor_id = opts[:actor] && opts[:actor].id
 
     candidate =
       resource
       |> Ash.Query.filter(id == ^image_id and is_nil(deleted_at))
-      |> Ash.Query.filter(uploaded_by_id == ^actor_id and pending_group_id == ^group_id)
+      |> Ash.Query.filter(uploaded_by_id == ^actor_id)
+      |> scope_to_group(action_type, group_id)
       |> Ash.Query.lock("FOR UPDATE")
 
     case Ash.read_one(candidate, opts) do
@@ -60,6 +61,13 @@ defmodule Huddlz.Communities.Changes.ReplaceCover do
         {:error, error}
     end
   end
+
+  # A group being created has no id at upload time.
+  defp scope_to_group(query, :create, _group_id),
+    do: Ash.Query.filter(query, is_nil(pending_group_id))
+
+  defp scope_to_group(query, :update, group_id),
+    do: Ash.Query.filter(query, pending_group_id == ^group_id)
 
   defp retire_previous(resource, parent_key, parent_id, image_id, opts) do
     previous =

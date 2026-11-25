@@ -154,6 +154,7 @@ defmodule Huddlz.Communities.GroupImage do
       description "Soft-delete a group image and trigger cleanup job"
       accept []
       # A stale discard of a pending upload must not retire a cover that has since been saved.
+      change filter(expr(is_nil(deleted_at)))
       change filter(expr(is_nil(group_id))), where: [attributes_absent(:group_id)]
       change set_attribute(:deleted_at, &DateTime.utc_now/0)
       change run_oban_trigger(:cleanup_storage)
@@ -255,10 +256,11 @@ defmodule Huddlz.Communities.GroupImage do
       authorize_if Huddlz.Communities.GroupImage.Checks.IsGroupOwner
     end
 
-    # Any authenticated user can create pending images (no group yet)
     policy action(:create_pending) do
-      description "Authenticated users can create pending images"
-      authorize_if actor_present()
+      description "Signed-in users can prepare a new group cover or edit a group they own"
+      forbid_unless actor_present()
+      authorize_if expr(is_nil(^arg(:group_id)))
+      authorize_if Huddlz.Communities.GroupImage.Checks.IsGroupOwner
     end
 
     # Group owners can assign pending images to their groups
@@ -292,13 +294,10 @@ defmodule Huddlz.Communities.GroupImage do
       authorize_if relates_to_actor_via([:group, :owner])
     end
 
-    # Group owners can soft-delete their group's images
-    # For pending images (no group), any authenticated user can soft-delete
     policy action(:soft_delete) do
-      description "Group owners can soft-delete their group's images; authenticated users can soft-delete pending images"
-      # Allow if the image has no group (pending) and actor is present
-      authorize_if expr(is_nil(group_id) and not is_nil(^actor(:id)))
-      # Allow if the actor is the owner of the group
+      description "Uploaders can discard pending covers; authorized editors can remove saved covers"
+      forbid_unless actor_present()
+      authorize_if expr(is_nil(group_id) and uploaded_by_id == ^actor(:id))
       authorize_if relates_to_actor_via([:group, :owner])
     end
 
