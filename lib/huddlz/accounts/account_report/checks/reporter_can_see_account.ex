@@ -2,14 +2,14 @@ defmodule Huddlz.Accounts.AccountReport.Checks.ReporterCanSeeAccount do
   @moduledoc """
   Reporting grants no new visibility: the reporter must already meet the
   account on an ordinary member surface. That is a group they both belong
-  to, or a huddl they both go to, or a huddl the reporter goes to that
-  the account organizes, or a public huddl whose organizer they can see.
-  Nobody reports themselves.
+  to, a huddl they both go to, a huddl the reporter goes to that the
+  account organizes, a public huddl whose organizer they can see, or a
+  public group the account owns. Nobody reports themselves.
   """
 
   use Ash.Policy.SimpleCheck
 
-  alias Huddlz.Communities.{GroupMember, Huddl, HuddlAttendee}
+  alias Huddlz.Communities.{Group, GroupMember, Huddl, HuddlAttendee}
 
   require Ash.Query
 
@@ -21,17 +21,18 @@ defmodule Huddlz.Accounts.AccountReport.Checks.ReporterCanSeeAccount do
     case Ash.Changeset.get_attribute(changeset, :reported_user_id) do
       nil -> false
       ^actor_id -> false
-      reported_id -> visible?(actor_id, reported_id)
+      reported_id -> visible?(actor_id, reported_id, changeset)
     end
   end
 
   def match?(_actor, _context, _opts), do: false
 
-  defp visible?(actor_id, reported_id) do
+  defp visible?(actor_id, reported_id, changeset) do
     shares_group?(actor_id, reported_id) or
       shares_huddl?(actor_id, reported_id) or
       organizes_attended_huddl?(actor_id, reported_id) or
-      organizes_public_huddl?(reported_id)
+      organizes_public_huddl?(reported_id) or
+      owns_reported_public_group?(reported_id, changeset)
   end
 
   defp shares_group?(actor_id, reported_id) do
@@ -60,5 +61,17 @@ defmodule Huddlz.Accounts.AccountReport.Checks.ReporterCanSeeAccount do
     |> Ash.Query.for_read(:read, %{}, actor: nil)
     |> Ash.Query.filter(creator_id == ^reported_id)
     |> Ash.exists?()
+  end
+
+  defp owns_reported_public_group?(reported_id, changeset) do
+    with :group <- Ash.Changeset.get_attribute(changeset, :source_type),
+         group_id when is_binary(group_id) <- Ash.Changeset.get_attribute(changeset, :source_id) do
+      Group
+      |> Ash.Query.for_read(:read, %{}, actor: nil)
+      |> Ash.Query.filter(id == ^group_id and owner_id == ^reported_id)
+      |> Ash.exists?()
+    else
+      _ -> false
+    end
   end
 end
