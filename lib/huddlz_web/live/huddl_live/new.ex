@@ -7,15 +7,14 @@ defmodule HuddlzWeb.HuddlLive.New do
   import HuddlzWeb.Components.HuddlForm
   import HuddlzWeb.Components.UploadComponents
   import HuddlzWeb.HuddlLive.FormHelpers
-  import HuddlzWeb.Live.Helpers.UploadHelpers
 
   alias Huddlz.Communities
   alias Huddlz.Communities.Huddl
   alias Huddlz.Communities.Huddl.CopySuggestion
   alias Huddlz.Storage.HuddlCoverImages
   alias HuddlzWeb.FormFocus
+  alias HuddlzWeb.HuddlLive.CoverUpload
   alias HuddlzWeb.Layouts
-  alias HuddlzWeb.Live.Helpers.ImageUploadPipeline
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
   on_mount {HuddlzWeb.LiveUserAuth, :app}
@@ -50,10 +49,7 @@ defmodule HuddlzWeb.HuddlLive.New do
     |> assign_create_form(group, user)
     |> assign(:group_locations, load_group_locations(group.id, user))
     |> assign(:selected_location, nil)
-    |> assign(:image_error, nil)
-    |> assign(:pending_image_id, nil)
-    |> assign(:pending_preview_url, nil)
-    |> assign(:upload_processing, false)
+    |> CoverUpload.init()
     |> assign(:copy_source, nil)
     |> assign(:copy_cover?, false)
     |> maybe_allow_image_upload()
@@ -63,7 +59,7 @@ defmodule HuddlzWeb.HuddlLive.New do
     do: socket
 
   defp maybe_allow_image_upload(socket) do
-    allow_image_upload(socket, :huddl_cover_image, &handle_upload_progress/3)
+    CoverUpload.allow(socket, socket.assigns.group.id)
   end
 
   defp assign_create_form(socket, group, user) do
@@ -152,53 +148,9 @@ defmodule HuddlzWeb.HuddlLive.New do
     |> assign(:calculated_end_time, calculate_end_time(date, start_time, duration))
   end
 
-  defp handle_upload_progress(:huddl_cover_image, entry, socket) do
-    if entry.done? do
-      {:noreply, ImageUploadPipeline.start_eager_upload(socket, upload_config(socket))}
-    else
-      {:noreply, socket}
-    end
-  end
-
   @impl true
   def handle_async(:prepare_cover, result, socket) do
-    {:noreply, ImageUploadPipeline.finish_eager_upload(socket, result, upload_config(socket))}
-  end
-
-  defp cleanup_pending_image(socket),
-    do: ImageUploadPipeline.cleanup_pending_image(socket, upload_config(socket))
-
-  # The pending cover belongs to the group before it belongs to a huddl.
-  defp upload_config(socket) do
-    group_id = socket.assigns.group.id
-
-    %{
-      upload_name: :huddl_cover_image,
-      storage: HuddlCoverImages,
-      create_pending: &create_pending_huddl_cover_image(group_id, &1, &2, &3),
-      cleanup: &soft_delete_pending_huddl_cover_image/2
-    }
-  end
-
-  defp create_pending_huddl_cover_image(group_id, actor, entry, metadata) do
-    Communities.create_pending_huddl_cover_image(
-      group_id,
-      %{
-        filename: entry.client_name,
-        content_type: entry.client_type,
-        size_bytes: metadata.size_bytes,
-        storage_path: metadata.storage_path,
-        thumbnail_path: metadata.thumbnail_path
-      },
-      actor: actor
-    )
-  end
-
-  defp soft_delete_pending_huddl_cover_image(socket, image_id) do
-    with {:ok, image} <- Communities.get_huddl_cover_image_by_id(image_id),
-         true <- is_nil(image.huddl_id) do
-      Communities.soft_delete_huddl_cover_image(image, actor: socket.assigns.current_user)
-    end
+    {:noreply, CoverUpload.finish(socket, result)}
   end
 
   @impl true
@@ -349,7 +301,7 @@ defmodule HuddlzWeb.HuddlLive.New do
   end
 
   def handle_event("cancel_pending_image", _params, socket) do
-    {:noreply, cleanup_pending_image(socket)}
+    {:noreply, CoverUpload.discard(socket)}
   end
 
   @impl true
@@ -371,7 +323,7 @@ defmodule HuddlzWeb.HuddlLive.New do
     {:noreply,
      socket
      |> assign(:form, to_form(form))
-     |> ImageUploadPipeline.drop_invalid_entries(upload_config(socket))}
+     |> CoverUpload.drop_invalid_entries()}
   end
 
   @impl true
