@@ -104,7 +104,7 @@ defmodule Huddlz.Accounts.AccountReport do
         constraints max_length: 1000, trim?: true
       end
 
-      run Huddlz.Accounts.AccountReport.Actions.ReportOrganizer
+      run Huddlz.Accounts.AccountReport.Actions.ReportFromSource
     end
 
     action :report_group do
@@ -125,7 +125,7 @@ defmodule Huddlz.Accounts.AccountReport do
         constraints max_length: 1000, trim?: true
       end
 
-      run Huddlz.Accounts.AccountReport.Actions.ReportGroup
+      run Huddlz.Accounts.AccountReport.Actions.ReportFromSource
     end
 
     read :queue do
