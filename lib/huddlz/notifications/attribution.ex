@@ -6,6 +6,7 @@ defmodule Huddlz.Notifications.Attribution do
   """
 
   alias Huddlz.Accounts.User
+  alias Huddlz.Accounts.User.Changes.DeleteAccount
   alias Huddlz.Accounts.User.Preparations.NeutralizeSuspended
 
   require Ash.Query
@@ -29,19 +30,24 @@ defmodule Huddlz.Notifications.Attribution do
           uniq: true,
           do: id
 
-    people = suspension_statuses(ids)
+    people = account_statuses(ids)
     Enum.map(payloads, &resolve_people(&1, people))
   end
 
-  defp suspension_statuses([]), do: %{}
+  defp account_statuses([]), do: %{}
 
-  defp suspension_statuses(ids) do
+  defp account_statuses(ids) do
     User
     |> Ash.Query.filter(id in ^ids)
-    |> Ash.Query.select([:id, :suspended_at])
+    |> Ash.Query.select([:id, :suspended_at, :deleted_at])
     |> Ash.read!(authorize?: false)
-    |> Map.new(&{&1.id, User.suspended?(&1)})
+    |> Map.new(&{&1.id, account_status(&1)})
   end
+
+  defp account_status(%User{deleted_at: deleted_at}) when not is_nil(deleted_at), do: :deleted
+
+  defp account_status(%User{} = user),
+    do: if(User.suspended?(user), do: :suspended, else: :active)
 
   defp resolve_people(payload, people) do
     Enum.reduce(@people, payload, fn {id_key, name_key}, payload ->
@@ -54,7 +60,8 @@ defmodule Huddlz.Notifications.Attribution do
     end)
   end
 
-  defp display_name(_name, {:ok, true}), do: NeutralizeSuspended.label()
-  defp display_name(name, {:ok, false}), do: name
+  defp display_name(_name, {:ok, :deleted}), do: DeleteAccount.display_name()
+  defp display_name(_name, {:ok, :suspended}), do: NeutralizeSuspended.label()
+  defp display_name(name, {:ok, :active}), do: name
   defp display_name(_name, :error), do: "Someone"
 end

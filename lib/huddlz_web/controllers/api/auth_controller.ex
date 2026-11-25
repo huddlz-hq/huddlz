@@ -1,8 +1,10 @@
 defmodule HuddlzWeb.Api.AuthController do
   use HuddlzWeb, :controller
 
+  alias AshAuthentication.Errors.AuthenticationFailed
   alias AshAuthentication.TokenResource
   alias AshRateLimiter.LimitExceeded
+  alias Huddlz.Accounts
   alias Huddlz.Accounts.{ApiKey, Token, User}
 
   def register(conn, params) do
@@ -79,6 +81,62 @@ defmodule HuddlzWeb.Api.AuthController do
         |> json(%{error: "Authentication required"})
     end
   end
+
+  def delete_account(conn, params) do
+    case conn.assigns[:current_user] do
+      %User{} = user -> destroy_account(conn, user, Map.get(params, "password"))
+      _ -> auth_required(conn)
+    end
+  end
+
+  defp destroy_account(conn, _user, password) when not is_binary(password) or password == "" do
+    conn
+    |> put_status(:unprocessable_entity)
+    |> json(%{
+      errors: [%{field: "password", message: "Enter your password to delete your account."}]
+    })
+  end
+
+  defp destroy_account(conn, user, password) do
+    case Accounts.delete_account(user, password, actor: user) do
+      {:ok, _user} ->
+        send_resp(conn, :no_content, "")
+
+      {:error, error} ->
+        handle_delete_account_error(conn, error)
+    end
+  end
+
+  defp handle_delete_account_error(conn, error) do
+    case rate_limit_error(error) do
+      %AshRateLimiter.LimitExceeded{} = limit_exceeded ->
+        too_many_requests(conn, limit_exceeded)
+
+      nil ->
+        respond_delete_account_error(conn, error)
+    end
+  end
+
+  defp respond_delete_account_error(conn, %Ash.Error.Forbidden{} = error) do
+    if authentication_failed?(error) do
+      conn
+      |> put_status(:unprocessable_entity)
+      |> json(%{errors: [%{field: "password", message: "That password isn't right."}]})
+    else
+      conn
+      |> put_status(:forbidden)
+      |> json(%{error: "You can't delete this account"})
+    end
+  end
+
+  defp respond_delete_account_error(conn, error) do
+    conn
+    |> put_status(:unprocessable_entity)
+    |> json(%{errors: format_errors(error)})
+  end
+
+  defp authentication_failed?(%{errors: errors}),
+    do: Enum.any?(errors, &match?(%AuthenticationFailed{}, &1))
 
   def password_reset(conn, params) do
     result =

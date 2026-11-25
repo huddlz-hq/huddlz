@@ -90,13 +90,15 @@ defmodule Huddlz.Notifications.Notification do
 
       change set_attribute(:read_at, &DateTime.utc_now/0)
     end
+
+    destroy :destroy do
+      description "System-only: remove notifications when an account is deleted."
+    end
   end
 
   policies do
-    # System-driven create from Huddlz.Notifications.deliver/3 runs with
-    # authorize?: false. No actor-driven path creates notifications, so
-    # forbid the action whenever an actor is in play.
-    policy action(:create) do
+    # System-driven create and destroy run with authorize?: false.
+    policy action([:create, :destroy]) do
       forbid_if always()
     end
 

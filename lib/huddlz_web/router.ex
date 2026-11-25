@@ -133,6 +133,7 @@ defmodule HuddlzWeb.Router do
     post "/sign_in", AuthController, :sign_in
     get "/me", AuthController, :me
     delete "/sign_out", AuthController, :sign_out
+    delete "/account", AuthController, :delete_account
     post "/password_reset", AuthController, :password_reset
     post "/api_keys", AuthController, :create_api_key
     get "/api_keys", AuthController, :list_api_keys

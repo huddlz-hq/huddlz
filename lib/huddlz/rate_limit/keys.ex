@@ -31,6 +31,11 @@ defmodule Huddlz.RateLimit.Keys do
     "auth:password_reset:" <> normalize(ActionInput.get_argument(input, :email))
   end
 
+  @doc "Key for `:delete_account` (an update action, keyed by user id)."
+  def delete_account(%Changeset{data: %{id: id}}, _context) do
+    "auth:delete_account:" <> to_string(id)
+  end
+
   # Email is a `:ci_string`; fold to a stable lower-case string so casing/whitespace
   # variants of the same address share a bucket. A missing email (the action will
   # reject it anyway) buckets together under the empty suffix.

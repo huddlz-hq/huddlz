@@ -27,7 +27,8 @@ config :huddlz, :rate_limit_enabled, false
 config :huddlz, :auth_rate_limits,
   sign_in: [limit: 5, per: :timer.minutes(1)],
   register: [limit: 5, per: :timer.minutes(1)],
-  password_reset: [limit: 5, per: :timer.hours(1)]
+  password_reset: [limit: 5, per: :timer.hours(1)],
+  delete_account: [limit: 5, per: :timer.minutes(5)]
 
 # Configure PhoenixTest
 config :phoenix_test, :endpoint, HuddlzWeb.Endpoint

@@ -51,4 +51,35 @@ defmodule HuddlzWeb.Api.AuthRateLimitControllerTest do
     assert %{"error" => _} =
              json_response(post(build_conn(), "/api/auth/password_reset", params), 429)
   end
+
+  test "DELETE /api/auth/account returns 429 with Retry-After once the limit is hit" do
+    user_email = email("api-rl-delete")
+
+    %{"token" => token} =
+      post(build_conn(), "/api/auth/register", %{
+        "email" => user_email,
+        "display_name" => "Rate Limit Delete",
+        "password" => "password123",
+        "password_confirmation" => "password123",
+        "legal_acceptance" => true
+      })
+      |> json_response(201)
+
+    authed = fn ->
+      build_conn()
+      |> put_req_header("authorization", "Bearer " <> token)
+      |> put_req_header("accept", "application/json")
+      |> put_req_header("content-type", "application/json")
+    end
+
+    for _ <- 1..limit_for(:delete_account) do
+      assert delete(authed.(), "/api/auth/account", %{"password" => "wrong-password"}).status ==
+               422
+    end
+
+    resp = delete(authed.(), "/api/auth/account", %{"password" => "wrong-password"})
+    assert %{"error" => _} = json_response(resp, 429)
+    assert [retry_after] = get_resp_header(resp, "retry-after")
+    assert String.to_integer(retry_after) > 0
+  end
 end
