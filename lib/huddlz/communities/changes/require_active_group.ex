@@ -53,15 +53,13 @@ defmodule Huddlz.Communities.Changes.RequireActiveGroup do
       |> Ash.Query.lock("FOR UPDATE")
       |> Ash.read_one!()
 
-    case group do
-      %{archived_at: nil} ->
-        changeset
-
-      _ ->
-        Ash.Changeset.add_error(changeset,
-          field: :base,
-          message: "This group is archived or unavailable. Restore it before making changes."
-        )
+    if Group.active?(group) do
+      changeset
+    else
+      Ash.Changeset.add_error(changeset,
+        field: :base,
+        message: "This group is archived or unavailable. Restore it before making changes."
+      )
     end
   end
 end

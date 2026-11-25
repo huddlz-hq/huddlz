@@ -9,7 +9,9 @@ defmodule HuddlzWeb.HuddlLive.Show do
   alias Huddlz.Accounts.ConfirmationDestination
   alias Huddlz.Accounts.User
   alias Huddlz.Communities
+  alias Huddlz.Communities.Group
   alias Huddlz.Communities.GroupMember
+  alias Huddlz.Communities.Huddl
   alias Huddlz.Storage.HuddlCoverImages
   alias Huddlz.Storage.HuddlPhotos
   alias HuddlzWeb.AuthReturnTo
@@ -232,13 +234,13 @@ defmodule HuddlzWeb.HuddlLive.Show do
             </div>
 
             <p :if={@photo_count == 0} class="huddl-photos-empty">
-              {if @huddl.group.archived_at,
-                do: "No photos were shared.",
-                else: "No photos yet — be the first to share one!"}
+              {if @can_change_photos,
+                do: "No photos yet — be the first to share one!",
+                else: "No photos were shared."}
             </p>
 
             <form
-              :if={is_nil(@huddl.group.archived_at)}
+              :if={@can_change_photos}
               id="huddl-photo-upload-form"
               phx-submit="upload_photos"
               phx-change="validate_photos"
@@ -319,7 +321,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
                 <span class="photo-credit">{photo.uploader.display_name || "Member"}</span>
                 <button
                   :if={
-                    is_nil(@huddl.group.archived_at) &&
+                    @can_change_photos &&
                       (photo.uploader_id == @current_user.id || @huddl.creator_id == @current_user.id)
                   }
                   type="button"
@@ -1217,7 +1219,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
   end
 
   @impl true
-  def handle_event("upload_photos", _params, %{assigns: %{can_view_photos: false}} = socket) do
+  def handle_event("upload_photos", _params, %{assigns: %{can_change_photos: false}} = socket) do
     {:noreply, socket}
   end
 
@@ -1455,44 +1457,46 @@ defmodule HuddlzWeb.HuddlLive.Show do
   defp assign_huddl(socket, huddl) do
     user = socket.assigns.current_user
     {attendance, waitlist_position} = attendance_info(huddl, user)
+    meta = huddl_meta(huddl)
 
     can_view_photos = can_view_photos?(huddl, user, attendance)
 
+    can_change_photos =
+      can_view_photos && Group.active?(huddl.group) &&
+        Communities.can_create_huddl_photo?(user, %{huddl_id: huddl.id})
+
     socket
     |> assign(:page_title, huddl.title)
-    |> assign(:meta, huddl_meta(huddl))
-    |> assign(:canonical_url, public_url(huddl))
+    |> assign(:meta, meta)
+    |> assign(:canonical_url, if(huddl.is_publicly_visible, do: meta.url))
     |> assign(:huddl, huddl)
     |> assign(:can_view_photos, can_view_photos)
+    |> assign(:can_change_photos, can_change_photos)
     |> assign(:attendance, attendance)
     |> assign(:waitlist_position, waitlist_position)
     |> assign(:going_visible, @going_visible)
     |> assign_going(huddl, user, attendance)
     |> assign_group_membership(huddl.group, user)
     |> assign_join_suggestion(huddl, attendance)
-    |> assign(
-      :can_edit_huddl,
-      is_nil(huddl.group.archived_at) && editable_lifecycle?(huddl) &&
-        Communities.can_update_huddl?(user, huddl)
-    )
+    |> assign(:can_edit_huddl, Huddl.editable_by?(huddl, user))
     |> assign(
       :can_copy_huddl,
-      is_nil(huddl.group.archived_at) &&
+      Group.active?(huddl.group) &&
         Communities.can_create_huddl?(user, %{group_id: huddl.group_id})
     )
     |> assign(
       :can_publish_huddl,
-      is_nil(huddl.group.archived_at) && huddl.lifecycle_state == :draft &&
+      Group.active?(huddl.group) && huddl.lifecycle_state == :draft &&
         Communities.can_publish_huddl?(user, huddl)
     )
     |> assign(
       :can_cancel_huddl,
-      is_nil(huddl.group.archived_at) && cancellable_lifecycle?(huddl) &&
+      Group.active?(huddl.group) && Huddl.cancellable?(huddl) &&
         Communities.can_cancel_huddl?(user, huddl)
     )
     |> assign(
       :can_delete_huddl,
-      is_nil(huddl.group.archived_at) && Communities.can_destroy_huddl?(user, huddl)
+      Group.active?(huddl.group) && Communities.can_destroy_huddl?(user, huddl)
     )
     |> assign_turnout(huddl, user)
     |> load_photos(huddl, user, can_view_photos)
@@ -1545,7 +1549,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
   defp suggestion_lead(_attendance), do: "You're going."
 
   defp joinable?(group, user) do
-    is_nil(group.archived_at) &&
+    Group.active?(group) &&
       Ash.can?({GroupMember, :join_group, %{group_id: group.id}}, user)
   end
 
@@ -1554,7 +1558,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
   # page only reads it back.
   defp assign_turnout(socket, huddl, user) do
     can_see =
-      huddl.status == :completed && not is_nil(user) && is_nil(huddl.group.archived_at) &&
+      huddl.status == :completed && not is_nil(user) && Group.active?(huddl.group) &&
         Communities.can_record_turnout?(user, huddl)
 
     assign(socket, :can_see_turnout, can_see)
@@ -1590,15 +1594,6 @@ defmodule HuddlzWeb.HuddlLive.Show do
 
   defp previous_start(huddl),
     do: DateTime.shift_zone!(huddl.previous_starts_at, huddl.previous_time_zone)
-
-  defp public_url(
-         %{is_private: false, group: %{is_public: true, archived_at: nil}, lifecycle_state: state} =
-           huddl
-       )
-       when state in [:published, :completed, :cancelled],
-       do: huddl_meta(huddl).url
-
-  defp public_url(_huddl), do: nil
 
   # You see who's going only if you're going, so nobody else pays for the query.
   defp assign_going(socket, huddl, user, attendance)
@@ -1674,13 +1669,6 @@ defmodule HuddlzWeb.HuddlLive.Show do
     "#{event_type_label(huddl.event_type)} · #{HuddlStatus.label(huddl.status)}"
   end
 
-  defp editable_lifecycle?(%{lifecycle_state: :draft}), do: true
-
-  defp editable_lifecycle?(%{lifecycle_state: :published, ends_at: ends_at}),
-    do: DateTime.after?(ends_at, DateTime.utc_now())
-
-  defp editable_lifecycle?(_huddl), do: false
-
   defp can_view_photos?(%{status: :completed} = huddl, %{id: user_id}, attendance) do
     attendance == :attending || huddl.creator_id == user_id
   end
@@ -1751,11 +1739,6 @@ defmodule HuddlzWeb.HuddlLive.Show do
         assign(socket, :selected_photo_url, next_url)
     end
   end
-
-  defp cancellable_lifecycle?(%{lifecycle_state: :published, ends_at: ends_at}),
-    do: DateTime.after?(ends_at, DateTime.utc_now())
-
-  defp cancellable_lifecycle?(_huddl), do: false
 
   defp event_type_label(:in_person), do: "In-person huddl"
   defp event_type_label(:virtual), do: "Online huddl"

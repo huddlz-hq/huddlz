@@ -51,6 +51,11 @@ defmodule GroupArchivalSteps do
     Map.merge(context, %{session: session, conn: session})
   end
 
+  step "I follow a saved edit link for {string}", %{args: [title]} = context do
+    session = visit(context.session, huddl_path(context, title) <> "/edit")
+    Map.merge(context, %{session: session, conn: session})
+  end
+
   step "I try to open the archived huddl {string}", %{args: [title]} = context do
     session = context[:session] || context[:conn]
     path = huddl_path(context, title)

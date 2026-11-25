@@ -42,6 +42,23 @@ defmodule HuddlPhotosSteps do
     })
   end
 
+  step "the creator opens the gallery with an unconfirmed address", context do
+    creator = Ash.Seed.update!(context.owner, %{confirmed_at: nil})
+    {:ok, gallery, _} = context.conn |> login(creator) |> live(context.gallery_path)
+    Map.put(context, :gallery, gallery)
+  end
+
+  step "the creator can view the shared photos", context do
+    assert has_element?(context.gallery, "button[aria-label='View photo']")
+    context
+  end
+
+  step "the gallery offers no way to upload or delete photos", context do
+    refute has_element?(context.gallery, "button", "Browse photos")
+    refute has_element?(context.gallery, "button[aria-label='Delete photo']")
+    context
+  end
+
   step "I open its gallery in two tabs and remove a photo in one", context do
     {:ok, first, _} = context.conn |> login(context.owner) |> live(context.gallery_path)
     {:ok, second, _} = context.conn |> login(context.owner) |> live(context.gallery_path)

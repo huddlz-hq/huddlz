@@ -3,6 +3,9 @@ defmodule Huddlz.Communities.Huddl do
   A huddl is a gathering within the huddlz platform.
   """
 
+  alias Huddlz.Communities
+  alias Huddlz.Communities.Group
+
   require Ash.Query
 
   use Ash.Resource,
@@ -13,6 +16,17 @@ defmodule Huddlz.Communities.Huddl do
     notifiers: [Ash.Notifier.PubSub],
     extensions: [AshOban, AshJsonApi.Resource, AshGraphql.Resource, AshPaperTrail.Resource],
     primary_read_warning?: false
+
+  @doc "Whether the viewer can open the edit form for a huddl with its group loaded."
+  def editable_by?(huddl, actor) do
+    Group.active?(huddl.group) and Communities.can_update_huddl?(actor, huddl)
+  end
+
+  @doc "Whether cancellation would transition this huddl to cancelled."
+  def cancellable?(%{lifecycle_state: :published, ends_at: ends_at}),
+    do: DateTime.after?(ends_at, DateTime.utc_now())
+
+  def cancellable?(_huddl), do: false
 
   graphql do
     type :huddl
@@ -1295,10 +1309,12 @@ defmodule Huddlz.Communities.Huddl do
     end
 
     calculate :is_publicly_visible, :boolean do
-      description "Whether the huddl is visible to everyone (public huddl in public group)"
+      description "Whether anyone can open this huddl's detail page"
 
       calculation expr(
-                    is_private == false and group.is_public == true and is_nil(group.archived_at)
+                    lifecycle_state in [:published, :completed, :cancelled] and
+                      is_private == false and group.is_public == true and
+                      is_nil(group.archived_at)
                   )
     end
 

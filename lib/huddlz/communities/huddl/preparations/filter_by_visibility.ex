@@ -15,9 +15,7 @@ defmodule Huddlz.Communities.Huddl.Preparations.FilterByVisibility do
   def prepare(query, _opts, %{actor: nil}) do
     query
     |> Ash.Query.load([:group, :is_publicly_visible])
-    |> Ash.Query.filter(
-      lifecycle_state in [:published, :completed, :cancelled] and is_publicly_visible == true
-    )
+    |> Ash.Query.filter(is_publicly_visible)
   end
 
   # One declarative database predicate is safer here than merging separately

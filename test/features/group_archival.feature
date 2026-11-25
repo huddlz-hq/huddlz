@@ -164,7 +164,8 @@ Feature: Group archival
     When I visit the group page for "Stale Club"
     Then I should not see "This should not save"
 
-  Scenario: An archived draft cannot be published through the API
+  @archived_draft
+  Scenario: An archived draft is read-only on the huddl page and through the API
     Given the following users exist:
       | email                            | role | display_name |
       | owner+group-archival@example.com | user | Owner        |
@@ -178,6 +179,10 @@ Feature: Group archival
     Then the archived huddl change is rejected
     When I open the archived huddl "Next season"
     Then the "Publish huddl" button should not be visible
+    And I should not see "Edit huddl"
+    When I follow a saved edit link for "Next season"
+    Then I should see "You don't have permission to edit this huddl"
+    And I should see "This group is archived"
 
   Scenario: An outstanding invitation cannot reopen membership in an archived group
     Given the following users exist:

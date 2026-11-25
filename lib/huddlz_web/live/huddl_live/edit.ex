@@ -10,6 +10,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
   import HuddlzWeb.Live.Helpers.UploadHelpers
 
   alias Huddlz.Communities
+  alias Huddlz.Communities.Huddl
   alias Huddlz.Communities.HuddlTemplate
   alias Huddlz.Storage.GroupImages
   alias Huddlz.Storage.HuddlCoverImages
@@ -61,7 +62,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
     user = socket.assigns.current_user
 
     with {:ok, huddl} <- get_huddl(id, group_slug, user),
-         :ok <- authorize({huddl, :update}, user) do
+         true <- Huddl.editable_by?(huddl, user) do
       group_locations = load_group_locations(huddl.group.id, user)
 
       socket =
@@ -87,7 +88,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
            fallback_path: ~p"/groups/#{group_slug}"
          )}
 
-      {:error, :not_authorized} ->
+      false ->
         {:noreply,
          handle_error(socket, :not_authorized,
            resource_name: "huddl",
