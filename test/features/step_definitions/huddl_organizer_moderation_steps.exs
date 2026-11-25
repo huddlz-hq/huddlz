@@ -27,11 +27,11 @@ defmodule HuddlOrganizerModerationSteps do
         "data" => attributes
       })
 
-    Map.put(context, :organizer_report_response, response)
+    Map.put(context, :report_response, response)
   end
 
   step "the organizer report is accepted without naming the organizer", context do
-    response = context.organizer_report_response
+    response = context.report_response
     assert response.status in 200..299, response.resp_body
 
     organizer = find_user("spam612@example.com")
@@ -43,12 +43,12 @@ defmodule HuddlOrganizerModerationSteps do
   end
 
   step "the organizer report is refused", context do
-    assert %{"errors" => [_ | _]} = json_response(context.organizer_report_response, 403)
+    assert %{"errors" => [_ | _]} = json_response(context.report_response, 403)
     context
   end
 
   step "JSON:API asks for an organizer report reason", context do
-    assert %{"errors" => errors} = json_response(context.organizer_report_response, 400)
+    assert %{"errors" => errors} = json_response(context.report_response, 400)
     assert Enum.any?(errors, &(&1["detail"] =~ "Say what's wrong"))
     context
   end
@@ -78,17 +78,24 @@ defmodule HuddlOrganizerModerationSteps do
         "data" => attributes
       })
 
-    Map.put(context, :group_report_response, response)
+    Map.put(context, :report_response, response)
   end
 
   step "the group report is accepted without naming the owner", context do
-    response = context.group_report_response
+    response = context.report_response
     assert response.status in 200..299, response.resp_body
 
     owner = find_user("spam612@example.com")
     refute response.resp_body =~ owner.id
     refute response.resp_body =~ to_string(owner.email)
     refute response.resp_body =~ owner.display_name
+
+    context
+  end
+
+  step "the report target cannot be found", context do
+    assert %{"errors" => [%{"code" => "not_found"}]} =
+             json_response(context.report_response, 404)
 
     context
   end

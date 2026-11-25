@@ -22,6 +22,13 @@ Feature: Report or block a huddl's organizer from the huddl
     And "member612@example.com" has an open report about "spam612@example.com" for "spam" saying "Coin listings"
     And the report about "spam612@example.com" came from the huddl "Free Coin Giveaway"
 
+  Scenario: A member cannot report an organizer through a huddl they cannot see
+    Given a members-only huddl "Coffee Committee" exists in "Moderation Brooklyn Coffee"
+    And I am signed in as "member612@example.com"
+    When I report the organizer of "Coffee Committee" for "spam" saying "" through JSON:API
+    Then the report target cannot be found
+    And there are no reports about "owner612@example.com"
+
   Scenario: Reporting an organizer follows the rules for reporting an account
     Given I am signed in as "member612@example.com"
     When I report the organizer of "Free Coin Giveaway" for "" saying "" through JSON:API
@@ -98,6 +105,13 @@ Feature: Report or block a huddl's organizer from the huddl
     Then the block is accepted
     And my blocked people through JSON:API are "Crypto Kings Promo"
     And discovery through JSON:API does not show "Free Coin Giveaway"
+
+  Scenario: A member cannot report an owner through a group they cannot see
+    Given a private group "Invite Only Coffee" exists with owner "spam612@example.com"
+    And I am signed in as "member612@example.com"
+    When I report the group "Invite Only Coffee" for "spam" saying "" through JSON:API
+    Then the report target cannot be found
+    And there are no reports about "spam612@example.com"
 
   Scenario: A group owner cannot block themselves and sees they own the group
     Given a public group "Quiet Spam Club" exists with owner "spam612@example.com"
