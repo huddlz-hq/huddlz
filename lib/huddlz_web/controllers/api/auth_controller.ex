@@ -309,11 +309,26 @@ defmodule HuddlzWeb.Api.AuthController do
     do: {:error, "must be between #{@api_key_min_days} and #{@api_key_max_days} days"}
 
   defp serialize_self(user) do
+    user = Ash.load!(user, [:current_profile_picture_url], actor: user)
+
     %{
       id: user.id,
       email: to_string(user.email),
-      display_name: user.display_name
+      display_name: user.display_name,
+      avatar_url: avatar_url(user)
     }
+  end
+
+  defp avatar_url(user) do
+    case HuddlzWeb.Avatar.picture_url(user) do
+      nil ->
+        nil
+
+      url ->
+        HuddlzWeb.Endpoint.url()
+        |> URI.merge(url)
+        |> URI.to_string()
+    end
   end
 
   defp format_errors(%Ash.Error.Invalid{errors: errors}) do

@@ -173,6 +173,60 @@ defmodule HuddlzWeb.Api.AuthControllerTest do
       assert user["id"] == target.id
       assert user["email"] == "me@example.com"
       assert user["display_name"] == "Me"
+      assert Map.fetch!(user, "avatar_url") == nil
+    end
+
+    test "returns the user's current avatar_url on /me and /sign_in, and null after removal", %{
+      conn: conn
+    } do
+      target =
+        generate(
+          user(
+            email: "avatar-me@example.com",
+            display_name: "Avatar Me",
+            password: "correct horse battery staple"
+          )
+        )
+
+      picture =
+        Huddlz.Accounts.ProfilePicture
+        |> Ash.Changeset.for_create(
+          :create,
+          %{
+            user_id: target.id,
+            filename: "avatar.jpg",
+            content_type: "image/jpeg",
+            size_bytes: 100,
+            storage_path: "/uploads/profile_pictures/#{target.id}/avatar.jpg",
+            thumbnail_path: "/uploads/profile_pictures/#{target.id}/avatar_thumb.jpg"
+          },
+          actor: target
+        )
+        |> Ash.create!()
+
+      expected = HuddlzWeb.Endpoint.url() <> picture.thumbnail_path
+
+      me_body = conn |> authenticated_conn(target) |> get("/api/auth/me") |> json_response(200)
+      assert me_body["user"]["avatar_url"] == expected
+
+      sign_in_body =
+        conn
+        |> post("/api/auth/sign_in", %{
+          "email" => "avatar-me@example.com",
+          "password" => "correct horse battery staple"
+        })
+        |> json_response(200)
+
+      assert sign_in_body["user"]["avatar_url"] == expected
+
+      picture
+      |> Ash.Changeset.for_update(:soft_delete, %{}, actor: target)
+      |> Ash.update!()
+
+      after_delete =
+        conn |> authenticated_conn(target) |> get("/api/auth/me") |> json_response(200)
+
+      assert Map.fetch!(after_delete["user"], "avatar_url") == nil
     end
 
     test "returns 401 when no bearer is provided", %{conn: conn} do
