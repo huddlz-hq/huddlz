@@ -26,8 +26,7 @@ defmodule HuddlzWeb.Live.Helpers.HuddlCardHelpers do
       "#{Calendar.strftime(datetime, "%-I:%M %p")} #{datetime.zone_abbr}"
   end
 
-  def local_starts_at(%{starts_at: datetime, time_zone: time_zone}),
-    do: DateTime.shift_zone!(datetime, time_zone)
+  defdelegate local_starts_at(huddl), to: HuddlzWeb.HuddlSchedule
 
   def rsvp_label(%{rsvp_count: count, max_attendees: max}) when is_integer(max) and max > 0,
     do: "#{count} / #{max} RSVPs"

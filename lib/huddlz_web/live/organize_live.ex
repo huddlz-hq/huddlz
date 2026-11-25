@@ -33,6 +33,7 @@ defmodule HuddlzWeb.OrganizeLive do
   alias Huddlz.Social.Post
   alias HuddlzWeb.Components.TurnoutForm
   alias HuddlzWeb.FormFocus
+  alias HuddlzWeb.HuddlSchedule
   alias HuddlzWeb.HuddlStatus
   alias HuddlzWeb.Layouts
   alias HuddlzWeb.Live.Helpers.BrowserTimeZone
@@ -697,7 +698,7 @@ defmodule HuddlzWeb.OrganizeLive do
             <h2>Next huddl</h2>
             <div :if={@next} class="panel-sub">
               <.link navigate={huddl_show_path(@group, @next)}>{@next.title}</.link>
-              · {short_date(@next)}
+              · {HuddlSchedule.short_date(@next)}
             </div>
             <div :if={is_nil(@next)} class="panel-sub">Next on the calendar</div>
           </div>
@@ -1069,7 +1070,7 @@ defmodule HuddlzWeb.OrganizeLive do
           <.organizer_status huddl={@huddl} />
         </h3>
         <div class="org-huddl-meta">
-          <span>{format_organizer_time(@huddl)}</span>
+          <span>{HuddlSchedule.start_time(@huddl)}</span>
           <span class="dot" aria-hidden="true"></span>
           <span>{organizer_place(@huddl)}</span>
           <%= if @huddl.huddl_template do %>
@@ -1267,10 +1268,6 @@ defmodule HuddlzWeb.OrganizeLive do
 
   defp huddl_show_path(group, huddl), do: ~p"/groups/#{group.slug}/huddlz/#{huddl.id}"
 
-  defp short_date(%{starts_at: starts_at, time_zone: time_zone}) do
-    starts_at |> DateTime.shift_zone!(time_zone) |> Calendar.strftime("%b %-d")
-  end
-
   defp signups_figure(%{capacity: nil, rsvp_count: count}), do: rsvp_label(count)
   defp signups_figure(%{capacity: capacity, rsvp_count: count}), do: "#{count} / #{capacity}"
 
@@ -1289,11 +1286,6 @@ defmodule HuddlzWeb.OrganizeLive do
 
   defp capacity_percent(%{rsvp_count: count, max_attendees: max}),
     do: min(100, div(count * 100, max))
-
-  defp format_organizer_time(huddl) do
-    local = HuddlCardHelpers.local_starts_at(huddl)
-    Calendar.strftime(local, "%-I:%M %p") <> " " <> local.zone_abbr
-  end
 
   defp organizer_place(%{event_type: :virtual}), do: "Online"
 

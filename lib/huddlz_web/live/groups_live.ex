@@ -18,8 +18,8 @@ defmodule HuddlzWeb.GroupsLive do
   import HuddlzWeb.Live.Helpers.ParamHelpers
 
   alias Huddlz.Communities
+  alias HuddlzWeb.HuddlSchedule
   alias HuddlzWeb.Layouts
-  alias HuddlzWeb.Live.Helpers.HuddlCardHelpers
   require Logger
 
   @group_loads [:current_image_url, :member_count, :viewer_role]
@@ -359,21 +359,17 @@ defmodule HuddlzWeb.GroupsLive do
 
   # huddlz knows who RSVPd, not who came, so a finished huddl reads "RSVPd".
   defp spot_line(%{spot: :going, huddl: huddl}),
-    do: "You're going to #{huddl.title} on #{huddl_day(huddl)}"
+    do: "You're going to #{huddl.title} on #{HuddlSchedule.short_date(huddl)}"
 
   defp spot_line(%{spot: :waitlisted, huddl: huddl}),
-    do: "Waitlisted for #{huddl.title} on #{huddl_day(huddl)}"
+    do: "Waitlisted for #{huddl.title} on #{HuddlSchedule.short_date(huddl)}"
 
   defp spot_line(%{spot: :rsvpd, huddl: huddl}),
-    do: "You RSVPd to #{huddl.title} on #{huddl_day(huddl)}"
+    do: "You RSVPd to #{huddl.title} on #{HuddlSchedule.short_date(huddl)}"
 
   defp spot_icon(:going), do: "hero-calendar"
   defp spot_icon(:waitlisted), do: "hero-clock"
   defp spot_icon(:rsvpd), do: "hero-check"
-
-  defp huddl_day(huddl) do
-    huddl |> HuddlCardHelpers.local_starts_at() |> Calendar.strftime("%b %-d")
-  end
 
   attr :group, :map, required: true
   attr :role, :atom, required: true
