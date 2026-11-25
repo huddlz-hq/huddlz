@@ -191,6 +191,7 @@ defmodule AccountReportsSteps do
 
     assert Enum.sort(report_routes) == [
              {"/api/json/account_reports", "post"},
+             {"/api/json/account_reports/group", "post"},
              {"/api/json/account_reports/organizer", "post"}
            ]
 

@@ -8,6 +8,7 @@ defmodule Huddlz.Accounts.AccountReport.Actions.ReportOrganizer do
 
   use Ash.Resource.Actions.Implementation
 
+  alias Ash.Error.Query.NotFound
   alias Huddlz.Accounts
   alias Huddlz.Accounts.HuddlOrganizer
   alias Huddlz.Communities.Huddl
@@ -30,7 +31,7 @@ defmodule Huddlz.Accounts.AccountReport.Actions.ReportOrganizer do
            ) do
       :ok
     else
-      :error -> {:error, Ash.Error.Query.NotFound.exception(resource: Huddl)}
+      :error -> {:error, NotFound.exception(resource: Huddl)}
       {:error, error} -> {:error, error}
     end
   end

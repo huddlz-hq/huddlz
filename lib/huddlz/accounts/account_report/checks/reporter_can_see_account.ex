@@ -2,9 +2,9 @@ defmodule Huddlz.Accounts.AccountReport.Checks.ReporterCanSeeAccount do
   @moduledoc """
   Reporting grants no new visibility: the reporter must already meet the
   account on an ordinary member surface. That is a group they both belong
-  to, or a huddl they both go to, or a huddl the reporter goes to that
-  the account organizes, or a public huddl whose organizer they can see.
-  Nobody reports themselves.
+  to, a huddl they both go to, a huddl the reporter goes to that the
+  account organizes, a public huddl whose organizer they can see, or a
+  public group the account owns. Nobody reports themselves.
   """
 
   use Ash.Policy.SimpleCheck

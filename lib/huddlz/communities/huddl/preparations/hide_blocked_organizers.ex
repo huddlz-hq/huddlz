@@ -8,7 +8,7 @@ defmodule Huddlz.Communities.Huddl.Preparations.HideBlockedOrganizers do
   require Ash.Query
 
   def prepare(query, _opts, %{actor: %{id: actor_id}}) do
-    if is_nil(Ash.Query.get_argument(query, :relationship)) do
+    if Ash.Query.get_argument(query, :relationship) in [nil, :member] do
       Ash.Query.filter(query, not exists(organizer_blocks, blocker_id == ^actor_id))
     else
       query

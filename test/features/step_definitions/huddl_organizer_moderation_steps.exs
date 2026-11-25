@@ -198,6 +198,11 @@ defmodule HuddlOrganizerModerationSteps do
     context
   end
 
+  step "member discovery through JSON:API does not show {string}", %{args: [title]} = context do
+    refute title in titles(context, "/api/json/huddlz", %{"relationship" => "member"})
+    context
+  end
+
   step "the group's upcoming huddlz through JSON:API do not show {string}",
        %{args: [title]} = context do
     huddl = find_huddl(title)

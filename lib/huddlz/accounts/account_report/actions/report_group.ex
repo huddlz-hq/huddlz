@@ -8,6 +8,7 @@ defmodule Huddlz.Accounts.AccountReport.Actions.ReportGroup do
 
   use Ash.Resource.Actions.Implementation
 
+  alias Ash.Error.Query.NotFound
   alias Huddlz.Accounts
   alias Huddlz.Accounts.GroupOwner
   alias Huddlz.Communities.Group
@@ -30,7 +31,7 @@ defmodule Huddlz.Accounts.AccountReport.Actions.ReportGroup do
            ) do
       :ok
     else
-      :error -> {:error, Ash.Error.Query.NotFound.exception(resource: Group)}
+      :error -> {:error, NotFound.exception(resource: Group)}
       {:error, error} -> {:error, error}
     end
   end

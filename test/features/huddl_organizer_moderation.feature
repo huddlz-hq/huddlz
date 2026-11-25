@@ -43,11 +43,13 @@ Feature: Report or block a huddl's organizer from the huddl
     And there are no reports about "spam612@example.com"
 
   Scenario: Blocking an organizer hides their huddlz from discovery and the group
-    Given I am signed in as "member612@example.com"
+    Given "member612@example.com" is a member of "Moderation Brooklyn Coffee"
+    And I am signed in as "member612@example.com"
     When I block the organizer of "Free Coin Giveaway" through JSON:API
     Then the block is accepted
     And discovery through JSON:API shows "Saturday Pour Over"
     But discovery through JSON:API does not show "Free Coin Giveaway"
+    And member discovery through JSON:API does not show "Free Coin Giveaway"
     And the group's upcoming huddlz through JSON:API do not show "Free Coin Giveaway"
     And I can still open "Free Coin Giveaway" through JSON:API
 

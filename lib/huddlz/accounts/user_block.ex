@@ -1,10 +1,10 @@
 defmodule Huddlz.Accounts.UserBlock do
   @moduledoc """
-  A person's choice to stop seeing huddlz someone else organizes. Today a
-  block is made from a huddl the person can see, and it blocks that
-  huddl's organizer: their huddlz leave the person's discovery and group
-  lists on every app. Huddlz the person already RSVPed to stay on their
-  calendar, and an open link still works.
+  A person's choice to stop seeing huddlz someone else organizes. A block can
+  be made from a huddl or group the person can see, targeting that huddl's
+  organizer or group's owner: their huddlz leave the person's discovery and
+  group lists on every app. Huddlz the person already RSVPed to stay on
+  their calendar, and an open link still works.
 
   Blocking is private. The blocked person is not told and can still see
   everything they could before. Only the person who blocked reads their
