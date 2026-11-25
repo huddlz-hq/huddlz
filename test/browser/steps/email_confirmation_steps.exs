@@ -40,6 +40,7 @@ defmodule BrowserEmailConfirmationSteps do
   step "I can still save my display name", context do
     conn =
       context.conn
+      |> assert_has("body .phx-connected")
       |> fill_in("Display name", with: "Confirmation Reviewer")
       |> click_button("Save changes")
       |> assert_has("[role=alert]", text: "Display name updated successfully")
