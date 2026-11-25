@@ -187,6 +187,15 @@ defmodule Huddlz.Communities.SocialConnection do
       authorize_if Huddlz.Communities.GroupMember.Checks.GroupOwner
     end
 
+    # The Social page is read-only when the group closes or becomes private.
+    # Outside that workspace an owner can still disconnect a place, and an
+    # organizer can stop posting. Resuming or editing requires an open public group.
+    policy action([:edit, :pause, :resume, :remove]) do
+      authorize_if expr(group.is_public == true and is_nil(group.archived_at))
+      forbid_if context_equals(:social_workspace?, true)
+      authorize_if action([:pause, :remove])
+    end
+
     policy action([:edit, :reconnect, :remove, :mark_needs_reconnecting]) do
       authorize_if expr(group.owner_id == ^actor(:id))
     end

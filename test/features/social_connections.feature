@@ -204,3 +204,45 @@ Feature: A group connects a place for huddlz to post to
     And hand-offs come back through "https://dev.example"
     When I start connecting Slack from the Social tab of "Elixir Nashville"
     Then Slack is told to send me back to "https://dev.example/social/slack/callback"
+
+  Scenario: Transferring ownership closes the former owner's open schedule
+    Given "Elixir Nashville" posts to the Slack channel "#general"
+    And "organizer@example.com" is an organizer of "Elixir Nashville"
+    And I am signed in as "owner@example.com"
+    When I open the Social tab of "Elixir Nashville"
+    And I click the "Edit" button
+    And the owner transfers "Elixir Nashville" to "organizer@example.com" in another session
+    Then I should not see "Choose when it posts"
+    And I can see the connection to "#general" but cannot change its schedule or remove it
+    And the "Pause" button should be visible
+
+  Scenario: Archiving the group closes its open schedule
+    Given "Elixir Nashville" posts to the Slack channel "#general"
+    And I am signed in as "owner@example.com"
+    When I open the Social tab of "Elixir Nashville"
+    And I click the "Edit" button
+    And the owner archives "Elixir Nashville" in another session
+    Then I should see "This group is archived"
+    And I should not see "Choose when it posts"
+    And the "Connect a place" button should not be visible
+    And the "Pause" button should not be visible
+
+  @social_rename
+  Scenario: A group keeps its open schedule when its address changes
+    Given "Elixir Nashville" posts to the Slack channel "#general"
+    And I am signed in as "owner@example.com"
+    When I enter an opening line longer than 140 characters and finish
+    And the owner changes the group address to "music-city-elixir" in another session
+    Then I can correct the opening line and the saved connection is unchanged
+    And I can continue editing "#general" at the new Social address "music-city-elixir"
+
+  @social_read_only
+  Scenario: Making a group private stops edits to its social schedule
+    Given "Elixir Nashville" posts to the Slack channel "#general"
+    And I am signed in as "owner@example.com"
+    When I open the Social tab of "Elixir Nashville"
+    And I click the "Edit" button
+    And the owner makes the group private in another session
+    Then the Social tab explains that only public groups post
+    And I should not see "Choose when it posts"
+    And my earlier connection cannot save a new opening line

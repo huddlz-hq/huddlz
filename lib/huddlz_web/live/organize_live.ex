@@ -10,7 +10,6 @@ defmodule HuddlzWeb.OrganizeLive do
     * `/organize/:group_slug` — overview (KPIs + next huddl)
     * `/organize/:group_slug/huddlz` — huddlz list, lifecycle filters
     * `/organize/:group_slug/members` — roster grouped by role, one menu per person
-    * `/organize/:group_slug/social` — social connections: the places huddlz posts to
     * `/organize/:group_slug/settings` — owner-only group administration
   """
   use HuddlzWeb, :live_view
@@ -24,13 +23,6 @@ defmodule HuddlzWeb.OrganizeLive do
   alias Huddlz.Accounts.User
   alias Huddlz.Communities
   alias Huddlz.Communities.GroupStats
-  alias Huddlz.Communities.MembershipEvents
-  alias Huddlz.Communities.SocialConnection
-  alias Huddlz.Communities.SocialConnection.Kind
-  alias Huddlz.Communities.SocialConnection.Moment
-  alias Huddlz.Communities.SocialPost.Occasion
-  alias Huddlz.Social
-  alias Huddlz.Social.Post
   alias HuddlzWeb.Components.TurnoutForm
   alias HuddlzWeb.FormFocus
   alias HuddlzWeb.HuddlSchedule
@@ -38,9 +30,9 @@ defmodule HuddlzWeb.OrganizeLive do
   alias HuddlzWeb.Layouts
   alias HuddlzWeb.Live.Helpers.BrowserTimeZone
   alias HuddlzWeb.Live.Helpers.HuddlCardHelpers
+  alias HuddlzWeb.OrganizeLive.Workspace
   alias HuddlzWeb.ReportAccount
 
-  @group_loads [:current_image_url, :member_count]
   @huddl_loads [
     :rsvp_count,
     :status,
@@ -83,17 +75,8 @@ defmodule HuddlzWeb.OrganizeLive do
      |> assign(:invitation_count, 0)
      |> assign(:member_lookup, %{})
      |> assign(:member_role_counts, %{owner: 0, organizer: 0, member: 0})
-     |> assign(:subscribed_group_id, nil)
      |> assign(:pending_member_action, nil)
      |> assign(:member_action_form, member_action_form())
-     |> assign(:social_connections, [])
-     |> assign(:upcoming_posts, [])
-     |> assign(:recent_posts, [])
-     |> assign(:connect_dialog?, false)
-     |> assign(:schedule_editor, nil)
-     |> assign(:schedule_form, nil)
-     |> assign(:moments_form, nil)
-     |> assign(:removing_connection, nil)
      |> assign(:transfer_target_form, transfer_target_form())
      |> assign(:transfer_candidates, [])
      |> stream(:invitations, [])
@@ -112,7 +95,6 @@ defmodule HuddlzWeb.OrganizeLive do
       |> assign(:pending_member_action, nil)
       |> assign(:huddlz_filter, parse_huddlz_filter(params["filter"]))
       |> assign(:period, GroupStats.parse_period(params["period"]))
-      |> assign(:connected_id, params["connected"])
       |> load_action(action, params, user)
 
     {:noreply, socket}
@@ -132,23 +114,25 @@ defmodule HuddlzWeb.OrganizeLive do
   end
 
   defp load_action(socket, action, %{"group_slug" => slug}, user) do
-    case load_group(slug, user) do
-      {:ok, group} ->
+    case Workspace.open(socket, slug) do
+      {:ok, socket} ->
         socket
-        |> subscribe_to_membership_changes(group)
-        |> assign(:group, group)
-        |> assign(
-          :can_edit_group,
-          is_nil(group.archived_at) && Ash.can?({group, :update_details}, user)
-        )
-        |> assign(:page_title, "#{group.name} · Organizer")
-        |> load_section(action, group, user)
+        |> assign_group_edit_permission()
+        |> load_section(action, socket.assigns.group, user)
 
-      :error ->
+      {:error, socket} ->
         socket
-        |> put_flash(:error, "That group doesn't exist, or you don't organize it.")
-        |> push_navigate(to: ~p"/organize")
     end
+  end
+
+  defp assign_group_edit_permission(socket) do
+    %{group: group, current_user: user} = socket.assigns
+
+    assign(
+      socket,
+      :can_edit_group,
+      is_nil(group.archived_at) && Ash.can?({group, :update_details}, user)
+    )
   end
 
   defp load_section(socket, :overview, group, user) do
@@ -185,21 +169,6 @@ defmodule HuddlzWeb.OrganizeLive do
     |> stream(:invitations, invitations, reset: true)
   end
 
-  defp load_section(socket, :social, group, user) do
-    socket = load_connections(socket, group, user)
-
-    # Coming back from the platform opens the new connection's schedule.
-    editor =
-      case socket.assigns.connected_id do
-        nil -> nil
-        id -> Enum.find(socket.assigns.social_connections, &(&1.id == id))
-      end
-
-    socket
-    |> assign(:connect_dialog?, false)
-    |> assign_schedule(editor)
-  end
-
   defp load_section(socket, :settings, group, user) when group.owner_id == user.id do
     assign_members(socket, list_group_members(group, user))
   end
@@ -208,13 +177,6 @@ defmodule HuddlzWeb.OrganizeLive do
     socket
     |> assign(:pending_member_action, nil)
     |> push_navigate(to: ~p"/organize/#{group.slug}")
-  end
-
-  defp load_connections(socket, group, user) do
-    socket
-    |> assign(:social_connections, Communities.list_social_connections!(group.id, actor: user))
-    |> assign(:upcoming_posts, Communities.list_upcoming_social_posts!(group.id, actor: user))
-    |> assign(:recent_posts, Communities.list_recent_social_posts!(group.id, actor: user))
   end
 
   # The huddl a turnout event names: the nudge's, or one of the listed rows.
@@ -244,13 +206,6 @@ defmodule HuddlzWeb.OrganizeLive do
 
       _other ->
         socket
-    end
-  end
-
-  defp load_group(slug, user) do
-    case Communities.get_group_for_organize(slug, actor: user, load: @group_loads) do
-      {:ok, %Huddlz.Communities.Group{} = group} -> {:ok, group}
-      _ -> :error
     end
   end
 
@@ -360,15 +315,6 @@ defmodule HuddlzWeb.OrganizeLive do
 
   defp normalize_invitation_expiration(invitation, _user), do: invitation
 
-  defp subscribe_to_membership_changes(socket, group) do
-    if connected?(socket) and socket.assigns.subscribed_group_id != group.id do
-      :ok = MembershipEvents.subscribe(group.id)
-      assign(socket, :subscribed_group_id, group.id)
-    else
-      socket
-    end
-  end
-
   defp parse_huddlz_filter("draft"), do: :draft
   defp parse_huddlz_filter("cancelled"), do: :cancelled
   defp parse_huddlz_filter("past"), do: :past
@@ -388,20 +334,7 @@ defmodule HuddlzWeb.OrganizeLive do
       active_group_slug={@group && @group.slug}
       active_organize_section={active_section(@live_action)}
     >
-      <section
-        :if={@group && @group.archived_at}
-        id="organizer-archived-banner"
-        class="panel mb-6"
-        role="status"
-      >
-        <h2>This group is archived</h2>
-        <p>History is read-only. Ownership can transfer without reopening the group.</p>
-        <.link
-          :if={@group.owner_id == @current_user.id}
-          navigate={~p"/groups/#{@group.slug}/edit"}
-          class="btn-secondary"
-        >Manage archival</.link>
-      </section>
+      <Workspace.archived_banner group={@group} current_user={@current_user} />
       <%= case @live_action do %>
         <% :index -> %>
           <.picker_view groups={@owned_groups} />
@@ -443,20 +376,6 @@ defmodule HuddlzWeb.OrganizeLive do
             invitations={@streams.invitations}
             invitation_count={@invitation_count}
           />
-        <% :social -> %>
-          <.social_view
-            group={@group}
-            connections={@social_connections}
-            owner?={@group.owner_id == @current_user.id}
-            connect_dialog?={@connect_dialog?}
-            editor={@schedule_editor}
-            form={@schedule_form}
-            moments_form={@moments_form}
-            fresh?={not is_nil(@connected_id)}
-            removing={@removing_connection}
-            upcoming={@upcoming_posts}
-            recent={@recent_posts}
-          />
         <% :settings -> %>
           <.settings_view
             :if={@group.owner_id == @current_user.id}
@@ -480,7 +399,6 @@ defmodule HuddlzWeb.OrganizeLive do
   defp active_section(:overview), do: :overview
   defp active_section(:huddlz), do: :huddlz
   defp active_section(:members), do: :members
-  defp active_section(:social), do: :social
   defp active_section(:settings), do: :settings
   defp active_section(_), do: nil
 
@@ -1846,81 +1764,6 @@ defmodule HuddlzWeb.OrganizeLive do
     {:noreply, put_flash(socket, :error, "Choose a member to receive ownership.")}
   end
 
-  def handle_event("open_connect_dialog", _params, socket) do
-    {:noreply, assign(socket, :connect_dialog?, true)}
-  end
-
-  def handle_event("close_connect_dialog", _params, socket) do
-    {:noreply, assign(socket, :connect_dialog?, false)}
-  end
-
-  def handle_event("edit_connection", %{"id" => id}, socket) do
-    editor = Enum.find(socket.assigns.social_connections, &(&1.id == id))
-    {:noreply, assign_schedule(socket, editor)}
-  end
-
-  def handle_event("close_schedule", _params, socket) do
-    {:noreply, close_schedule(socket)}
-  end
-
-  def handle_event("ask_remove_connection", _params, socket) do
-    {:noreply, assign(socket, :removing_connection, socket.assigns.schedule_editor)}
-  end
-
-  def handle_event("cancel_remove_connection", _params, socket) do
-    {:noreply, assign(socket, :removing_connection, nil)}
-  end
-
-  def handle_event("remove_connection", _params, socket) do
-    %{removing_connection: connection, current_user: user, group: group} = socket.assigns
-
-    case Communities.remove_social_connection(connection, actor: user) do
-      :ok ->
-        {:noreply,
-         socket
-         |> assign(:removing_connection, nil)
-         |> put_flash(:info, "#{SocialConnection.place(connection)} is no longer connected.")
-         |> close_schedule()
-         |> load_connections(group, user)}
-
-      {:error, _error} ->
-        {:noreply, put_flash(socket, :error, "That connection didn't go.")}
-    end
-  end
-
-  def handle_event("pause_connection", %{"id" => id}, socket) do
-    set_connection_state(socket, id, &Communities.pause_social_connection/2, "is paused.")
-  end
-
-  def handle_event("resume_connection", %{"id" => id}, socket) do
-    set_connection_state(socket, id, &Communities.resume_social_connection/2, "is posting again.")
-  end
-
-  def handle_event("send_test_post", _params, socket) do
-    %{schedule_editor: connection, current_user: user} = socket.assigns
-
-    case Communities.send_social_test_post(connection.id, actor: user) do
-      :ok ->
-        {:noreply,
-         put_flash(socket, :info, "A test post went to #{SocialConnection.place(connection)}.")}
-
-      {:error, error} ->
-        {:noreply,
-         socket
-         |> load_connections(socket.assigns.group, user)
-         |> put_flash(:error, test_post_error(error))}
-    end
-  end
-
-  def handle_event("save_schedule", params, socket) do
-    {:noreply, save_schedule(socket, params)}
-  end
-
-  def handle_event("finish_schedule", params, socket) do
-    socket = save_schedule(socket, params)
-    {:noreply, finish_schedule(socket, socket.assigns.schedule_form.source.valid?)}
-  end
-
   def handle_event("cancel_member_action", _params, socket) do
     {:noreply,
      socket
@@ -2028,24 +1871,15 @@ defmodule HuddlzWeb.OrganizeLive do
   end
 
   defp refresh_after_membership_change(socket) do
-    user = socket.assigns.current_user
-    group = socket.assigns.group
-
-    case load_group(group.slug, user) do
-      {:ok, reloaded_group} ->
+    case Workspace.refresh(socket) do
+      {:ok, socket} ->
         socket
-        |> assign(:group, reloaded_group)
-        |> assign(
-          :can_edit_group,
-          is_nil(reloaded_group.archived_at) && Ash.can?({reloaded_group, :update_details}, user)
-        )
-        |> refresh_members_if_visible(reloaded_group, user)
+        |> assign_group_edit_permission()
+        |> refresh_members_if_visible(socket.assigns.group, socket.assigns.current_user)
         |> refresh_pending_member_action()
 
-      :error ->
+      {:error, socket} ->
         socket
-        |> put_flash(:error, "Your organizer access to #{group.name} has changed.")
-        |> push_navigate(to: ~p"/organize")
     end
   end
 
@@ -2254,521 +2088,4 @@ defmodule HuddlzWeb.OrganizeLive do
   defp rsvp_label(0), do: "0 RSVPs"
   defp rsvp_label(1), do: "1 RSVP"
   defp rsvp_label(n), do: "#{n} RSVPs"
-
-  # ---------------------------------------------------------------------------
-  # Social
-  # ---------------------------------------------------------------------------
-
-  defp save_schedule(socket, params) do
-    attrs = Map.put(params["schedule"] || %{}, "moments", chosen_moments(params["moments"]))
-    form = AshPhoenix.Form.validate(socket.assigns.schedule_form, attrs)
-
-    socket
-    |> assign(:moments_form, to_form(params["moments"] || %{}, as: :moments))
-    |> persist_schedule(form)
-  end
-
-  defp persist_schedule(socket, %AshPhoenix.Form{valid?: true, changed?: false}), do: socket
-
-  defp persist_schedule(socket, form) do
-    case AshPhoenix.Form.submit(form, params: form.params) do
-      {:ok, updated} ->
-        socket
-        |> assign_schedule(updated)
-        |> load_connections(socket.assigns.group, socket.assigns.current_user)
-
-      {:error, form} ->
-        assign(socket, :schedule_form, to_form(form))
-    end
-  end
-
-  defp finish_schedule(socket, false), do: FormFocus.first_error(socket, "schedule-form")
-
-  defp finish_schedule(socket, true) do
-    socket
-    |> put_flash(
-      :info,
-      "#{SocialConnection.place(socket.assigns.schedule_editor)} will post on that schedule."
-    )
-    |> close_schedule()
-  end
-
-  defp assign_schedule(socket, nil) do
-    assign(socket, schedule_editor: nil, schedule_form: nil, moments_form: nil)
-  end
-
-  defp assign_schedule(socket, connection) do
-    form =
-      connection
-      |> AshPhoenix.Form.for_update(:edit, actor: socket.assigns.current_user, as: "schedule")
-      |> to_form()
-
-    moments = Map.new(Moment.values(), &{Atom.to_string(&1), &1 in connection.moments})
-
-    assign(socket,
-      schedule_editor: connection,
-      schedule_form: form,
-      moments_form: to_form(moments, as: :moments)
-    )
-  end
-
-  defp close_schedule(socket) do
-    socket = assign_schedule(socket, nil)
-
-    case socket.assigns.connected_id do
-      nil -> socket
-      _id -> push_patch(socket, to: ~p"/organize/#{socket.assigns.group.slug}/social")
-    end
-  end
-
-  defp set_connection_state(socket, id, change, said) do
-    %{current_user: user, group: group} = socket.assigns
-    connection = Enum.find(socket.assigns.social_connections, &(&1.id == id))
-
-    case connection && change.(connection, actor: user) do
-      {:ok, _connection} ->
-        {:noreply,
-         socket
-         |> put_flash(:info, "#{SocialConnection.place(connection)} #{said}")
-         |> load_connections(group, user)}
-
-      _ ->
-        {:noreply, put_flash(socket, :error, "That didn't change.")}
-    end
-  end
-
-  defp test_post_error(%Ash.Error.Invalid{errors: [%{message: message} | _]}), do: message
-  defp test_post_error(_error), do: "The test post didn't go through."
-
-  # The morning-of post for a made-up huddl this evening, worded by the same
-  # formatter scheduled posts use, so the preview cannot drift from a post.
-  defp preview_text(group, opening_line) do
-    today = group.time_zone |> DateTime.now!() |> DateTime.to_date()
-
-    Post.text(
-      %{
-        title: "Your next huddl with #{group.name}",
-        starts_at: DateTime.new!(today, ~T[18:00:00], group.time_zone),
-        time_zone: group.time_zone,
-        event_type: :virtual,
-        max_attendees: 20,
-        rsvp_count: 8,
-        waitlist_count: 0
-      },
-      moment: :morning_of,
-      opening_line: opening_line,
-      link: url(~p"/groups/#{group.slug}/huddlz/example")
-    )
-  end
-
-  # Checkbox params: %{"week_before" => "true"} for the ticked moments.
-  defp chosen_moments(nil), do: []
-
-  defp chosen_moments(params) when is_map(params) do
-    Enum.filter(Moment.values(), fn moment -> params[Atom.to_string(moment)] == "true" end)
-  end
-
-  attr :group, :map, required: true
-  attr :connections, :list, required: true
-  attr :owner?, :boolean, required: true
-  attr :connect_dialog?, :boolean, required: true
-  attr :editor, :any, required: true
-  attr :form, :any, required: true
-  attr :moments_form, :any, required: true
-  attr :fresh?, :boolean, required: true
-  attr :removing, :any, required: true
-  attr :upcoming, :list, required: true
-  attr :recent, :list, required: true
-
-  defp social_view(assigns) do
-    ~H"""
-    <div class="page-head">
-      <div>
-        <h1>Social</h1>
-        <p>
-          Post each huddl to the places your people already talk. Only public huddlz in public groups are posted.
-        </p>
-      </div>
-      <.button
-        :if={@owner? && @group.is_public && is_nil(@group.archived_at)}
-        id="connect-place"
-        type="button"
-        variant={:primary}
-        phx-click="open_connect_dialog"
-      >
-        Connect a place
-      </.button>
-    </div>
-
-    <section :if={!@group.is_public} id="social-private-note" class="panel">
-      <p class="muted">
-        Only public groups post to outside places: a link to a private group's huddl dead-ends for anyone who isn't a member.
-      </p>
-    </section>
-
-    <section :if={!@owner? && @group.is_public} id="social-organizer-note" class="panel">
-      <p class="muted">
-        The group owner sets up social connections. You can pause one, skip a huddl, or post a huddl now.
-      </p>
-    </section>
-
-    <section :if={@group.is_public} id="social-connections" class="panel">
-      <div class="panel-head">
-        <div>
-          <h2>Social connections</h2>
-          <div class="panel-sub">Each one posts on its own social schedule.</div>
-        </div>
-      </div>
-      <p :if={@connections == []} class="muted">
-        Nothing connected yet. Connect a Slack or Discord channel once and huddlz posts every public huddl there.
-      </p>
-      <div :if={@connections != []} class="row-list">
-        <div
-          :for={connection <- @connections}
-          id={"social-connection-#{connection.id}"}
-          class="row social-row"
-        >
-          <span class={["place-mark", Atom.to_string(connection.kind)]} aria-hidden="true">
-            {String.first(Kind.label(connection.kind))}
-          </span>
-          <span class="row-title">
-            {connection.channel_name}
-            <span class="meta">
-              {Kind.label(connection.kind)} · {connection.workspace_name}
-              <span :if={connection.connected_by}>· connected by {connection.connected_by.display_name}</span>
-            </span>
-            <.link
-              :if={SocialConnection.destination_url(connection)}
-              href={SocialConnection.destination_url(connection)}
-              target="_blank"
-              rel="noopener noreferrer"
-              class="meta underline"
-            >Open channel</.link>
-            <span :if={connection.opening_line} class="meta social-opening-line">
-              Opens with “{connection.opening_line}”
-            </span>
-          </span>
-          <span class="social-moments">
-            <span :for={moment <- connection.moments} class="pill">{Moment.short(moment)}</span>
-            <span :if={connection.moments == []} class="pill muted">No schedule yet</span>
-          </span>
-          <.pill variant={state_variant(connection.state)}>{state_label(connection.state)}</.pill>
-          <span class="social-actions">
-            <.button
-              :if={connection.state == :posting}
-              id={"pause-connection-#{connection.id}"}
-              type="button"
-              variant={:secondary}
-              phx-click="pause_connection"
-              phx-value-id={connection.id}
-            >
-              Pause
-            </.button>
-            <.button
-              :if={connection.state == :paused}
-              id={"resume-connection-#{connection.id}"}
-              type="button"
-              variant={:secondary}
-              phx-click="resume_connection"
-              phx-value-id={connection.id}
-            >
-              Resume
-            </.button>
-            <.button
-              :if={@owner?}
-              id={"edit-connection-#{connection.id}"}
-              type="button"
-              variant={:secondary}
-              phx-click="edit_connection"
-              phx-value-id={connection.id}
-            >
-              Edit
-            </.button>
-          </span>
-        </div>
-      </div>
-    </section>
-
-    <section :if={@group.is_public && @connections != []} id="upcoming-social-posts" class="panel">
-      <div class="panel-head">
-        <div>
-          <h2>Upcoming posts</h2>
-          <div class="panel-sub">
-            Times are in each huddl's time zone. A paused connection posts nothing, so its posts are not listed.
-          </div>
-        </div>
-      </div>
-      <p :if={@upcoming == []} class="muted">
-        Nothing to post yet. Posts appear here as public huddlz are published.
-      </p>
-      <div :if={@upcoming != []} class="row-list">
-        <div :for={post <- @upcoming} id={"social-post-#{post.id}"} class="row social-post-row">
-          <span class="social-post-time">{post_time(post.due_at, post.huddl)}</span>
-          <span class="row-title">
-            {post_huddl(post)}
-            <span class="meta">
-              {Occasion.label(post.occasion)} · {post.social_connection.channel_name}
-            </span>
-          </span>
-        </div>
-      </div>
-    </section>
-
-    <section :if={@group.is_public && @recent != []} id="recent-social-posts" class="panel">
-      <div class="panel-head">
-        <div>
-          <h2>Recent posts</h2>
-        </div>
-      </div>
-      <div class="row-list">
-        <div :for={post <- @recent} id={"social-post-#{post.id}"} class="row social-post-row">
-          <span class="social-post-time">{post_time(post.sent_at || post.due_at, post.huddl)}</span>
-          <span class="row-title">
-            {post_huddl(post)}
-            <span class="meta">
-              {Occasion.label(post.occasion)} · {post.social_connection.channel_name}
-            </span>
-          </span>
-          <.pill :if={post.state == :not_sent} variant={:magenta}>Didn't send</.pill>
-        </div>
-      </div>
-    </section>
-
-    <.connect_place_dialog :if={@connect_dialog?} group={@group} />
-    <.schedule_sheet
-      :if={@editor}
-      connection={@editor}
-      form={@form}
-      moments_form={@moments_form}
-      group={@group}
-      fresh?={@fresh?}
-    />
-    <.remove_connection_dialog :if={@removing} connection={@removing} />
-    """
-  end
-
-  # When a post goes out, read in its huddl's time zone.
-  defp post_time(at, huddl) do
-    at |> DateTime.shift_zone!(huddl.time_zone) |> Calendar.strftime("%a, %b %-d, %-I:%M %p")
-  end
-
-  # The huddl a post is about, with its date when the post goes out on
-  # another day.
-  defp post_huddl(%{huddl: huddl} = post) do
-    starts = DateTime.shift_zone!(huddl.starts_at, huddl.time_zone)
-    due = DateTime.shift_zone!(post.due_at, huddl.time_zone)
-
-    if DateTime.to_date(starts) == DateTime.to_date(due),
-      do: huddl.title,
-      else: "#{huddl.title} · #{Calendar.strftime(starts, "%a, %b %-d")}"
-  end
-
-  defp state_label(:posting), do: "Posting"
-  defp state_label(:paused), do: "Paused"
-  defp state_label(:needs_reconnecting), do: "Needs reconnecting"
-
-  defp state_variant(:posting), do: :cyan
-  defp state_variant(:paused), do: :muted
-  defp state_variant(:needs_reconnecting), do: :warn
-
-  @not_yet [
-    {"Bluesky", "Free to post to, and links work. The next one to add."},
-    {"Mastodon", "Free to post to, and links work."},
-    {"X", "X charges huddlz for every post that carries a link."},
-    {"Instagram", "Posts can't carry a link, and Meta has to review huddlz first."}
-  ]
-
-  attr :group, :map, required: true
-
-  defp connect_place_dialog(assigns) do
-    assigns =
-      assigns
-      |> assign(:not_yet, @not_yet)
-      |> assign(:tiles, [
-        {:slack, "S", "Pick the workspace and channel on Slack's own screen."},
-        {:discord, "D", "Pick the server and channel on Discord's own screen."}
-      ])
-
-    ~H"""
-    <.modal id="connect-place-dialog" show on_cancel={JS.push("close_connect_dialog")}>
-      <div class="pr-8">
-        <h2 id="connect-place-dialog-title" class="text-xl font-bold">Connect a place</h2>
-        <p class="mt-2 muted">Where should huddlz post for {@group.name}?</p>
-      </div>
-      <div class="place-tiles mt-5">
-        <%= for {kind, mark, line} <- @tiles do %>
-          <.link
-            :if={Social.configured?(kind)}
-            id={"connect-#{kind}"}
-            class="place-tile"
-            href={~p"/organize/#{@group.slug}/social/connect/#{kind}"}
-          >
-            <span class={"place-mark #{kind}"} aria-hidden="true">{mark}</span>
-            <span class="place-tile-name">{Kind.label(kind)}</span>
-            <span class="place-tile-line">{line}</span>
-          </.link>
-          <div
-            :if={!Social.configured?(kind)}
-            id={"connect-#{kind}"}
-            class="place-tile place-tile-off"
-          >
-            <span class={"place-mark #{kind}"} aria-hidden="true">{mark}</span>
-            <span class="place-tile-name">{Kind.label(kind)}</span>
-            <span class="place-tile-line">Not set up on this server yet.</span>
-          </div>
-        <% end %>
-      </div>
-      <ul class="not-yet-list mt-4">
-        <li :for={{name, why} <- @not_yet}>
-          <span class="not-yet-name">{name}</span>
-          <span class="muted">{why}</span>
-          <span class="pill muted">Not yet</span>
-        </li>
-      </ul>
-      <p class="mt-4 muted text-sm">
-        One social connection is one channel. Connect again to post to another.
-      </p>
-    </.modal>
-    """
-  end
-
-  attr :connection, :map, required: true
-
-  defp remove_connection_dialog(assigns) do
-    ~H"""
-    <.modal id="remove-connection-dialog" show on_cancel={JS.push("cancel_remove_connection")}>
-      <div class="pr-8">
-        <h2 id="remove-connection-dialog-title" class="text-xl font-bold">
-          Remove {SocialConnection.place(@connection)}?
-        </h2>
-        <p class="mt-3 muted">
-          huddlz stops posting there. Connecting it again goes through {Kind.label(@connection.kind)}'s own screen.
-        </p>
-      </div>
-      <div class="form-foot mt-6">
-        <.button id="remove-connection-cancel" type="button" phx-click="cancel_remove_connection">
-          Cancel
-        </.button>
-        <.button
-          id="remove-connection-confirm"
-          type="button"
-          variant={:destructive}
-          phx-click="remove_connection"
-        >
-          Remove connection
-        </.button>
-      </div>
-    </.modal>
-    """
-  end
-
-  attr :connection, :map, required: true
-  attr :group, :map, required: true
-  attr :fresh?, :boolean, default: false
-
-  attr :form, :any, required: true
-  attr :moments_form, :any, required: true
-
-  defp schedule_sheet(assigns) do
-    assigns =
-      assigns
-      |> assign(:moments, Moment.values())
-      |> assign(:preview, preview_text(assigns.group, assigns.form[:opening_line].value))
-
-    ~H"""
-    <.modal id="schedule-sheet" show on_cancel={JS.push("close_schedule")}>
-      <div class="pr-8">
-        <h2 id="schedule-sheet-title" class="text-xl font-bold">Choose when it posts</h2>
-        <p class="mt-2 muted">
-          {SocialConnection.place(@connection)} · {@connection.workspace_name}. This applies to every public huddl from now on.
-        </p>
-      </div>
-      <.form
-        for={@form}
-        id="schedule-form"
-        phx-change="save_schedule"
-        phx-submit="finish_schedule"
-        class="mt-5"
-      >
-        <fieldset :if={@connection.kind == :discord} class="place-names">
-          <legend class="form-label">What to call it</legend>
-          <p class="muted text-sm">
-            Discord shares only the server and channel ids, so name them the way your members would.
-          </p>
-          <div class="place-names-fields">
-            <.input
-              field={@form[:workspace_name]}
-              id="place-server-name"
-              label="Server name"
-              phx-debounce="300"
-            />
-            <.input
-              field={@form[:channel_name]}
-              id="place-channel-name"
-              label="Channel name"
-              phx-debounce="300"
-            />
-          </div>
-        </fieldset>
-        <fieldset class="schedule-moments">
-          <legend class="form-label">Social schedule</legend>
-          <div :for={moment <- @moments} class="schedule-moment">
-            <.toggle field={@moments_form[moment]} label={Moment.label(moment)} labelled_externally />
-            <span>
-              <label for={@moments_form[moment].id} class="schedule-moment-name">{Moment.label(moment)}</label>
-              <span :if={Moment.hint(moment) != ""} class="muted">{Moment.hint(moment)}</span>
-            </span>
-          </div>
-          <p class="muted text-sm">
-            If a posted huddl is cancelled or moved, huddlz always posts a short follow-up here.
-          </p>
-        </fieldset>
-        <div class="mt-4">
-          <.input
-            field={@form[:opening_line]}
-            id="opening-line"
-            label="Opening line"
-            placeholder="Optional. For example: This week at Elixir Nashville:"
-            help="Up to 140 characters."
-            phx-debounce="300"
-          />
-        </div>
-        <p class="muted text-sm mt-2">
-          Changes save as you make them and show in the group's activity.
-        </p>
-        <section
-          id="social-post-preview"
-          aria-label="Morning-of post preview"
-          class="mt-5 rounded-xl border border-base-content/15 bg-base-content/5 p-4"
-        >
-          <h3 class="font-semibold">Morning-of post preview</h3>
-          <p class="muted text-sm mt-1">
-            An example with your opening line. Each post uses the huddl's own details and local time.
-          </p>
-          <p class="mt-3 text-sm whitespace-pre-wrap break-words">{@preview}</p>
-        </section>
-        <div class="form-foot schedule-actions mt-5">
-          <.button
-            id="remove-connection"
-            type="button"
-            variant={:destructive}
-            phx-click="ask_remove_connection"
-          >
-            Remove
-          </.button>
-          <.link
-            href={~p"/organize/#{@group.slug}/social/reconnect/#{@connection.id}"}
-            class="btn-secondary"
-          >Reconnect</.link>
-          <.button id="send-test-post" type="button" variant={:secondary} phx-click="send_test_post">
-            Send a test post
-          </.button>
-          <.button id="finish-schedule" type="submit" variant={:primary}>
-            {if @fresh?, do: "Start posting", else: "Done"}
-          </.button>
-        </div>
-      </.form>
-    </.modal>
-    """
-  end
 end

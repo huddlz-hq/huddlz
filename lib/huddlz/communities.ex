@@ -86,7 +86,8 @@ defmodule Huddlz.Communities do
       define :drop_in?, action: :drop_in?, args: [:group_id]
       define :list_drop_ins, action: :drop_ins
       define :get_by_slug, action: :get_by_slug, args: [:slug]
-      define :get_group_for_organize, action: :get_for_organize, args: [:slug], get?: true
+      define :get_group_for_organize, action: :get_for_organize, get_by: [:slug]
+      define :get_group_for_organize_by_id, action: :get_for_organize, get_by: [:id]
       define :group_overview, action: :overview, args: [:group_id, {:optional, :period}]
 
       define :update_details,

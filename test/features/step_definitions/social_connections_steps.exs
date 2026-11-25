@@ -15,6 +15,7 @@ defmodule SocialConnectionsSteps do
   alias Huddlz.Accounts.User
   alias Huddlz.Communities.Group
   alias Huddlz.Communities.SocialConnection
+  alias Huddlz.Test.Helpers.Authentication
 
   # Connecting hands off to the platform's own consent screen and comes back
   # to huddlz with a code. The hand-off is followed by hand here: the redirect
@@ -135,6 +136,60 @@ defmodule SocialConnectionsSteps do
     group = lookup_group(group_name)
     session = visit(context.session, "/organize/#{group.slug}/social")
     Map.merge(context, %{session: session, conn: session, group: group})
+  end
+
+  step "the owner makes the group private in another session", context do
+    build_conn()
+    |> Authentication.login(context.current_user)
+    |> visit("/groups/#{context.group.slug}/edit")
+    |> uncheck("Public group")
+    |> click_button("Save Changes")
+    |> assert_path("/groups/#{context.group.slug}")
+
+    context
+  end
+
+  step "my earlier connection cannot save a new opening line", context do
+    assert {:error, _} =
+             Huddlz.Communities.edit_social_connection(
+               context.connection,
+               %{opening_line: "A new opening line"},
+               actor: context.current_user
+             )
+
+    saved =
+      Huddlz.Communities.get_social_connection!(context.connection.id,
+        actor: context.current_user
+      )
+
+    assert saved.opening_line == context.connection.opening_line
+    context
+  end
+
+  step "the owner changes the group address to {string} in another session",
+       %{args: [slug]} = context do
+    build_conn()
+    |> Authentication.login(context.current_user)
+    |> visit("/groups/#{context.group.slug}/edit")
+    |> fill_in("URL Slug", with: slug)
+    |> click_button("Save Changes")
+    |> assert_path("/groups/#{slug}")
+
+    context
+  end
+
+  step "I can continue editing {string} at the new Social address {string}",
+       %{args: [channel, slug]} = context do
+    context.session
+    |> assert_has("#schedule-sheet", text: channel)
+    |> assert_path("/organize/#{slug}/social", timeout: 1000)
+    |> fill_in("Opening line", with: "See you tonight!")
+    |> click_button("Done")
+    |> assert_has("#social-connections", text: "See you tonight!")
+    |> click_link("Members")
+    |> assert_path("/organize/#{slug}/members")
+
+    context
   end
 
   step "I can see the connection to {string} but cannot change its schedule or remove it",

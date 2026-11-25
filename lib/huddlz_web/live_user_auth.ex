@@ -317,6 +317,10 @@ defmodule HuddlzWeb.LiveUserAuth do
     end
   end
 
+  def refresh_sidebar_groups(socket) do
+    assign(socket, :sidebar_owned_groups, load_sidebar_owned_groups(socket))
+  end
+
   defp load_sidebar_owned_groups(%{assigns: %{current_user: user}}) when not is_nil(user) do
     Huddlz.Communities.get_organizable_groups!(
       actor: user,
@@ -383,12 +387,8 @@ defmodule HuddlzWeb.LiveUserAuth do
          {:organizer_access_changed, user_id},
          %{assigns: %{current_user: %{id: user_id}}} = socket
        ) do
-    groups = load_sidebar_owned_groups(socket)
-
-    socket =
-      socket
-      |> assign(:sidebar_owned_groups, groups)
-      |> maybe_assign_picker_groups(groups)
+    socket = refresh_sidebar_groups(socket)
+    socket = maybe_assign_picker_groups(socket, socket.assigns.sidebar_owned_groups)
 
     organizer_access_result(socket)
   end

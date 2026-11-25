@@ -196,7 +196,7 @@ defmodule HuddlzWeb.Router do
       live "/organize/:group_slug", OrganizeLive, :overview
       live "/organize/:group_slug/huddlz", OrganizeLive, :huddlz
       live "/organize/:group_slug/members", OrganizeLive, :members
-      live "/organize/:group_slug/social", OrganizeLive, :social
+      live "/organize/:group_slug/social", OrganizeLive.Social, :social
       live "/organize/:group_slug/settings", OrganizeLive, :settings
 
       # Group routes

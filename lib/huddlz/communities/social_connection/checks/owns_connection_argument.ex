@@ -1,7 +1,7 @@
 defmodule Huddlz.Communities.SocialConnection.Checks.OwnsConnectionArgument do
   @moduledoc """
   Authorizes a generic action whose `id` argument names a social connection
-  of a group the actor owns. Generic actions have no record to write an
+  of an open public group the actor owns. Generic actions have no record to write an
   expression policy against, so the lookup happens here.
   """
 
@@ -12,12 +12,15 @@ defmodule Huddlz.Communities.SocialConnection.Checks.OwnsConnectionArgument do
   alias Huddlz.Communities.SocialConnection
 
   @impl true
-  def describe(_opts), do: "actor owns the group of the connection named by id"
+  def describe(_opts), do: "actor owns the open public group of the connection named by id"
 
   @impl true
   def match?(%{id: actor_id}, %{subject: %{arguments: %{id: id}}}, _opts) when is_binary(id) do
     SocialConnection
-    |> Ash.Query.filter(id == ^id and group.owner_id == ^actor_id)
+    |> Ash.Query.filter(
+      id == ^id and group.owner_id == ^actor_id and
+        group.is_public == true and is_nil(group.archived_at)
+    )
     |> Ash.exists?(authorize?: false)
   end
 
