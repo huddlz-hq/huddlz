@@ -37,6 +37,8 @@ defmodule Huddlz.Accounts.AccountReport do
     routes do
       base "/account_reports"
       post :report
+      route :post, "/organizer", :report_organizer
+      route :post, "/group", :report_group
     end
   end
 
@@ -82,6 +84,48 @@ defmodule Huddlz.Accounts.AccountReport do
       upsert_condition expr(expires_at <= now())
       upsert_fields [:reason, :details, :source_type, :source_id, :expires_at, :inserted_at]
       return_skipped_upsert? true
+    end
+
+    action :report_organizer do
+      description """
+      Report the organizer of a huddl the actor can see, by naming the
+      huddl. It follows the same rules as reporting the account directly
+      and returns nothing about the account.
+      """
+
+      argument :huddl_id, :uuid do
+        description "The huddl whose organizer to report"
+        allow_nil? false
+      end
+
+      argument :reason, Huddlz.Accounts.AccountReport.Reason
+
+      argument :details, :string do
+        constraints max_length: 1000, trim?: true
+      end
+
+      run Huddlz.Accounts.AccountReport.Actions.ReportOrganizer
+    end
+
+    action :report_group do
+      description """
+      Report the owner of a group the actor can see, by naming the group.
+      It follows the same rules as reporting the account directly and
+      returns nothing about the account.
+      """
+
+      argument :group_id, :uuid do
+        description "The group whose owner to report"
+        allow_nil? false
+      end
+
+      argument :reason, Huddlz.Accounts.AccountReport.Reason
+
+      argument :details, :string do
+        constraints max_length: 1000, trim?: true
+      end
+
+      run Huddlz.Accounts.AccountReport.Actions.ReportGroup
     end
 
     read :queue do
@@ -137,6 +181,11 @@ defmodule Huddlz.Accounts.AccountReport do
   end
 
   policies do
+    policy action([:report_organizer, :report_group]) do
+      description "Signed-in people may ask; reporting the account itself decides the rest"
+      authorize_if actor_present()
+    end
+
     policy action(:report) do
       description "Confirmed members report accounts they can already see, never themselves"
       forbid_unless Huddlz.Accounts.Checks.ConfirmedActor

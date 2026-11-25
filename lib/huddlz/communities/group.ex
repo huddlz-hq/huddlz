@@ -547,6 +547,12 @@ defmodule Huddlz.Communities.Group do
   end
 
   calculations do
+    calculate :owned_by_me, :boolean do
+      public? true
+      description "Whether the current caller owns this group"
+      calculation expr(not is_nil(^actor(:id)) and owner_id == ^actor(:id))
+    end
+
     calculate :search_relevance, :float do
       argument :query, :string, allow_nil?: false
 

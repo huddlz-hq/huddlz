@@ -9,7 +9,7 @@ defmodule Huddlz.Accounts.AccountReport.Checks.ReporterCanSeeAccount do
 
   use Ash.Policy.SimpleCheck
 
-  alias Huddlz.Communities.{GroupMember, Huddl, HuddlAttendee}
+  alias Huddlz.Communities.{Group, GroupMember, Huddl, HuddlAttendee}
 
   require Ash.Query
 
@@ -31,7 +31,8 @@ defmodule Huddlz.Accounts.AccountReport.Checks.ReporterCanSeeAccount do
     shares_group?(actor_id, reported_id) or
       shares_huddl?(actor_id, reported_id) or
       organizes_attended_huddl?(actor_id, reported_id) or
-      organizes_public_huddl?(reported_id)
+      organizes_public_huddl?(reported_id) or
+      owns_public_group?(reported_id)
   end
 
   defp shares_group?(actor_id, reported_id) do
@@ -59,6 +60,13 @@ defmodule Huddlz.Accounts.AccountReport.Checks.ReporterCanSeeAccount do
     Huddl
     |> Ash.Query.for_read(:read, %{}, actor: nil)
     |> Ash.Query.filter(creator_id == ^reported_id)
+    |> Ash.exists?()
+  end
+
+  defp owns_public_group?(reported_id) do
+    Group
+    |> Ash.Query.for_read(:read, %{}, actor: nil)
+    |> Ash.Query.filter(owner_id == ^reported_id)
     |> Ash.exists?()
   end
 end
