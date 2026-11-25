@@ -405,6 +405,9 @@ defmodule Huddlz.Communities.Huddl do
         :huddl_template_id
       ]
 
+      argument :pending_image_id, :uuid, public?: false
+      change Huddlz.Communities.Changes.ReplaceCover
+
       # Virtual arguments for form inputs
       argument :date, :date, allow_nil?: true
       argument :start_time, :time, allow_nil?: true

@@ -1,4 +1,4 @@
-@async @database @conn
+@async @database @conn @cover_images
 Feature: Huddl Image Management
   As a group owner or organizer
   I want to upload images for huddlz
@@ -69,18 +69,34 @@ Feature: Huddl Image Management
     Then I should see "Cover image"
     And I should see "Drop a 16:9 image"
 
-  Scenario: Owner can upload a new image for existing huddl
+  Scenario: Owner can replace the cover of an existing huddl
     Given a public group "Cover Image Tech Meetup" exists with owner "owner+huddl-cover-image@example.com"
     And the following huddl exists in "Cover Image Tech Meetup":
       | title     | description | event_type | physical_location | creator                             |
       | Add Image | Test desc   | in_person  | Test Location     | owner+huddl-cover-image@example.com |
+    And the huddl "Add Image" has an image
     And I am signed in as "owner+huddl-cover-image@example.com"
     When I visit the edit page for huddl "Add Image"
     And I upload "test/fixtures/test_image.jpg" to "Cover image"
-    Then I should see "New image uploaded. Save to apply."
+    Then I preview the replacement cover
     When I click "Save changes"
     Then I should see "Huddl updated successfully"
-    And the huddl "Add Image" should have its own image
+    And I should see the cover I previewed
+
+  Scenario: A huddl keeps its cover when the replacement expires before saving
+    Given a public group "Cover Image Tech Meetup" exists with owner "owner+huddl-cover-image@example.com"
+    And a huddl "Original Cover Huddl" exists in "Cover Image Tech Meetup" created by "owner+huddl-cover-image@example.com"
+    And the huddl "Original Cover Huddl" has an image
+    And I am signed in as "owner+huddl-cover-image@example.com"
+    When I visit the edit page for huddl "Original Cover Huddl"
+    And I upload "test/fixtures/test_image.jpg" to "Cover image"
+    And my pending huddl cover expires
+    And I click "Save changes"
+    Then I should see "The cover could not be saved. Choose the image again."
+    And the edit form should show my saved huddl cover
+    And I should not see "Huddl updated successfully"
+    When I visit the huddl page for "Original Cover Huddl"
+    Then I should see the original huddl cover
 
   Scenario: Owner can remove existing huddl image to fallback to group
     Given a public group "Cover Image Tech Meetup" exists with owner "owner+huddl-cover-image@example.com"

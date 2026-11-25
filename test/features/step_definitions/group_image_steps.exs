@@ -34,7 +34,7 @@ defmodule GroupImageSteps do
       end)
 
     # Create a group image record (simulating an uploaded image)
-    {:ok, _image} =
+    {:ok, image} =
       Communities.create_group_image(
         %{
           filename: "test_banner.jpg",
@@ -46,6 +46,41 @@ defmodule GroupImageSteps do
         },
         actor: owner
       )
+
+    Map.put(context, :original_group_cover, image.thumbnail_path)
+  end
+
+  step "my pending group image expires", context do
+    pending = GroupImage |> Ash.Query.filter(is_nil(group_id)) |> Ash.read_one!(authorize?: false)
+    Communities.soft_delete_group_image!(pending, authorize?: false)
+    context
+  end
+
+  step "I preview the replacement cover", context do
+    [url] =
+      context.session.view
+      |> Phoenix.LiveViewTest.render()
+      |> Floki.parse_fragment!()
+      |> Floki.attribute(".cover-upload img", "src")
+
+    Map.put(context, :replacement_cover_url, url)
+  end
+
+  step "I should see the cover I previewed", context do
+    assert_has(context.session, "[data-cover-url='#{context.replacement_cover_url}']")
+    context
+  end
+
+  step "the edit form should show my saved group cover", context do
+    assert_has(context.session, "img[src='#{Huddlz.Storage.url(context.original_group_cover)}']")
+    context
+  end
+
+  step "I should see the original group cover", context do
+    assert_has(
+      context.session,
+      "[data-cover-url='#{Huddlz.Storage.url(context.original_group_cover)}']"
+    )
 
     context
   end

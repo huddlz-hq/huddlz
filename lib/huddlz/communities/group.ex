@@ -359,6 +359,9 @@ defmodule Huddlz.Communities.Group do
 
       require_atomic? false
 
+      argument :pending_image_id, :uuid, public?: false
+      change Huddlz.Communities.Changes.ReplaceCover
+
       argument :provided_latitude, :float, allow_nil?: true, public?: false
       argument :provided_longitude, :float, allow_nil?: true, public?: false
 

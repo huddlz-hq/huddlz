@@ -101,6 +101,23 @@ defmodule HuddlzWeb.Live.Helpers.ImageUploadPipeline do
     end)
   end
 
+  @doc "Submit an edit with the pending cover selected by this LiveView."
+  def submit_edit(%{assigns: %{upload_processing: true}}, _params),
+    do: {:upload_error, "Wait for the cover to finish uploading."}
+
+  def submit_edit(%{assigns: %{image_error: message}}, _params) when is_binary(message),
+    do: {:upload_error, message}
+
+  def submit_edit(socket, params) do
+    pending_image_id = socket.assigns.pending_image_id
+
+    socket.assigns.form.source
+    |> AshPhoenix.Form.update_options(
+      &Keyword.put(&1, :private_arguments, %{pending_image_id: pending_image_id})
+    )
+    |> AshPhoenix.Form.submit(params: params)
+  end
+
   @doc "Soft-delete any pending image attached to the socket and clear the preview assigns."
   def cleanup_pending_image(socket, %{cleanup: cleanup}) do
     case socket.assigns[:pending_image_id] do

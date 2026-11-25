@@ -80,6 +80,7 @@ defmodule Huddlz.Communities.HuddlCoverImage do
 
     references do
       reference :huddl, on_delete: :delete
+      reference :pending_group, on_delete: :nilify
     end
 
     custom_indexes do
@@ -121,7 +122,9 @@ defmodule Huddlz.Communities.HuddlCoverImage do
       description "Create a pending image during eager upload (huddl_id = nil)"
       accept [:filename, :content_type, :size_bytes, :storage_path, :thumbnail_path]
 
-      # group_id is required for authorization but not stored
+      change set_attribute(:pending_group_id, arg(:group_id))
+      change set_attribute(:uploaded_by_id, actor(:id))
+
       argument :group_id, :uuid do
         allow_nil? false
         description "Group ID for authorization - actor must be a member"
@@ -156,6 +159,8 @@ defmodule Huddlz.Communities.HuddlCoverImage do
       change Huddlz.Communities.Changes.RequireActiveGroup
       description "Soft-delete a huddl image and trigger cleanup job"
       accept []
+      # A stale discard of a pending upload must not retire a cover that has since been saved.
+      change filter(expr(is_nil(huddl_id))), where: [attributes_absent(:huddl_id)]
       change set_attribute(:deleted_at, &DateTime.utc_now/0)
       change run_oban_trigger(:cleanup_storage)
     end
@@ -172,6 +177,11 @@ defmodule Huddlz.Communities.HuddlCoverImage do
       validate attributes_absent(:huddl_id),
         message: "can only assign unassigned images"
 
+      change filter(
+               expr(is_nil(huddl_id) and is_nil(deleted_at) and uploaded_by_id == ^actor(:id))
+             )
+
+      change filter(expr(exists(pending_group.huddlz, id == ^arg(:huddl_id))))
       change set_attribute(:huddl_id, arg(:huddl_id))
     end
 
@@ -306,6 +316,7 @@ defmodule Huddlz.Communities.HuddlCoverImage do
 
   attributes do
     uuid_primary_key :id
+    attribute :uploaded_by_id, :uuid
 
     attribute :filename, :string do
       allow_nil? false
@@ -347,6 +358,8 @@ defmodule Huddlz.Communities.HuddlCoverImage do
   end
 
   relationships do
+    belongs_to :pending_group, Huddlz.Communities.Group
+
     belongs_to :huddl, Huddlz.Communities.Huddl do
       attribute_type :uuid
       # Allow nil for pending images (not yet assigned to a huddl)

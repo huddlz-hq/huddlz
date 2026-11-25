@@ -10,6 +10,7 @@ defmodule HuddlCoverImageSteps do
   alias Huddlz.Communities
   alias Huddlz.Communities.GroupMember
   alias Huddlz.Communities.Huddl
+  alias Huddlz.Communities.HuddlCoverImage
 
   require Ash.Query
 
@@ -29,7 +30,7 @@ defmodule HuddlCoverImageSteps do
         u.id == group.owner_id
       end)
 
-    {:ok, _image} =
+    {:ok, image} =
       Communities.create_huddl_cover_image(
         %{
           filename: "huddl_banner.jpg",
@@ -41,6 +42,28 @@ defmodule HuddlCoverImageSteps do
         },
         actor: owner
       )
+
+    Map.put(context, :original_huddl_cover, image.thumbnail_path)
+  end
+
+  step "my pending huddl cover expires", context do
+    pending =
+      HuddlCoverImage |> Ash.Query.filter(is_nil(huddl_id)) |> Ash.read_one!(authorize?: false)
+
+    Ash.destroy!(pending, authorize?: false)
+    context
+  end
+
+  step "the edit form should show my saved huddl cover", context do
+    assert_has(context.session, "img[src='#{Huddlz.Storage.url(context.original_huddl_cover)}']")
+    context
+  end
+
+  step "I should see the original huddl cover", context do
+    assert_has(
+      context.session,
+      "[data-cover-url='#{Huddlz.Storage.url(context.original_huddl_cover)}']"
+    )
 
     context
   end

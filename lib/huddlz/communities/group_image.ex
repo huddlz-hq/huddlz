@@ -119,7 +119,10 @@ defmodule Huddlz.Communities.GroupImage do
       change Huddlz.Communities.Changes.RequireActiveGroup
       description "Create a pending image during eager upload (group_id = nil)"
       accept [:filename, :content_type, :size_bytes, :storage_path, :thumbnail_path]
-      # group_id intentionally not accepted - stays nil for pending images
+      # New groups do not have an id yet. Edit uploads are scoped to their group.
+      argument :group_id, :uuid
+      change set_attribute(:pending_group_id, arg(:group_id))
+      change set_attribute(:uploaded_by_id, actor(:id))
     end
 
     read :get_current_for_group do
@@ -150,6 +153,8 @@ defmodule Huddlz.Communities.GroupImage do
       change Huddlz.Communities.Changes.RequireActiveGroup
       description "Soft-delete a group image and trigger cleanup job"
       accept []
+      # A stale discard of a pending upload must not retire a cover that has since been saved.
+      change filter(expr(is_nil(group_id))), where: [attributes_absent(:group_id)]
       change set_attribute(:deleted_at, &DateTime.utc_now/0)
       change run_oban_trigger(:cleanup_storage)
     end
@@ -166,6 +171,11 @@ defmodule Huddlz.Communities.GroupImage do
       validate attributes_absent(:group_id),
         message: "can only assign unassigned images"
 
+      change filter(
+               expr(is_nil(group_id) and is_nil(deleted_at) and uploaded_by_id == ^actor(:id))
+             )
+
+      change filter(expr(is_nil(pending_group_id) or pending_group_id == ^arg(:group_id)))
       change set_attribute(:group_id, arg(:group_id))
     end
 
@@ -301,6 +311,8 @@ defmodule Huddlz.Communities.GroupImage do
 
   attributes do
     uuid_primary_key :id
+    attribute :pending_group_id, :uuid
+    attribute :uploaded_by_id, :uuid
 
     attribute :filename, :string do
       allow_nil? false
