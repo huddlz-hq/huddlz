@@ -94,26 +94,33 @@ defmodule HuddlzWeb.Api.AuthController do
       {:ok, _user} ->
         send_resp(conn, :no_content, "")
 
-      {:error, %Ash.Error.Forbidden{} = error} ->
-        if authentication_failed?(error) do
-          conn
-          |> put_status(:unprocessable_entity)
-          |> json(%{errors: [%{field: "password", message: "That password isn't right."}]})
-        else
-          conn
-          |> put_status(:forbidden)
-          |> json(%{error: "You can't delete this account"})
-        end
-
       {:error, error} ->
-        case rate_limit_error(error) do
-          nil ->
+        handle_delete_account_error(conn, error)
+    end
+  end
+
+  defp handle_delete_account_error(conn, error) do
+    case rate_limit_error(error) do
+      %AshRateLimiter.LimitExceeded{} = limit_exceeded ->
+        too_many_requests(conn, limit_exceeded)
+
+      nil ->
+        case error do
+          %Ash.Error.Forbidden{} ->
+            if authentication_failed?(error) do
+              conn
+              |> put_status(:unprocessable_entity)
+              |> json(%{errors: [%{field: "password", message: "That password isn't right."}]})
+            else
+              conn
+              |> put_status(:forbidden)
+              |> json(%{error: "You can't delete this account"})
+            end
+
+          _ ->
             conn
             |> put_status(:unprocessable_entity)
             |> json(%{errors: format_errors(error)})
-
-          limit_exceeded ->
-            too_many_requests(conn, limit_exceeded)
         end
     end
   end

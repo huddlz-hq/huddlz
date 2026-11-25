@@ -62,7 +62,8 @@ config :huddlz, Oban,
 config :huddlz, :auth_rate_limits,
   sign_in: [limit: 10, per: :timer.minutes(1)],
   register: [limit: 5, per: :timer.minutes(1)],
-  password_reset: [limit: 3, per: :timer.hours(1)]
+  password_reset: [limit: 3, per: :timer.hours(1)],
+  delete_account: [limit: 5, per: :timer.minutes(5)]
 
 config :ash,
   default_string_length_count: :codepoints,

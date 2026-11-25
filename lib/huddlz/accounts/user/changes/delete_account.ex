@@ -132,15 +132,19 @@ defmodule Huddlz.Accounts.User.Changes.DeleteAccount do
 
   defp archive_owned_groups(user, opts) do
     Group
+    |> Ash.Query.for_read(:read_with_archived, %{}, authorize?: false)
     |> Ash.Query.filter(owner_id == ^user.id)
     |> Ash.read!(authorize?: false)
     |> Enum.each(fn group ->
       destroy_draft_huddlz(group, opts)
-      cancel_upcoming_huddlz(group, opts)
 
-      group
-      |> Ash.Changeset.for_destroy(:archive, %{}, opts)
-      |> Ash.destroy!(authorize?: false)
+      if is_nil(group.archived_at) do
+        cancel_upcoming_huddlz(group, opts)
+
+        group
+        |> Ash.Changeset.for_destroy(:archive, %{}, opts)
+        |> Ash.destroy!(authorize?: false)
+      end
     end)
   end
 

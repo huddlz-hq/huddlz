@@ -290,6 +290,22 @@ defmodule AccountDeletionSteps do
     context
   end
 
+  step "the huddl {string} still exists", %{args: [title]} = context do
+    assert find_huddl(title)
+    context
+  end
+
+  step "{string} archived the group {string}", %{args: [email, name]} = context do
+    owner = find_user(email)
+    group = group_with_archived(name)
+
+    group
+    |> Ash.Changeset.for_destroy(:archive, %{}, actor: owner)
+    |> Ash.destroy!()
+
+    context
+  end
+
   step "the deleted account has no notifications", context do
     refute Notification
            |> Ash.Query.filter(user_id == ^context.deleted_user_id)

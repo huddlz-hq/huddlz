@@ -93,3 +93,14 @@ Feature: People delete their own account
     And the draft huddl "Secret Draft" no longer exists
     And the deleted account has no notifications
     And notifications for "member801@example.com" show "Deleted member" instead of "Lee Leaving"
+
+  Scenario: Deleting an account removes drafts inside groups that were already archived
+    Given a public group "Old Archived Club" exists with owner "leave801@example.com"
+    And the past huddl "Old Gathering" exists in group "Old Archived Club" hosted by "leave801@example.com"
+    And a draft huddl "Forgotten Draft" exists in group "Old Archived Club" hosted by "leave801@example.com"
+    And "leave801@example.com" archived the group "Old Archived Club"
+    And "leave801@example.com" is signed in to the app with password "Password123!"
+    When "leave801@example.com" deletes their account in the app with password "Password123!"
+    Then the account is deleted
+    And the draft huddl "Forgotten Draft" no longer exists
+    And the huddl "Old Gathering" still exists
