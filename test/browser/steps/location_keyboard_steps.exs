@@ -1,71 +1,69 @@
 defmodule BrowserLocationKeyboardSteps do
   use Cucumber.StepDefinition
+  use Fluffy.Assert
 
-  import ExUnit.Assertions
+  import Fluffy, except: [step: 3]
+  import Fluffy.Locator
   import Huddlz.Generator
   import Huddlz.Test.BrowserHelpers
   import Huddlz.Test.MoxHelpers
-  import PhoenixTest
-  import PhoenixTest.Playwright, only: [type: 3, press: 3, evaluate: 3]
 
-  step "I have opened my profile in a browser", context do
+  step "I have opened my profile in a browser", %{session: session} do
     member = generate(user(role: :user, display_name: "Browser Member"))
 
     stub_places_autocomplete(%{"saint" => [:saint_augustine]})
     stub_place_details(:defaults)
 
-    conn =
-      context.conn
-      |> sign_in(member)
-      |> visit("/profile")
-      |> assert_has(".phx-connected")
-      |> assert_has("h1", text: "Profile")
-      |> evaluate(
-        """
-        (() => {
-          window.observedSubmissions = 0;
-          document.addEventListener('submit', () => window.observedSubmissions++, true);
-          return true;
-        })()
-        """,
-        fn installed -> assert installed end
-      )
+    session
+    |> sign_in(member)
+    |> visit("/profile")
+    |> assert_has(by_role(:heading, level: 1, name: "Profile"))
+
+    Fluffy.Playwright.evaluate(session, """
+    window.observedSubmissions = 0;
+    document.addEventListener('submit', () => window.observedSubmissions++, true);
+    """)
 
     ExUnit.Callbacks.on_exit(fn ->
       File.rm_rf!("priv/static/uploads/profile_pictures/#{member.id}")
     end)
 
-    Map.put(context, :conn, conn)
+    :ok
   end
 
-  step "I type {string} into my home location", %{args: [query]} = context do
-    conn = context.conn |> type("#profile-location-input", query) |> assert_has("[role='option']")
-    Map.put(context, :conn, conn)
+  step "I type {string} into my home location", %{args: [query], session: session} do
+    session
+    |> Fluffy.Playwright.press_sequentially(home_location(), query)
+    |> assert_has(by_role(:option) |> first())
+
+    :ok
   end
 
-  step "I highlight the first home location suggestion", context do
-    conn =
-      context.conn
-      |> press("#profile-location-input", "ArrowDown")
-      |> assert_has("#profile-location[data-has-highlight='true']")
+  step "I highlight the first home location suggestion", %{session: session} do
+    session
+    |> press(home_location(), "ArrowDown")
+    |> assert(attribute(by_css("#profile-location"), "data-has-highlight", "true"))
 
-    Map.put(context, :conn, conn)
+    :ok
   end
 
-  step "I select the highlighted home location with Enter", context do
-    Map.put(context, :conn, press(context.conn, "#profile-location-input", "Enter"))
+  step "I select the highlighted home location with Enter", %{session: session} do
+    press(session, home_location(), "Enter")
+    :ok
   end
 
-  step "my home location is {string}", %{args: [location]} = context do
-    context.conn
-    |> assert_has("[data-testid='location-selected']", text: location)
-    |> assert_has("[role='alert']", text: "Home location updated")
+  step "my home location is {string}", %{args: [location], session: session} do
+    session
+    |> assert_has(by_test_id("location-selected") |> filter(has_text: location))
+    |> assert_has(by_role(:alert) |> filter(has_text: "Home location updated"))
 
-    context
+    :ok
   end
 
-  step "Enter did not submit a form", context do
-    evaluate(context.conn, "window.observedSubmissions", fn count -> assert count == 0 end)
-    context
+  step "Enter did not submit a form", %{session: session} do
+    assert Fluffy.Playwright.evaluate(session, "window.observedSubmissions") == 0
+    :ok
   end
+
+  defp home_location, do: by_label("Location", exact: true)
 end

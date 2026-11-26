@@ -1,13 +1,16 @@
 defmodule BrowserOverviewCardsSteps do
   use Cucumber.StepDefinition
+  use Fluffy.Assert
 
+  import Fluffy, except: [step: 3]
+  import Fluffy.Locator
   import Huddlz.Generator
   import Huddlz.Test.BrowserHelpers
-  import PhoenixTest
 
   alias Huddlz.Communities.HuddlAttendee
 
-  step "I have opened the overview of a group with an uncounted past huddl", context do
+  step "I have opened the overview of a group with an uncounted past huddl",
+       %{session: session} do
     owner = generate(user(role: :user))
     group = generate(group(owner_id: owner.id, is_public: true, actor: owner))
     starts_at = DateTime.add(DateTime.utc_now(), -2, :day)
@@ -32,43 +35,41 @@ defmodule BrowserOverviewCardsSteps do
       |> Ash.create!(authorize?: false)
     end
 
-    conn =
-      context.conn
-      |> sign_in(owner)
-      |> visit("/organize/#{group.slug}")
-      |> assert_has(".phx-connected")
-      |> assert_has("#turnout-nudge", text: "Elixir office hours")
+    session
+    |> sign_in(owner)
+    |> visit("/organize/#{group.slug}")
+    |> assert_has(by_css("#turnout-nudge") |> filter(has_text: "Elixir office hours"))
 
-    Map.merge(context, %{conn: conn, group: group})
+    %{group: group}
   end
 
-  step "the Show rate card is as tall as the RSVPs card", context do
-    Map.put(context, :conn, assert_same_height(context.conn))
+  step "the Show rate card is as tall as the RSVPs card", %{session: session} do
+    assert_same_height(session)
+    :ok
   end
 
-  step "I record turnout from the overview reminder", context do
-    conn =
-      context.conn
-      |> click_button("#turnout-nudge button", "Add turnout")
-      |> fill_in("People in the room", with: 6)
-      |> click_button("Save turnout")
-      |> assert_has("#flash-info", text: "Turnout saved")
+  step "I record turnout from the overview reminder", %{session: session} do
+    session
+    |> click(by_role(by_css("#turnout-nudge"), :button, name: "Add turnout"))
+    |> fill(by_label("People in the room", exact: true), 6)
+    |> click(by_role(:button, name: "Save turnout"))
+    |> assert_has(by_css("#flash-info") |> filter(has_text: "Turnout saved"))
 
-    Map.put(context, :conn, conn)
+    :ok
   end
 
-  step "the Show rate card shows a rate and is still as tall as the RSVPs card", context do
-    conn =
-      context.conn
-      |> assert_has("#kpi-showrate .value", text: "50%", exact: true)
-      |> assert_has("#spark-showrate:not([data-empty])")
-      |> assert_same_height()
+  step "the Show rate card shows a rate and is still as tall as the RSVPs card",
+       %{session: session} do
+    session
+    |> assert(text(by_css("#kpi-showrate .value"), "50%"))
+    |> assert_has(by_css("#spark-showrate:not([data-empty])"))
+    |> assert_same_height()
 
-    Map.put(context, :conn, conn)
+    :ok
   end
 
-  defp assert_same_height(conn) do
-    assert_browser(conn, """
+  defp assert_same_height(session) do
+    assert_browser(session, """
     (() => {
       const rate = document.querySelector('#kpi-showrate').getBoundingClientRect();
       const rsvps = document.querySelector('#kpi-rsvps').getBoundingClientRect();

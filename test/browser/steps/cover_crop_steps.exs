@@ -1,46 +1,43 @@
 defmodule BrowserCoverCropSteps do
   use Cucumber.StepDefinition
+  use Fluffy.Assert
 
-  import ExUnit.Assertions
+  import Fluffy, except: [step: 3]
+  import Fluffy.Locator
   import Huddlz.Generator
   import Huddlz.Test.BrowserHelpers
-  import PhoenixTest
 
   require Ash.Query
 
-  alias PlaywrightEx.Frame
-  alias PlaywrightEx.Page
+  alias Fluffy.Playwright.Mouse
 
-  step "I am creating a group in a browser", context do
+  step "I am creating a group in a browser", %{session: session} do
     owner = generate(user(role: :user))
 
     ExUnit.Callbacks.on_exit(fn ->
       File.rm_rf!("priv/static/uploads/group_images/pending")
     end)
 
-    conn =
-      context.conn
-      |> sign_in(owner)
-      |> visit("/groups/new")
-      |> assert_has(".phx-connected")
-      |> assert_has("#group-cover-upload[data-state=idle]")
+    session
+    |> sign_in(owner)
+    |> visit("/groups/new")
+    |> assert_has(by_css("#group-cover-upload[data-state=idle]"))
 
-    Map.put(context, :conn, conn)
+    :ok
   end
 
-  step "I choose a tall picture for the cover", context do
-    assert {:ok, _} =
-             Frame.set_input_files(context.conn.frame_id,
-               selector: "#group-cover-upload input[type=file]",
-               timeout: 5_000,
-               local_paths: [Path.expand("test/fixtures/tall_red_blue.png")]
-             )
+  step "I choose a tall picture for the cover", %{session: session} do
+    set_input_files(
+      session,
+      by_label("Cover image", exact: true),
+      "test/fixtures/tall_red_blue.png"
+    )
 
-    context
+    :ok
   end
 
-  step "the crop sheet opens with the picture fit to the 16:9 window", context do
-    assert_browser(context.conn, """
+  step "the crop sheet opens with the picture fit to the 16:9 window", %{session: session} do
+    assert_browser(session, """
     (() => {
       const sheet = document.querySelector('#group-cover-upload-crop');
       if (!sheet || !sheet.open) return false;
@@ -54,11 +51,12 @@ defmodule BrowserCoverCropSteps do
     })()
     """)
 
-    context
+    :ok
   end
 
-  step "the crop sheet fills the screen with the window and Use photo in view", context do
-    assert_browser(context.conn, """
+  step "the crop sheet fills the screen with the window and Use photo in view",
+       %{session: session} do
+    assert_browser(session, """
     (() => {
       const sheet = document.querySelector('#group-cover-upload-crop');
       if (!sheet || !sheet.open) return false;
@@ -73,61 +71,52 @@ defmodule BrowserCoverCropSteps do
     })()
     """)
 
-    context
+    :ok
   end
 
-  step "I drag the picture up to keep its bottom and use the photo", context do
-    conn = context.conn
+  step "I drag the picture up to keep its bottom and use the photo", %{session: session} do
+    window =
+      Fluffy.Playwright.bounding_box(session, by_css("#group-cover-upload-crop .crop-window"))
 
-    {:ok, %{"x" => x, "top" => top, "bottom" => bottom}} =
-      Frame.evaluate(conn.frame_id,
-        timeout: 5_000,
-        expression: """
-        (() => {
-          const win = document.querySelector('#group-cover-upload-crop .crop-window').getBoundingClientRect();
-          return {x: win.left + win.width / 2, top: win.top + 4, bottom: win.bottom - 4};
-        })()
-        """
-      )
+    x = window.x + window.width / 2
+    top = window.y + 4
+    bottom = window.y + window.height - 4
 
     # Three drags from the bottom of the window to its top; the picture
     # stops at its own bottom edge, whatever it was dragged past.
     for _ <- 1..3 do
-      assert {:ok, _} = Page.mouse_move(conn.page_id, x: x, y: bottom, timeout: 5_000)
-      assert {:ok, _} = Page.mouse_down(conn.page_id, timeout: 5_000)
-      assert {:ok, _} = Page.mouse_move(conn.page_id, x: x, y: top, steps: 6, timeout: 5_000)
-      assert {:ok, _} = Page.mouse_up(conn.page_id, timeout: 5_000)
+      session
+      |> Mouse.move(x, bottom)
+      |> Mouse.down()
+      |> Mouse.move(x, top, steps: 6)
+      |> Mouse.up()
     end
 
-    conn =
-      conn
-      |> assert_browser("""
-      (() => {
-        const sheet = document.querySelector('#group-cover-upload-crop');
-        const pic = sheet.querySelector('.crop-pic').getBoundingClientRect();
-        const win = sheet.querySelector('.crop-window').getBoundingClientRect();
-        return Math.abs(pic.bottom - win.bottom) < 1 && !sheet.querySelector('[data-crop-reset]').hidden;
-      })()
-      """)
-      |> click_button("Use photo")
+    session
+    |> assert_browser("""
+    (() => {
+      const sheet = document.querySelector('#group-cover-upload-crop');
+      const pic = sheet.querySelector('.crop-pic').getBoundingClientRect();
+      const win = sheet.querySelector('.crop-window').getBoundingClientRect();
+      return Math.abs(pic.bottom - win.bottom) < 1;
+    })()
+    """)
+    |> assert_has(by_role(:button, name: "Reset"))
+    |> click(by_role(:button, name: "Use photo"))
 
-    Map.put(context, :conn, conn)
+    :ok
   end
 
-  step "the slot uploads a 16:9 cover showing only the bottom of my picture", context do
-    conn =
-      context.conn
-      |> refute_has("#group-cover-upload-crop[open]")
-      |> assert_has(
-        "#group-cover-upload[data-state=uploaded] .cover-slot img[src*='group_images']"
-      )
+  step "the slot uploads a 16:9 cover showing only the bottom of my picture",
+       %{session: session} do
+    cover =
+      by_css("#group-cover-upload[data-state=uploaded] .cover-slot img[src*='group_images']")
 
-    {:ok, thumbnail_path} =
-      Frame.evaluate(conn.frame_id,
-        timeout: 5_000,
-        expression:
-          "document.querySelector('#group-cover-upload .cover-slot img').getAttribute('src')"
-      )
+    session
+    |> refute_has(by_css("#group-cover-upload-crop[open]"))
+    |> assert_has(cover)
+
+    thumbnail_path = get_attribute(session, cover, "src")
 
     image =
       Huddlz.Communities.GroupImage
@@ -149,6 +138,6 @@ defmodule BrowserCoverCropSteps do
       assert r < 90 and b > 180, "expected blue at #{x},#{y}, got #{inspect({r, b})}"
     end
 
-    Map.put(context, :conn, conn)
+    :ok
   end
 end

@@ -33,6 +33,17 @@ config :huddlz, :auth_rate_limits,
 # Configure PhoenixTest
 config :phoenix_test, :endpoint, HuddlzWeb.Endpoint
 
+# Browser scenarios (mix test.browser). The endpoint's sandbox plug and
+# AllowEctoSandbox read the sandbox metadata from the user agent.
+config :fluffy, endpoint: HuddlzWeb.Endpoint, ecto_repos: [Huddlz.Repo]
+config :fluffy, Fluffy.Sandbox, header: "user-agent"
+
+config :playwright, :test,
+  timezone_id: "America/New_York",
+  screenshot: :only_on_failure,
+  trace: :retain_on_failure,
+  output_dir: "_build/browser/test-results"
+
 # Disable swoosh api client in test
 config :swoosh, :api_client, false
 

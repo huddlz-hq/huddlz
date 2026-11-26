@@ -1,9 +1,11 @@
 defmodule BrowserCalendarSteps do
   use Cucumber.StepDefinition
+  use Fluffy.Assert
 
+  import Fluffy, except: [step: 3]
+  import Fluffy.Locator
   import Huddlz.Generator
   import Huddlz.Test.BrowserHelpers
-  import PhoenixTest
 
   step "I attend a Denver huddl late on July 15", context do
     attendee = generate(user(role: :user))
@@ -38,27 +40,28 @@ defmodule BrowserCalendarSteps do
       )
 
     Huddlz.Communities.rsvp_huddl!(huddl, actor: attendee)
-    Map.merge(context, %{conn: sign_in(context.conn, attendee), huddl: huddl})
+    sign_in(context.session, attendee)
+    %{huddl: huddl}
   end
 
-  step "I open Calendar in a New York browser", context do
-    conn =
-      context.conn
-      |> visit("/calendar/month?month=2030-07")
-      |> assert_has(".phx-connected")
-      |> assert_browser("Intl.DateTimeFormat().resolvedOptions().timeZone === 'America/New_York'")
+  step "I open Calendar in a New York browser", %{session: session} do
+    session
+    |> visit("/calendar/month?month=2030-07")
+    |> assert_browser("Intl.DateTimeFormat().resolvedOptions().timeZone === 'America/New_York'")
 
-    Map.put(context, :conn, conn)
+    :ok
   end
 
-  step "the huddl appears on July 16 with its Denver local time", context do
-    context.conn
-    |> assert_has("#calendar-time-zone", text: "America/New_York")
+  step "the huddl appears on July 16 with its Denver local time", %{session: session} = context do
+    day = by_css("td[aria-label^='Tuesday, July 16, 2030']")
+
+    session
+    |> assert(text(by_css("#calendar-time-zone"), "America/New_York"))
     |> assert_has(
-      "td[aria-label^='Tuesday, July 16, 2030'] #calendar-entry-#{context.huddl.id} .cal-pill-time",
-      text: "11:30 PM MDT"
+      by_css(day, "#calendar-entry-#{context.huddl.id} .cal-pill-time")
+      |> filter(has_text: "11:30 PM MDT")
     )
 
-    context
+    :ok
   end
 end

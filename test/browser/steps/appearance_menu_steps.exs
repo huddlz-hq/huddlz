@@ -1,65 +1,61 @@
 defmodule BrowserAppearanceMenuSteps do
   use Cucumber.StepDefinition
+  use Fluffy.Assert
 
-  import ExUnit.Assertions
-  import Huddlz.Test.BrowserHelpers
-  import PhoenixTest
-  import PhoenixTest.Playwright, only: [press: 3]
+  import Fluffy, except: [step: 3]
+  import Fluffy.Locator
 
-  @menu_open "document.querySelector('#theme-menu').matches(':popover-open')"
+  alias Fluffy.Playwright.Keyboard
 
-  step "I open the appearance menu with the keyboard", context do
-    conn =
-      context.conn
-      |> press("#theme-menu-trigger", "Enter")
-      |> assert_browser(@menu_open)
+  step "I open the appearance menu with the keyboard", %{session: session} do
+    session
+    |> press(trigger(), "Enter")
+    |> assert_has(open_menu())
 
-    Map.put(context, :conn, conn)
+    :ok
   end
 
-  step "I pick {string} with the keyboard", %{args: [label]} = context do
-    conn = tab_to_option(context.conn, label)
-    Map.put(context, :conn, press(conn, ":focus", "Enter"))
+  step "I pick {string} with the keyboard", %{args: [label], session: session} do
+    session
+    |> tab_to_option(label)
+    |> Keyboard.press("Enter")
+
+    :ok
   end
 
-  step "the page uses the dark appearance and the menu is closed", context do
-    conn =
-      assert_browser(
-        context.conn,
-        "document.documentElement.dataset.theme === 'dark' && !#{@menu_open}"
-      )
+  step "the page uses the dark appearance and the menu is closed", %{session: session} do
+    session
+    |> assert(attribute(by_css("html"), "data-theme", "dark"))
+    |> refute_has(open_menu())
 
-    Map.put(context, :conn, conn)
+    :ok
   end
 
-  step "I press Escape", context do
-    Map.put(context, :conn, press(context.conn, ":focus", "Escape"))
+  step "I press Escape", %{session: session} do
+    Keyboard.press(session, "Escape")
+    :ok
   end
 
-  step "the menu is closed and focus is back on its trigger", context do
-    conn =
-      context.conn
-      |> assert_browser("!#{@menu_open}")
-      |> assert_has("#theme-menu-trigger:focus")
+  step "the menu is closed and focus is back on its trigger", %{session: session} do
+    session
+    |> refute_has(open_menu())
+    |> assert(focused(trigger()))
 
-    Map.put(context, :conn, conn)
+    :ok
   end
+
+  defp trigger, do: by_role(:button, name: ~r/^Appearance: /)
+  defp open_menu, do: by_css("#theme-menu:popover-open")
 
   # Tab from the trigger into the menu, one option at a time, until the
   # wanted one has focus.
-  defp tab_to_option(conn, label, tries \\ 4)
+  defp tab_to_option(session, label, tries \\ 4)
 
-  defp tab_to_option(_conn, label, 0), do: flunk("no appearance option labelled #{label}")
+  defp tab_to_option(_session, label, 0), do: flunk("no appearance option labelled #{label}")
 
-  defp tab_to_option(conn, label, tries) do
-    conn = press(conn, ":focus", "Tab")
-
-    {:ok, focused} =
-      PlaywrightEx.Frame.evaluate(conn.frame_id,
-        expression: "document.activeElement.querySelector('.theme-option-label')?.textContent",
-        timeout: 5_000
-      )
-
-    if focused == label, do: conn, else: tab_to_option(conn, label, tries - 1)
+  defp tab_to_option(session, label, tries) do
+    session = Keyboard.press(session, "Tab")
+    focused = text_content(session, by_css(":focus .theme-option-label"))
+    if focused == label, do: session, else: tab_to_option(session, label, tries - 1)
   end
 end

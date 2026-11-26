@@ -18,6 +18,6 @@ defmodule HuddlzWeb.Hooks.AllowEctoSandbox do
         if connected?(socket), do: get_connect_info(socket, :user_agent)
       end)
 
-    Sandbox.allow(metadata, Ecto.Adapters.SQL.Sandbox)
+    Sandbox.allow(metadata, Fluffy.Sandbox)
   end
 end

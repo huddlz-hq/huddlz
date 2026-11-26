@@ -1,15 +1,15 @@
 defmodule BrowserCoverSteps do
   use Cucumber.StepDefinition
+  use Fluffy.Assert
 
-  import ExUnit.Assertions
+  import Fluffy, except: [step: 3]
+  import Fluffy.Locator
   import Huddlz.Generator
   import Huddlz.Test.BrowserHelpers
-  import PhoenixTest
-  import PhoenixTest.Playwright, only: [evaluate: 3]
 
   alias Huddlz.Storage.Local
 
-  step "a group with long details and a {string} cover", %{args: [state]} = context do
+  step "a group with long details and a {string} cover", %{args: [state]} do
     owner = generate(user(role: :user))
 
     group =
@@ -47,26 +47,25 @@ defmodule BrowserCoverSteps do
       )
     end
 
-    Map.merge(context, %{group: group, cover_state: state})
+    %{group: group, cover_state: state}
   end
 
-  step "I open that group in the browser", context do
-    conn =
-      context.conn
-      |> visit("/groups/#{context.group.slug}")
-      |> assert_has(".phx-connected")
-      |> assert_has("h1", text: context.group.name)
+  step "I open that group in the browser", %{session: session} = context do
+    session
+    |> visit("/groups/#{context.group.slug}")
+    |> assert_has(by_role(:heading, level: 1, name: to_string(context.group.name)))
 
-    Map.put(context, :conn, conn)
+    :ok
   end
 
-  step "its cover has the expected image or visible fallback", context do
-    assert_cover(context.conn, context.cover_state)
-    context
+  step "its cover has the expected image or visible fallback", %{session: session} = context do
+    assert_cover(session, context.cover_state)
+    :ok
   end
 
-  step "its title and location fit without clipping or horizontal overflow", context do
-    assert_browser(context.conn, """
+  step "its title and location fit without clipping or horizontal overflow",
+       %{session: session} do
+    assert_browser(session, """
     (() => {
       const hero = document.querySelector('#group-detail-hero');
       const bounds = hero.getBoundingClientRect();
@@ -81,11 +80,11 @@ defmodule BrowserCoverSteps do
     })()
     """)
 
-    context
+    :ok
   end
 
-  step "the mobile cover stays above the group details", context do
-    assert_browser(context.conn, """
+  step "the mobile cover stays above the group details", %{session: session} do
+    assert_browser(session, """
     (() => {
       const cover = document.querySelector('#group-detail-hero .group-cover').getBoundingClientRect();
       const details = document.querySelector('#group-detail-hero .hero-content').getBoundingClientRect();
@@ -93,11 +92,11 @@ defmodule BrowserCoverSteps do
     })()
     """)
 
-    context
+    :ok
   end
 
-  step "the group sidebar aligns with the top of the cover", context do
-    assert_browser(context.conn, """
+  step "the group sidebar aligns with the top of the cover", %{session: session} do
+    assert_browser(session, """
     (() => {
       const cover = document.querySelector('#group-detail-hero .group-cover').getBoundingClientRect();
       const sidebar = document.querySelector('.huddl-side').getBoundingClientRect();
@@ -105,21 +104,20 @@ defmodule BrowserCoverSteps do
     })()
     """)
 
-    context
+    :ok
   end
 
-  defp assert_cover(conn, "missing") do
-    conn
-    |> refute_has("#group-detail-hero .cover-image")
+  defp assert_cover(session, "missing") do
+    session
+    |> refute_has(cover_image())
     |> assert_fallback()
   end
 
-  defp assert_cover(conn, state) do
-    conn = assert_has(conn, "#group-detail-hero .cover-image")
+  defp assert_cover(session, state) do
+    assert_has(session, cover_image())
 
-    evaluate(
-      conn,
-      """
+    decoded =
+      Fluffy.Playwright.evaluate(session, """
       (async () => {
         const element = document.querySelector('#group-detail-hero .cover-image');
         const url = getComputedStyle(element).backgroundImage.slice(5, -2);
@@ -128,19 +126,23 @@ defmodule BrowserCoverSteps do
         try { await image.decode(); return image.naturalWidth > 0; }
         catch { return false; }
       })()
-      """,
-      fn decoded -> assert decoded == (state == "valid") end
-    )
+      """)
+
+    assert decoded == (state == "valid")
 
     outcome = if state == "valid", do: "loaded", else: "failed"
-    conn = assert_has(conn, "#group-detail-hero .cover-image[data-cover-state='#{outcome}']")
-    refute_has(conn, "#group-detail-hero .cover-image.is-pending")
 
-    if state == "failed", do: assert_fallback(conn), else: assert_painted_cover(conn)
+    session
+    |> assert(attribute(cover_image(), "data-cover-state", outcome))
+    |> refute(contain_class(cover_image(), "is-pending"))
+
+    if state == "failed", do: assert_fallback(session), else: assert_painted_cover(session)
   end
 
-  defp assert_painted_cover(conn) do
-    assert_browser(conn, """
+  defp cover_image, do: by_css("#group-detail-hero .cover-image")
+
+  defp assert_painted_cover(session) do
+    assert_browser(session, """
     (() => {
       const cover = document.querySelector('#group-detail-hero .group-cover');
       const layer = cover.querySelector('.cover-image');
@@ -159,9 +161,9 @@ defmodule BrowserCoverSteps do
     """)
   end
 
-  defp assert_fallback(conn) do
-    conn
-    |> assert_has("#group-detail-hero .group-cover-signal")
+  defp assert_fallback(session) do
+    session
+    |> assert_has(by_css("#group-detail-hero .group-cover-signal"))
     |> assert_browser("""
     (() => {
       const cover = document.querySelector('#group-detail-hero .group-cover');

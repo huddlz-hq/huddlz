@@ -1,14 +1,15 @@
 defmodule BrowserReportReviewSteps do
   use Cucumber.StepDefinition
+  use Fluffy.Assert
 
+  import Fluffy, except: [step: 3]
+  import Fluffy.Locator
   import Huddlz.Generator
   import Huddlz.Test.BrowserHelpers
-  import PhoenixTest
 
   alias Huddlz.Accounts
-  alias PhoenixTest.Playwright
 
-  step "I am reviewing a reported account in a browser", context do
+  step "I am reviewing a reported account in a browser", %{session: session} do
     owner = generate(user(display_name: "Sam Rivera"))
     reporter = generate(user(display_name: "Ada Park"))
     admin = generate(user(role: :admin, display_name: "Alex Admin"))
@@ -21,62 +22,67 @@ defmodule BrowserReportReviewSteps do
 
     Accounts.suspend_user!(owner, "Repeated advertisements", actor: admin)
 
-    conn =
-      context.conn |> sign_in(admin) |> visit("/admin/reports") |> assert_has(".phx-connected")
+    session |> sign_in(admin) |> visit("/admin/reports")
 
-    Map.merge(context, %{conn: conn, reported: owner})
+    %{reported: owner}
   end
 
-  step "the report review controls stay together", context do
-    check_controls(context.conn)
-    Playwright.screenshot(context.conn, "reports-#{size(context)}.png")
-    context
+  step "the report review controls stay together", %{session: session} = context do
+    check_controls(session)
+    screenshot(session, "reports-#{size(context)}.png")
+    :ok
   end
 
-  step "I handle and reopen the report", context do
-    conn =
-      context.conn
-      |> click_button("Review")
-      |> click_button(".review-card button", "Mark handled")
-      |> click_link("Handled")
-      |> click_button("Review")
-      |> click_button("Reopen")
+  step "I handle and reopen the report", %{session: session} do
+    session
+    |> click(review())
+    |> click(by_role(review_card(), :button, name: "Mark handled"))
+    |> click(by_role(:link, name: "Handled"))
+    |> click(review())
+    |> click(by_role(:button, name: "Reopen"))
 
-    Map.put(context, :conn, conn)
+    :ok
   end
 
-  step "the reopened report is ready for review", context do
-    conn =
-      context.conn
-      |> assert_has(".review-card", text: "Repeated advertisements")
-      |> assert_has(".review-card button", text: "Mark handled")
-      |> refute_has("button", text: "Suspend account")
-      |> assert_browser("!new URL(window.location.href).searchParams.has('account_id')")
+  step "the reopened report is ready for review", %{session: session} do
+    session
+    |> assert_has(review_card() |> filter(has_text: "Repeated advertisements"))
+    |> assert_has(by_role(review_card(), :button, name: "Mark handled"))
+    |> assert(count(by_role(:button, name: "Suspend account"), 0))
+    |> assert(page_url(&(not Map.has_key?(URI.decode_query(&1.query || ""), "account_id"))))
 
-    Map.put(context, :conn, conn)
+    :ok
   end
 
-  step "I review the suspended account in Users", context do
-    conn =
-      context.conn
-      |> visit("/admin/users?scope=suspended")
-      |> assert_has(".phx-connected")
-      |> click_button("Review")
-      |> assert_has(".review-card a", text: "1 open report")
+  step "I review the suspended account in Users", %{session: session} do
+    session
+    |> visit("/admin/users?scope=suspended")
+    |> click(review())
+    |> assert_has(by_role(review_card(), :link, name: "1 open report"))
 
-    Map.put(context, :conn, conn)
+    :ok
   end
 
-  step "the account review controls stay together", context do
-    check_controls(context.conn)
-    Playwright.screenshot(context.conn, "users-review-#{size(context)}.png")
-    context
+  step "the account review controls stay together", %{session: session} = context do
+    check_controls(session)
+    screenshot(session, "users-review-#{size(context)}.png")
+    :ok
   end
+
+  defp review, do: by_role(:button, name: "Review", exact: true)
+  defp review_card, do: by_css(".review-card")
+
+  defp screenshot(session, name),
+    do:
+      Fluffy.Playwright.screenshot(session,
+        path: "_build/browser/screenshots/#{name}",
+        full_page: true
+      )
 
   defp size(context), do: if(Map.get(context, :mobile), do: "mobile", else: "desktop")
 
-  defp check_controls(conn) do
-    assert_browser(conn, """
+  defp check_controls(session) do
+    assert_browser(session, """
     (() => {
       const row = document.querySelector('.member-row');
       const review = row.querySelector('button[phx-click="review"]').getBoundingClientRect();

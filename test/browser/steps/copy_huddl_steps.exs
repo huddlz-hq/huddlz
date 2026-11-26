@@ -1,37 +1,37 @@
 defmodule BrowserCopyHuddlSteps do
   use Cucumber.StepDefinition
+  use Fluffy.Assert
 
+  import Fluffy, except: [step: 3]
+  import Fluffy.Locator
   import Huddlz.Generator
   import Huddlz.Test.BrowserHelpers
-  import PhoenixTest
 
-  step "I opened a copied huddl on my phone", context do
+  step "I opened a copied huddl on my phone", %{session: session} do
     owner = generate(user(role: :user))
     group = generate(group(owner_id: owner.id, is_public: true, actor: owner))
     huddl = generate(huddl(group_id: group.id, actor: owner))
 
-    conn =
-      context.conn
-      |> sign_in(owner)
-      |> visit("/groups/#{group.slug}/huddlz/new?copy=#{huddl.id}")
-      |> assert_has(".phx-connected")
-      |> assert_has("h2", text: "Copied from")
+    session
+    |> sign_in(owner)
+    |> visit("/groups/#{group.slug}/huddlz/new?copy=#{huddl.id}")
+    |> assert_has(by_role(:heading, level: 2, name: "Copied from"))
 
-    Map.put(context, :conn, conn)
+    :ok
   end
 
-  step "I review the copied description", context do
-    PhoenixTest.Playwright.evaluate(
-      context.conn,
-      "document.querySelector('#form_description').scrollIntoView({block: 'center'})",
-      fn _ -> :ok end
+  step "I review the copied description", %{session: session} do
+    Fluffy.Playwright.evaluate(
+      session,
+      by_label("Description", exact: true),
+      "field => field.scrollIntoView({block: 'center'})"
     )
 
-    context
+    :ok
   end
 
-  step "I can reach Schedule huddl and Save as draft without scrolling", context do
-    assert_browser(context.conn, """
+  step "I can reach Schedule huddl and Save as draft without scrolling", %{session: session} do
+    assert_browser(session, """
     (() => ['publish-huddl', 'save-huddl-draft'].every(id => {
       const button = document.getElementById(id);
       const rect = button.getBoundingClientRect();
@@ -41,6 +41,6 @@ defmodule BrowserCopyHuddlSteps do
     }))()
     """)
 
-    context
+    :ok
   end
 end
