@@ -13,7 +13,7 @@ defmodule BrowserNotificationPreferencesSteps do
     session
     |> sign_in(member)
     |> visit("/profile/notifications")
-    |> assert(visible(by_role(:heading, level: 1, name: "Notifications")))
+    |> assert_has(by_role(:heading, level: 1, name: "Notifications"))
 
     %{member: member}
   end
@@ -31,7 +31,7 @@ defmodule BrowserNotificationPreferencesSteps do
   end
 
   step "the row says the change could not be saved", %{session: session} do
-    assert(session, visible(by_role(:alert) |> filter(has_text: "Couldn't save")))
+    assert_has(session, by_role(:alert) |> filter(has_text: "Couldn't save"))
     :ok
   end
 

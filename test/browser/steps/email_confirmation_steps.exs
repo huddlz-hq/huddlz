@@ -27,7 +27,7 @@ defmodule BrowserEmailConfirmationSteps do
   end
 
   step "a confirmation email is sent to my current address", %{session: session} = context do
-    assert(session, visible(alert("Confirmation sent to")))
+    assert_has(session, alert("Confirmation sent to"))
     email = to_string(context.member.email)
 
     assert_email_sent(fn sent ->
@@ -40,10 +40,9 @@ defmodule BrowserEmailConfirmationSteps do
 
   step "I can still save my display name", %{session: session} do
     session
-    |> assert(visible(by_css("body .phx-connected") |> first()))
     |> fill(by_label("Display name", exact: true), "Confirmation Reviewer")
     |> click(by_role(:button, name: "Save changes"))
-    |> assert(visible(alert("Display name updated successfully")))
+    |> assert_has(alert("Display name updated successfully"))
     |> visit("/profile")
     |> assert(value(by_label("Display name", exact: true), "Confirmation Reviewer"))
 

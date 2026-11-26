@@ -15,7 +15,7 @@ defmodule BrowserCopyHuddlSteps do
     session
     |> sign_in(owner)
     |> visit("/groups/#{group.slug}/huddlz/new?copy=#{huddl.id}")
-    |> assert(visible(by_role(:heading, level: 2, name: "Copied from")))
+    |> assert_has(by_role(:heading, level: 2, name: "Copied from"))
 
     :ok
   end

@@ -23,7 +23,7 @@ defmodule BrowserMemberMenuSteps do
     session
     |> sign_in(owner)
     |> visit("/organize/#{group.slug}/members")
-    |> assert(visible(by_role(:heading, level: 1, name: "Members")))
+    |> assert_has(by_role(:heading, level: 1, name: "Members"))
 
     %{owner: owner, member: member, group: group}
   end
@@ -31,7 +31,7 @@ defmodule BrowserMemberMenuSteps do
   step "I open the menu for {string} with the keyboard", %{args: [name], session: session} do
     session
     |> press(trigger(name), "Enter")
-    |> assert(visible(menu(name)))
+    |> assert_has(menu(name))
 
     %{menu_name: name}
   end
@@ -47,7 +47,7 @@ defmodule BrowserMemberMenuSteps do
   step "the member menu is closed and focus is back on its button",
        %{session: session, menu_name: name} do
     session
-    |> refute(visible(menu(name)))
+    |> refute_has(menu(name))
     |> assert(focused(trigger(name)))
 
     :ok
@@ -56,8 +56,8 @@ defmodule BrowserMemberMenuSteps do
   step "the promotion confirmation is open and the menu is closed",
        %{session: session, menu_name: name} do
     session
-    |> assert(visible(by_role(:dialog) |> filter(has_text: "Promote #{name}?")))
-    |> refute(visible(menu(name)))
+    |> assert_has(by_role(:dialog) |> filter(has_text: "Promote #{name}?"))
+    |> refute_has(menu(name))
 
     :ok
   end
@@ -73,7 +73,7 @@ defmodule BrowserMemberMenuSteps do
 
   defp tab_to_item(session, label, tries) do
     session = Keyboard.press(session, "Tab")
-    focused = Fluffy.Playwright.evaluate(session, "document.activeElement.textContent.trim()")
+    focused = session |> text_content(by_css(":focus")) |> String.trim()
     if focused == label, do: session, else: tab_to_item(session, label, tries - 1)
   end
 end

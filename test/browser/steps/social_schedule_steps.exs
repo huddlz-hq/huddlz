@@ -15,7 +15,7 @@ defmodule BrowserSocialScheduleSteps do
     session
     |> visit("/organize/#{group.slug}/social")
     |> click(edit())
-    |> assert(visible(preview() |> filter(has_text: "Morning-of post preview")))
+    |> assert_has(preview() |> filter(has_text: "Morning-of post preview"))
     # The sheet moves focus to its first control again two animation
     # frames after mounting; wait for it to finish opening before typing.
     |> assert(css(sheet(), "opacity", "1"))
@@ -86,7 +86,7 @@ defmodule BrowserSocialScheduleSteps do
     session
     |> click(edit())
     |> assert(checked(morning_of()))
-    |> assert(visible(preview() |> filter(has_text: "See you tonight!")))
+    |> assert_has(preview() |> filter(has_text: "See you tonight!"))
     |> assert(css(sheet(), "opacity", "1"))
     |> press(opening_line(), "Tab")
     |> assert(focused(by_role(:button, name: "Remove", exact: true)))

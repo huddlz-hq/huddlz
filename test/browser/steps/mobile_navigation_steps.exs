@@ -4,7 +4,6 @@ defmodule BrowserNavigationSteps do
 
   import Fluffy, except: [step: 3]
   import Fluffy.Locator
-  import Huddlz.Test.BrowserHelpers
 
   alias Fluffy.Playwright.Keyboard
 
@@ -28,12 +27,7 @@ defmodule BrowserNavigationSteps do
     |> assert(focused(by_role(:link, name: "View profile")))
     |> Keyboard.press("Tab")
     |> assert(focused(home))
-    |> assert_browser("""
-    (() => {
-      const drawer = document.querySelector('#mobile-navigation-drawer').getBoundingClientRect();
-      return drawer.left >= 0 && drawer.right <= innerWidth;
-    })()
-    """)
+    |> assert(in_viewport(drawer(), ratio: 1))
 
     :ok
   end
@@ -65,8 +59,7 @@ defmodule BrowserNavigationSteps do
 
   step "Groups loads with the drawer closed and can reopen navigation", %{session: session} do
     session
-    |> assert(visible(by_role(:heading, level: 1, name: "Groups")))
-    |> assert(visible(by_css(".phx-connected") |> first()))
+    |> assert_has(by_role(:heading, level: 1, name: "Groups"))
     |> assert(inert(drawer()))
     |> refute(inert(background()))
     |> press(trigger(), "Enter")

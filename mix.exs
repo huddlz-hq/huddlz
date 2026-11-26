@@ -144,7 +144,8 @@ defmodule Huddlz.MixProject do
       {:mox, "~> 1.0", only: :test},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:phoenix_test, "~> 0.12", only: :test},
-      {:fluffy, "~> 0.9.0-rc.6", only: :test},
+      {:fluffy, "~> 0.9.0-rc.7", only: :test},
+      {:playwright, "~> 1.65.0-rc.6", hex: :playwright_ex, only: :test},
       {:slugify, "~> 1.3"},
       {:remote_ip, "~> 1.1"},
       {:envious, "~> 1.0"}

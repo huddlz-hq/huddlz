@@ -21,7 +21,7 @@ defmodule BrowserCoverCropSteps do
     session
     |> sign_in(owner)
     |> visit("/groups/new")
-    |> assert(visible(by_css("#group-cover-upload[data-state=idle]")))
+    |> assert_has(by_css("#group-cover-upload[data-state=idle]"))
 
     :ok
   end
@@ -101,7 +101,7 @@ defmodule BrowserCoverCropSteps do
       return Math.abs(pic.bottom - win.bottom) < 1;
     })()
     """)
-    |> assert(visible(by_role(:button, name: "Reset")))
+    |> assert_has(by_role(:button, name: "Reset"))
     |> click(by_role(:button, name: "Use photo"))
 
     :ok
@@ -113,8 +113,8 @@ defmodule BrowserCoverCropSteps do
       by_css("#group-cover-upload[data-state=uploaded] .cover-slot img[src*='group_images']")
 
     session
-    |> refute(visible(by_css("#group-cover-upload-crop[open]")))
-    |> assert(visible(cover))
+    |> refute_has(by_css("#group-cover-upload-crop[open]"))
+    |> assert_has(cover)
 
     thumbnail_path = get_attribute(session, cover, "src")
 

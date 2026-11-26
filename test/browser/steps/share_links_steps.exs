@@ -41,7 +41,7 @@ defmodule BrowserShareLinksSteps do
 
   step "the Share section confirms the address was copied", %{session: session} do
     session
-    |> assert(visible(share_actions() |> filter(has_text: "Copied!")))
+    |> assert_has(share_actions() |> filter(has_text: "Copied!"))
     |> assert(focused(by_role(share_actions(), :button, name: "Copied!")))
 
     :ok
@@ -57,7 +57,7 @@ defmodule BrowserShareLinksSteps do
 
   step "the QR code dialog confirms the address was copied", %{session: session} do
     session
-    |> assert(visible(by_role(:dialog) |> filter(has_text: "Copied!")))
+    |> assert_has(by_role(:dialog) |> filter(has_text: "Copied!"))
     |> assert(focused(by_role(by_role(:dialog), :button, name: "Copied!")))
 
     :ok

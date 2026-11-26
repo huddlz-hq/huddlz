@@ -28,7 +28,7 @@ defmodule BrowserCoverUploadSteps do
     session
     |> sign_in(owner)
     |> visit("/groups/new")
-    |> assert(visible(by_css("#group-cover-upload[data-state=idle]")))
+    |> assert_has(by_css("#group-cover-upload[data-state=idle]"))
     |> assert_browser("""
     (() => {
       const slot = document.querySelector('#group-cover-upload .cover-slot').getBoundingClientRect();
@@ -45,7 +45,7 @@ defmodule BrowserCoverUploadSteps do
     # The crop sheet opens first; the picture already fits, so use it as is.
     session
     |> set_input_files(by_label("Cover image", exact: true), "test/fixtures/test_image.jpg")
-    |> assert(visible(by_css("#group-cover-upload-crop[open]")))
+    |> assert_has(by_css("#group-cover-upload-crop[open]"))
     |> click(by_role(:button, name: "Use photo"))
 
     :ok
@@ -72,17 +72,15 @@ defmodule BrowserCoverUploadSteps do
     """)
     # Typing while the cover is prepared must work.
     |> fill(by_label("Group name", exact: true), "Typed while uploading")
-    |> assert(visible(by_css("#group-cover-upload[data-state=uploading]")))
+    |> assert_has(by_css("#group-cover-upload[data-state=uploading]"))
 
     :ok
   end
 
   step "the slot settles on the prepared cover without moving", %{session: session} do
     session
-    |> assert(
-      visible(
-        by_css("#group-cover-upload[data-state=uploaded] .cover-slot img[src*='group_images']")
-      )
+    |> assert_has(
+      by_css("#group-cover-upload[data-state=uploaded] .cover-slot img[src*='group_images']")
     )
     |> assert_browser("""
     (() => {

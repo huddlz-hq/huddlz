@@ -17,15 +17,12 @@ defmodule BrowserLocationKeyboardSteps do
     session
     |> sign_in(member)
     |> visit("/profile")
-    |> assert(visible(by_role(:heading, level: 1, name: "Profile")))
+    |> assert_has(by_role(:heading, level: 1, name: "Profile"))
 
-    assert Fluffy.Playwright.evaluate(session, """
-           (() => {
-             window.observedSubmissions = 0;
-             document.addEventListener('submit', () => window.observedSubmissions++, true);
-             return true;
-           })()
-           """)
+    Fluffy.Playwright.evaluate(session, """
+    window.observedSubmissions = 0;
+    document.addEventListener('submit', () => window.observedSubmissions++, true);
+    """)
 
     ExUnit.Callbacks.on_exit(fn ->
       File.rm_rf!("priv/static/uploads/profile_pictures/#{member.id}")
@@ -37,7 +34,7 @@ defmodule BrowserLocationKeyboardSteps do
   step "I type {string} into my home location", %{args: [query], session: session} do
     session
     |> Fluffy.Playwright.press_sequentially(home_location(), query)
-    |> assert(visible(by_role(:option) |> first()))
+    |> assert_has(by_role(:option) |> first())
 
     :ok
   end
@@ -57,8 +54,8 @@ defmodule BrowserLocationKeyboardSteps do
 
   step "my home location is {string}", %{args: [location], session: session} do
     session
-    |> assert(visible(by_test_id("location-selected") |> filter(has_text: location)))
-    |> assert(visible(by_role(:alert) |> filter(has_text: "Home location updated")))
+    |> assert_has(by_test_id("location-selected") |> filter(has_text: location))
+    |> assert_has(by_role(:alert) |> filter(has_text: "Home location updated"))
 
     :ok
   end

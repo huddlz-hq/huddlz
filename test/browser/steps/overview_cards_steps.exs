@@ -38,7 +38,7 @@ defmodule BrowserOverviewCardsSteps do
     session
     |> sign_in(owner)
     |> visit("/organize/#{group.slug}")
-    |> assert(visible(by_css("#turnout-nudge") |> filter(has_text: "Elixir office hours")))
+    |> assert_has(by_css("#turnout-nudge") |> filter(has_text: "Elixir office hours"))
 
     %{group: group}
   end
@@ -53,7 +53,7 @@ defmodule BrowserOverviewCardsSteps do
     |> click(by_role(by_css("#turnout-nudge"), :button, name: "Add turnout"))
     |> fill(by_label("People in the room", exact: true), 6)
     |> click(by_role(:button, name: "Save turnout"))
-    |> assert(visible(by_css("#flash-info") |> filter(has_text: "Turnout saved")))
+    |> assert_has(by_css("#flash-info") |> filter(has_text: "Turnout saved"))
 
     :ok
   end
@@ -62,7 +62,7 @@ defmodule BrowserOverviewCardsSteps do
        %{session: session} do
     session
     |> assert(text(by_css("#kpi-showrate .value"), "50%"))
-    |> assert(visible(by_css("#spark-showrate:not([data-empty])")))
+    |> assert_has(by_css("#spark-showrate:not([data-empty])"))
     |> assert_same_height()
 
     :ok

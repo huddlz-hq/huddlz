@@ -46,8 +46,8 @@ defmodule BrowserReportReviewSteps do
 
   step "the reopened report is ready for review", %{session: session} do
     session
-    |> assert(visible(review_card() |> filter(has_text: "Repeated advertisements")))
-    |> assert(visible(by_role(review_card(), :button, name: "Mark handled")))
+    |> assert_has(review_card() |> filter(has_text: "Repeated advertisements"))
+    |> assert_has(by_role(review_card(), :button, name: "Mark handled"))
     |> assert(count(by_role(:button, name: "Suspend account"), 0))
     |> assert(page_url(&(not Map.has_key?(URI.decode_query(&1.query || ""), "account_id"))))
 
@@ -58,7 +58,7 @@ defmodule BrowserReportReviewSteps do
     session
     |> visit("/admin/users?scope=suspended")
     |> click(review())
-    |> assert(visible(by_role(review_card(), :link, name: "1 open report")))
+    |> assert_has(by_role(review_card(), :link, name: "1 open report"))
 
     :ok
   end

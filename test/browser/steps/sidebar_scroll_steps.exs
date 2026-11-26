@@ -25,7 +25,7 @@ defmodule BrowserSidebarScrollSteps do
     session
     |> sign_in(member)
     |> visit("/agenda")
-    |> assert(visible(by_css(".sb-org-row") |> filter(has_text: "Overflow group 14")))
+    |> assert_has(by_css(".sb-org-row") |> filter(has_text: "Overflow group 14"))
 
     %{member: member}
   end
@@ -62,7 +62,7 @@ defmodule BrowserSidebarScrollSteps do
     Enum.find(1..60, fn _n ->
       session
       |> Keyboard.press("Tab")
-      |> Fluffy.Playwright.evaluate("document.activeElement.id === 'sign-out-link'")
+      |> get_attribute(by_css(":focus"), "id") == "sign-out-link"
     end)
 
     assert(session, focused(by_css("#sign-out-link")))
@@ -111,7 +111,7 @@ defmodule BrowserSidebarScrollSteps do
 
   step "the page behind the sidebar has not moved and is still usable", %{session: session} do
     session
-    |> assert(visible(by_role(by_css("main"), :heading, level: 1, name: "Agenda")))
+    |> assert_has(by_role(by_css("main"), :heading, level: 1, name: "Agenda"))
     |> assert_browser("""
     window.scrollY === 0 && !document.querySelector('main').inert &&
       document.querySelector('main').getBoundingClientRect().left > 0
@@ -124,18 +124,13 @@ defmodule BrowserSidebarScrollSteps do
   # partly below the fold has its centre off the page, where a wheel reaches
   # nothing.
   defp wheel_over(session, locator, delta_y) do
-    %{"x" => x, "y" => y} =
-      Fluffy.Playwright.evaluate(session, locator, """
-      element => {
-        const r = element.getBoundingClientRect();
-        const top = Math.max(r.top, 0);
-        const bottom = Math.min(r.bottom, window.innerHeight);
-        return {x: r.left + r.width / 2, y: (top + bottom) / 2};
-      }
-      """)
+    box = Fluffy.Playwright.bounding_box(session, locator)
+    %{height: height} = Fluffy.Playwright.viewport_size(session)
+    top = max(box.y, 0)
+    bottom = min(box.y + box.height, height)
 
     session
-    |> Mouse.move(x, y)
+    |> Mouse.move(box.x + box.width / 2, (top + bottom) / 2)
     |> Mouse.wheel(0, delta_y)
   end
 end

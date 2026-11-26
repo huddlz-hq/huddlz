@@ -10,7 +10,7 @@ defmodule BrowserAppearanceMenuSteps do
   step "I open the appearance menu with the keyboard", %{session: session} do
     session
     |> press(trigger(), "Enter")
-    |> assert(visible(open_menu()))
+    |> assert_has(open_menu())
 
     :ok
   end
@@ -26,7 +26,7 @@ defmodule BrowserAppearanceMenuSteps do
   step "the page uses the dark appearance and the menu is closed", %{session: session} do
     session
     |> assert(attribute(by_css("html"), "data-theme", "dark"))
-    |> refute(visible(open_menu()))
+    |> refute_has(open_menu())
 
     :ok
   end
@@ -38,7 +38,7 @@ defmodule BrowserAppearanceMenuSteps do
 
   step "the menu is closed and focus is back on its trigger", %{session: session} do
     session
-    |> refute(visible(open_menu()))
+    |> refute_has(open_menu())
     |> assert(focused(trigger()))
 
     :ok
@@ -55,13 +55,7 @@ defmodule BrowserAppearanceMenuSteps do
 
   defp tab_to_option(session, label, tries) do
     session = Keyboard.press(session, "Tab")
-
-    focused =
-      Fluffy.Playwright.evaluate(
-        session,
-        "document.activeElement.querySelector('.theme-option-label')?.textContent"
-      )
-
+    focused = text_content(session, by_css(":focus .theme-option-label"))
     if focused == label, do: session, else: tab_to_option(session, label, tries - 1)
   end
 end

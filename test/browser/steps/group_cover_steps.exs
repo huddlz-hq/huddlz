@@ -53,7 +53,7 @@ defmodule BrowserCoverSteps do
   step "I open that group in the browser", %{session: session} = context do
     session
     |> visit("/groups/#{context.group.slug}")
-    |> assert(visible(by_role(:heading, level: 1, name: to_string(context.group.name))))
+    |> assert_has(by_role(:heading, level: 1, name: to_string(context.group.name)))
 
     :ok
   end
@@ -109,12 +109,12 @@ defmodule BrowserCoverSteps do
 
   defp assert_cover(session, "missing") do
     session
-    |> refute(visible(cover_image()))
+    |> refute_has(cover_image())
     |> assert_fallback()
   end
 
   defp assert_cover(session, state) do
-    assert(session, visible(cover_image()))
+    assert_has(session, cover_image())
 
     decoded =
       Fluffy.Playwright.evaluate(session, """
@@ -163,7 +163,7 @@ defmodule BrowserCoverSteps do
 
   defp assert_fallback(session) do
     session
-    |> assert(visible(by_css("#group-detail-hero .group-cover-signal")))
+    |> assert_has(by_css("#group-detail-hero .group-cover-signal"))
     |> assert_browser("""
     (() => {
       const cover = document.querySelector('#group-detail-hero .group-cover');

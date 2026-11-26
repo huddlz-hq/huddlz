@@ -13,9 +13,9 @@ defmodule BrowserPictureSteps do
     # The crop sheet opens first; the picture is used as it is.
     session
     |> set_input_files(by_label("Upload a photo…", exact: true), "test/fixtures/test_image.jpg")
-    |> assert(visible(by_css("#avatar-upload-crop[open]")))
+    |> assert_has(by_css("#avatar-upload-crop[open]"))
     |> click(by_role(:button, name: "Use photo"))
-    |> assert(visible(remove()))
+    |> assert_has(remove())
 
     :ok
   end
@@ -42,7 +42,7 @@ defmodule BrowserPictureSteps do
   step "I open the remove picture confirmation by clicking Remove", %{session: session} do
     session
     |> click(remove())
-    |> assert(visible(dialog()))
+    |> assert_has(dialog())
 
     :ok
   end
@@ -71,9 +71,9 @@ defmodule BrowserPictureSteps do
   step "my profile picture is replaced by initials", %{session: session} do
     session
     |> assert(count(dialog(), 0))
-    |> assert(visible(by_role(:alert) |> filter(has_text: "Profile picture removed")))
+    |> assert_has(by_role(:alert) |> filter(has_text: "Profile picture removed"))
     |> assert(count(by_css("img.big-avatar"), 0))
-    |> assert(visible(by_css("main .big-avatar") |> filter(has_text: "BM")))
+    |> assert_has(by_css("main .big-avatar") |> filter(has_text: "BM"))
 
     :ok
   end
@@ -103,7 +103,7 @@ defmodule BrowserPictureSteps do
     session
     |> assert(count(dialog(), 0))
     |> assert(focused(remove()))
-    |> assert(visible(by_css("img.big-avatar")))
+    |> assert_has(by_css("img.big-avatar"))
 
     :ok
   end

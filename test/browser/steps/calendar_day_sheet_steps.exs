@@ -67,7 +67,7 @@ defmodule BrowserCalendarDaySheetSteps do
   step "the day sheet is docked to the bottom edge and lists {string}",
        %{args: [title], session: session} do
     session
-    |> assert(visible(entry(title)))
+    |> assert_has(entry(title))
     |> assert_browser("""
     (() => {
       const sheet = document.querySelector('#calendar-day-panel');
@@ -86,7 +86,7 @@ defmodule BrowserCalendarDaySheetSteps do
   step "I open {string} from the sheet and go back", %{args: [title], session: session} do
     session
     |> click(entry(title))
-    |> assert(visible(by_role(:heading, level: 1, name: title)))
+    |> assert_has(by_role(:heading, level: 1, name: title))
     |> Fluffy.Playwright.go_back()
 
     :ok
@@ -101,7 +101,7 @@ defmodule BrowserCalendarDaySheetSteps do
       text(by_role(day_panel(), :heading, level: 2), Calendar.strftime(context.day, "%B %-d"))
     )
     |> assert(page_url(&(URI.decode_query(&1.query || "")["day"] == day)))
-    |> assert(visible(by_css("#month-calendar")))
+    |> assert_has(by_css("#month-calendar"))
     |> assert_browser("Math.abs(scrollY - Number(sessionStorage.getItem('calendar-scroll'))) < 2")
 
     :ok

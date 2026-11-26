@@ -36,11 +36,10 @@ defmodule BrowserSignInReturnSteps do
 
     session
     |> click(by_role(:link, name: "Forgot your password?"))
-    |> assert(visible(by_role(:heading, level: 1, name: "Reset your password")))
-    |> assert(visible(by_css(".phx-connected") |> first()))
+    |> assert_has(by_role(:heading, level: 1, name: "Reset your password"))
     |> fill(by_label("Email", exact: true), email)
     |> click(by_role(:button, name: "Send reset instructions"))
-    |> assert(visible(by_role(:heading, level: 2, name: "Check your email")))
+    |> assert_has(by_role(:heading, level: 2, name: "Check your email"))
 
     token =
       receive do
@@ -65,8 +64,8 @@ defmodule BrowserSignInReturnSteps do
        %{session: session} = context do
     session
     |> assert(page_url(&(&1.path == context.return_path)))
-    |> assert(visible(by_role(:heading, level: 1, name: context.return_huddl.title)))
-    |> assert(visible(by_role(:button, name: "RSVP")))
+    |> assert_has(by_role(:heading, level: 1, name: context.return_huddl.title))
+    |> assert_has(by_role(:button, name: "RSVP"))
 
     assert [] =
              Huddlz.Communities.check_user_rsvp!(context.return_huddl.id,

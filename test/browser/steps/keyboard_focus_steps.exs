@@ -43,7 +43,7 @@ defmodule BrowserKeyboardFocusSteps do
   step "{string} still has keyboard focus", %{args: [name], session: session} = context do
     # Let the save's reply land before looking.
     session
-    |> assert(visible(by_css(context.focus_form <> ":not(.phx-submit-loading)")))
+    |> assert_has(by_css(context.focus_form <> ":not(.phx-submit-loading)"))
     |> assert_focused(name)
 
     :ok
@@ -94,7 +94,7 @@ defmodule BrowserKeyboardFocusSteps do
     invitee = generate(user(role: :user))
     email = to_string(invitee.email)
     save_with(context, "Email", email)
-    assert(context.session, visible(flash_info("Invitation sent to #{email}.")))
+    assert_has(context.session, flash_info("Invitation sent to #{email}."))
     save_with(context, "Email", email)
   end
 
@@ -110,7 +110,7 @@ defmodule BrowserKeyboardFocusSteps do
   step "I clear the group location and save", %{session: session} do
     session
     |> click(by_role(by_css("#group-location"), :button, name: "Clear"))
-    |> assert(visible(by_css("#group-location-input")))
+    |> assert_has(by_css("#group-location-input"))
     |> press(by_css("#edit-group-form button[type=submit]"), "Enter")
 
     :ok
@@ -136,10 +136,7 @@ defmodule BrowserKeyboardFocusSteps do
     session
     |> assert_focused(Huddlz.Legal.acceptance_text())
     |> assert(attribute(focused_field(), "aria-invalid", "true"))
-    |> assert_browser("""
-    (document.activeElement.getAttribute('aria-describedby') || '').split(/\\s+/).some(id =>
-      document.getElementById(id)?.textContent.includes('accept'))
-    """)
+    |> assert(accessible_description(focused_field(), ~r/accept/))
 
     :ok
   end
@@ -235,7 +232,7 @@ defmodule BrowserKeyboardFocusSteps do
 
     context.session
     |> fill(search, "saint")
-    |> assert(visible(by_role(:option) |> first()))
+    |> assert_has(by_role(:option) |> first())
     |> press(search, "ArrowDown")
     |> assert(attribute(by_css("#modal-address-autocomplete"), "data-has-highlight", "true"))
     |> press(search, "Enter")

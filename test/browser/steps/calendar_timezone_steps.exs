@@ -57,11 +57,9 @@ defmodule BrowserCalendarSteps do
 
     session
     |> assert(text(by_css("#calendar-time-zone"), "America/New_York"))
-    |> assert(
-      visible(
-        by_css(day, "#calendar-entry-#{context.huddl.id} .cal-pill-time")
-        |> filter(has_text: "11:30 PM MDT")
-      )
+    |> assert_has(
+      by_css(day, "#calendar-entry-#{context.huddl.id} .cal-pill-time")
+      |> filter(has_text: "11:30 PM MDT")
     )
 
     :ok

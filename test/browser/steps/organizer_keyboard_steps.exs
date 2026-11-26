@@ -36,10 +36,8 @@ defmodule BrowserOrganizerSteps do
     session
     |> assert(checked(virtual))
     |> assert(attached(focus_visible(virtual)))
-    |> assert(visible(by_label("Online link", exact: true)))
-    |> assert_browser("""
-    getComputedStyle(document.querySelector('#event-type-virtual').closest('.event-type-option')).outlineStyle !== 'none'
-    """)
+    |> assert_has(by_label("Online link", exact: true))
+    |> refute(css(by_css(".event-type-option") |> filter(has: virtual), "outline-style", "none"))
 
     :ok
   end
@@ -52,7 +50,7 @@ defmodule BrowserOrganizerSteps do
     |> assert(checked(recurring()))
     |> assert(attached(focus_visible(recurring())))
     |> assert(attribute(recurring(), "aria-checked", "true"))
-    |> assert(visible(by_label("Frequency", exact: true)))
+    |> assert_has(by_label("Frequency", exact: true))
     |> press(by_label("Max attendees", exact: true), "Tab")
     |> assert(focused(members_only()))
     |> Keyboard.press("Space")
@@ -68,9 +66,7 @@ defmodule BrowserOrganizerSteps do
     |> assert(checked(members_only()))
     |> assert(attached(focus_visible(members_only())))
     |> assert(attribute(members_only(), "aria-checked", "true"))
-    |> assert_browser("""
-    getComputedStyle(document.querySelector('input[name="form[is_private]"] + .track')).boxShadow !== 'none'
-    """)
+    |> refute(css(by_css("input[name='form[is_private]'] + .track"), "box-shadow", "none"))
 
     :ok
   end

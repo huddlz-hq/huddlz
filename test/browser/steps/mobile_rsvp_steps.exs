@@ -77,10 +77,8 @@ defmodule BrowserMobileRsvpSteps do
 
   step "the dock shows I am attending and offers to cancel", %{session: session} do
     session
-    |> assert(
-      visible(by_css(dock(), ".rsvp-banner.cyan") |> filter(has_text: "You're attending"))
-    )
-    |> assert(visible(by_role(dock(), :button, name: "Cancel RSVP")))
+    |> assert_has(by_css(dock(), ".rsvp-banner.cyan") |> filter(has_text: "You're attending"))
+    |> assert_has(by_role(dock(), :button, name: "Cancel RSVP"))
     |> assert_browser("""
     (() => {
       const dock = document.querySelector('.rsvp-state[data-dock]').getBoundingClientRect();

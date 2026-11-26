@@ -38,10 +38,10 @@ defmodule BrowserPhotoSteps do
   step "I can upload the valid photo and understand why the other was skipped",
        %{session: session} do
     session
-    |> assert(visible(upload_error("Each photo must be 5 MB or smaller.")))
+    |> assert_has(upload_error("Each photo must be 5 MB or smaller."))
     |> click(upload_button())
     |> assert(count(tiles(), 1))
-    |> assert(visible(by_css("#flash-info") |> filter(has_text: "Photos uploaded.")))
+    |> assert_has(by_css("#flash-info") |> filter(has_text: "Photos uploaded."))
     |> assert_browser(
       "[...document.querySelectorAll('.photo-tile img')].every(i => i.complete && i.naturalWidth > 0)"
     )
@@ -59,9 +59,9 @@ defmodule BrowserPhotoSteps do
 
   step "I am told to choose a supported image instead of retrying it", %{session: session} do
     session
-    |> assert(visible(upload_error("corrupt_image.jpg: Choose a JPG, PNG, or WebP image.")))
+    |> assert_has(upload_error("corrupt_image.jpg: Choose a JPG, PNG, or WebP image."))
     |> assert(count(tiles(), 0))
-    |> refute(visible(by_css("#flash-error") |> filter(has_text: "Please try again.")))
+    |> refute_has(by_css("#flash-error") |> filter(has_text: "Please try again."))
 
     :ok
   end
@@ -85,9 +85,9 @@ defmodule BrowserPhotoSteps do
 
   step "the upload queue names each photo and its remove control", %{session: session} do
     session
-    |> assert(visible(by_css(".photo-upload-entry") |> filter(has_text: "test_image.jpg")))
-    |> assert(visible(by_role(:button, name: "Remove test_image.jpg", exact: true)))
-    |> assert(visible(by_role(:button, name: "Remove icon-512.png", exact: true)))
+    |> assert_has(by_css(".photo-upload-entry") |> filter(has_text: "test_image.jpg"))
+    |> assert_has(by_role(:button, name: "Remove test_image.jpg", exact: true))
+    |> assert_has(by_role(:button, name: "Remove icon-512.png", exact: true))
 
     :ok
   end
@@ -126,9 +126,7 @@ defmodule BrowserPhotoSteps do
     position = by_css("#photo-position")
 
     session
-    |> assert(
-      visible(by_role(by_css("#photo-lightbox"), :dialog) |> filter(has_text: "Sam Rivera"))
-    )
+    |> assert_has(by_role(by_css("#photo-lightbox"), :dialog) |> filter(has_text: "Sam Rivera"))
     |> assert(text(position, "1 of 2"))
     |> Keyboard.press("ArrowRight")
     |> assert(text(position, "2 of 2"))
@@ -192,8 +190,8 @@ defmodule BrowserPhotoSteps do
     dialog = by_role(by_css("#delete-photo-modal"), :dialog)
 
     session
-    |> assert(visible(by_css("#delete-photo-modal img")))
-    |> assert(visible(dialog |> filter(has_text: "Sam Rivera")))
+    |> assert_has(by_css("#delete-photo-modal img"))
+    |> assert_has(dialog |> filter(has_text: "Sam Rivera"))
     |> Keyboard.press("Enter")
     |> assert(count(dialog, 0))
     |> assert(count(tiles(), 2))
